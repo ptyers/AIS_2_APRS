@@ -1,0 +1,348 @@
+-- AISAPRS MIB
+-- $Revision: 1 $
+
+-- WORK IN PROGRESS
+
+AISAPRS DEFINITIONS ::= BEGIN
+
+IMPORTS
+    OBJECT-TYPE
+        FROM RFC-1212
+    NOTIFICATION-TYPE
+        FROM SNMPv2-SMI
+    MODULE-IDENTITY, Unsigned32, snmpV2, snmpModules
+        FROM SNMPv2-SMI
+    DisplayString
+        FROM RFC1213-MIB
+    mgmt
+        FROM RFC1155-SMI
+    enterprises
+        FROM RFC1155-SMI
+
+;
+aisaprs     MODULE-IDENTITY
+	LAST-UPDATED    "202105191100Z"
+	ORGANIZATION    "Australian Volunteer Coast Guard Association"
+	CONTACT-INFO    "P Tyers"
+	DESCRIPTION     "Software to convert AIS datastream to APRS packets and foward to an APRS server"
+	REVISION       "202105191100Z"
+    DESCRIPTION     "Software to convert AIS datastream to APRS packets and foward to an APRS server"
+    ::= { enterprises 65001 }
+
+
+
+
+-- **************************************************************
+-- *************** Upper level definitions ***********************
+
+mib-2 OBJECT IDENTIFIER ::= { mgmt 1 }
+snmpv2-mib OBJECT IDENTIFIER ::= { mib-2 1 }
+avcga OBJECT IDENTIFIER ::= { enterprises 65000 }
+
+-- Trap stuff
+snmpmib OBJECT IDENTIFIER ::= { snmpModules 1 }
+snmpmibobjects OBJECT IDENTIFIER ::= { snmpmib 1 }
+snmptraps OBJECT IDENTIFIER ::= { snmpmibobjects 5 }
+-- extra level Error Trap
+errortrap OBJECT IDENTIFIER ::= { snmptraps 6}
+
+-- SYSTEM OBJECTS
+
+sysdescr OBJECT IDENTIFIER ::= { snmpv2-mib 1 }
+sysobjectid OBJECT IDENTIFIER ::= { snmpv2-mib 2 }
+sysuptime OBJECT IDENTIFIER ::= { snmpv2-mib 3 }
+syscontact OBJECT IDENTIFIER ::= { snmpv2-mib 4 }
+sysname OBJECT IDENTIFIER ::= { snmpv2-mib 5 }
+syslocation OBJECT IDENTIFIER ::= { snmpv2-mib 6 }
+sysservices OBJECT IDENTIFIER ::= { snmpv2-mib 7 }
+sysorlastchange OBJECT IDENTIFIER ::= { snmpv2-mib 8 }
+
+
+--- PRIVATE ENTERPRISES STUFF
+---
+model  OBJECT IDENTIFIER ::= { avcga 1 }
+
+errors OBJECT IDENTIFIER ::= { model 4 }
+    minorerror OBJECT-TYPE
+       SYNTAX         DisplayString (SIZE (0..2048))
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Minor Error string - max length 2048"
+        ::= { errors 1 }
+    majorerror OBJECT-TYPE
+       SYNTAX         DisplayString (SIZE (0..4096))
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Major Error string - restart after exception - max length 4096"
+        ::= { errors 2 }
+
+
+ships  OBJECT IDENTIFIER ::= {model 1}
+
+    shipsTable OBJECT-TYPE
+        SYNTAX         SEQUENCE OF ShipsEntry
+        MAX-ACCESS		   not-accessible
+        STATUS         current
+        DESCRIPTION    "Table of Vessels - Name, Callsign, MMSI"
+        ::= { ships 1 }
+
+    shipsEntry OBJECT-TYPE
+        SYNTAX        ShipsEntry
+        MAX-ACCESS         not-accessible
+        STATUS         current
+        DESCRIPTION    "Each entry contains Name, Callsign, MMSI."
+        INDEX          { shipsEntryIndex }
+        ::= { shipsTable 1 }
+
+   ShipsEntry ::= SEQUENCE {
+            shipsEntryIndex
+                Unsigned32,
+           shipName
+                DisplayString ,
+            shipCallsign
+                DisplayString ,
+            shipMMSSI
+                DisplayString
+        }
+
+    shipsEntryIndex OBJECT-TYPE
+        SYNTAX         Unsigned32
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Ships index."
+        ::= { shipsEntry 1 }
+
+    shipName OBJECT-TYPE
+        SYNTAX         DisplayString (SIZE (0..255))
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Vessel Name"
+        ::= { shipsEntry 2 }
+
+    shipCallsign OBJECT-TYPE
+        SYNTAX         DisplayString (SIZE (0..255))
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Vessel Callsign"
+        ::= { shipsEntry 3 }
+
+    shipMMSSI OBJECT-TYPE
+        SYNTAX         DisplayString (SIZE (0..255))
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Vessel MMSI"
+        ::= { shipsEntry 4 }
+
+
+stations OBJECT IDENTIFIER ::= { model 2}
+
+    stationsTable OBJECT-TYPE
+        SYNTAX         SEQUENCE OF StationEntry
+        MAX-ACCESS		   not-accessible
+        STATUS         current
+        DESCRIPTION    "Table of received IP stations and their packet counts"
+        ::= { stations 1 }
+
+    stationEntry OBJECT-TYPE
+        SYNTAX         StationEntry
+        MAX-ACCESS         not-accessible
+        STATUS         current
+        DESCRIPTION    "Each entry contains a packet count."
+        INDEX          { stationEntryIndex }
+        ::= { stationsTable 1 }
+
+    StationEntry ::= SEQUENCE {
+            stationEntryIndex
+                Unsigned32,
+           ipaddress
+                INTEGER,
+            packetcount
+                INTEGER
+        }
+
+    stationEntryIndex OBJECT-TYPE
+        SYNTAX         Unsigned32
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Stations index."
+        ::= { stationEntry 1 }
+
+    ipaddress OBJECT-TYPE
+        SYNTAX         INTEGER
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "IP Address of station"
+        ::= { stationEntry 2 }
+
+    packetcount OBJECT-TYPE
+        SYNTAX         INTEGER
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Number packets received"
+        ::= { stationEntry 3 }
+
+
+stats OBJECT IDENTIFIER ::= { model 3 }
+
+udp OBJECT IDENTIFIER ::= { stats 1 }
+
+    udpTable OBJECT-TYPE
+        SYNTAX         SEQUENCE OF UdpEntry
+        MAX-ACCESS		   not-accessible
+        STATUS         current
+        DESCRIPTION    "Table of received UDP packet counts, dropped counts and rate"
+        ::= { udp 1 }
+
+    udpEntry OBJECT-TYPE
+        SYNTAX         UdpEntry
+        MAX-ACCESS         not-accessible
+        STATUS         current
+        DESCRIPTION    "Each entry contains a packet count, dropped count and rate."
+        INDEX          { udpEntryIndex }
+        ::= { udpTable 1 }
+
+    UdpEntry ::= SEQUENCE {
+            udpEntryIndex
+                Unsigned32,
+           udppacketcount
+                INTEGER,
+            udpdroppedpackets
+                INTEGER,
+            udprate
+                INTEGER
+        }
+
+    udpEntryIndex OBJECT-TYPE
+        SYNTAX         Unsigned32
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "UDP index."
+        ::= { udpEntry 1 }
+
+    udppacketcount OBJECT-TYPE
+        SYNTAX         INTEGER
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Number UDP packets received"
+        ::= { udpEntry 2 }
+
+    udpdroppedpackets OBJECT-TYPE
+        SYNTAX         INTEGER
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Number UDP packets dropped due to error"
+        ::= { udpEntry 3 }
+
+    udprate OBJECT-TYPE
+        SYNTAX         INTEGER
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Rate per minute UDP packet reception"
+        ::= { udpEntry 4 }
+
+serial OBJECT IDENTIFIER ::= { stats 2 }
+    serialTable OBJECT-TYPE
+        SYNTAX         SEQUENCE OF SerialEntry
+        MAX-ACCESS		   not-accessible
+        STATUS         current
+        DESCRIPTION    "Table of received Serioal packet counts, dropped counts and rate"
+        ::= { serial 1 }
+
+    serialEntry OBJECT-TYPE
+        SYNTAX        SerialEntry
+        MAX-ACCESS         not-accessible
+        STATUS         current
+        DESCRIPTION    "Each entry contains a packet count, dropped count and rate."
+        INDEX          { serialEntryIndex }
+        ::= { serialTable 1 }
+
+   SerialEntry ::= SEQUENCE {
+            serialEntryIndex
+                Unsigned32,
+           serialpacketcount
+                INTEGER,
+            serialdroppedpackets
+                INTEGER,
+            serialrate
+                INTEGER
+        }
+
+    serialEntryIndex OBJECT-TYPE
+        SYNTAX         Unsigned32
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Serial index."
+        ::= { serialEntry 1 }
+
+    serialpacketcount OBJECT-TYPE
+        SYNTAX         INTEGER
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Number Serial packets received"
+        ::= { serialEntry 2 }
+
+    serialdroppedpackets OBJECT-TYPE
+        SYNTAX         INTEGER
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Number Serial packets dropped due to error"
+        ::= { serialEntry 3 }
+
+    serialrate OBJECT-TYPE
+        SYNTAX         INTEGER
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Rate per minute Serial packet reception"
+        ::= { serialEntry 4 }
+
+aprs OBJECT IDENTIFIER ::= { stats 3 }
+    aprsTable OBJECT-TYPE
+        SYNTAX         SEQUENCE OF AprsEntry
+        MAX-ACCESS		   not-accessible
+        STATUS         current
+        DESCRIPTION    "Table of received Serioal packet counts, dropped counts and rate"
+        ::= { aprs 1 }
+
+    aprsEntry OBJECT-TYPE
+        SYNTAX        AprsEntry
+        MAX-ACCESS         not-accessible
+        STATUS         current
+        DESCRIPTION    "Each entry contains a packet count, dropped count and rate."
+        INDEX          { aprsEntryIndex }
+        ::= { aprsTable 1 }
+
+   AprsEntry ::= SEQUENCE {
+            aprsEntryIndex
+                Unsigned32,
+           aprspacketcount
+                INTEGER,
+            aprsrate
+                INTEGER
+        }
+
+    aprsEntryIndex OBJECT-TYPE
+        SYNTAX         Unsigned32
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Serial index."
+        ::= { aprsEntry 1 }
+
+    aprspacketcount OBJECT-TYPE
+        SYNTAX         INTEGER
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Number APRS packets transmitted"
+        ::= { aprsEntry 2 }
+
+    aprsrate OBJECT-TYPE
+        SYNTAX         INTEGER
+        MAX-ACCESS         read-only
+        STATUS         current
+        DESCRIPTION    "Rate per minute APRS packet transmission"
+        ::= { aprsEntry 3 }
+
+
+
+
+
+END
