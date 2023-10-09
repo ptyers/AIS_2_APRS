@@ -799,26 +799,26 @@ class AIS_Data:
 
     RepeatIndicator = property(get_RepeatIndicator, set_RepeatIndicator)
 
-    def get_SOG(self):
+    def get_SOG(self) -> float:
         self._fsog = float(self._sog)
         return self._fsog / 10
 
-    def set_SOG(self, value):
+    def set_SOG(self, value) -> None:
         self._sog = int(value)
 
     SOG = property(get_SOG, set_SOG)
 
-    def get_int_HDG(self):
+    def get_int_HDG(self) -> int:
         # print('getting int HDG')
         return self._truhead
 
-    def set_int_HDG(self, value):
+    def set_int_HDG(self, value) -> None:
         # print ('setting int HDG ', value)
         self._truhead = value
 
     int_HDG = property(get_int_HDG, set_int_HDG)
 
-    def ROT(self):
+    def ROT(self) -> None:
         # ROT is coded as 4.733 * SQRT(p_rot)
         # to decode divide bcoded value by 4.733 then square.
         # Returns rate in degrees per minute to three decimal places
@@ -845,15 +845,15 @@ class AIS_Data:
     def get_Altitude(self):
         return self._altitude
 
-    def set_Altitude(self, value):
+    def set_Altitude(self, value) -> None:
         self._altitude = value
 
     Altitude = property(get_Altitude, set_Altitude)
 
-    def get_int_ROT(self):
+    def get_int_ROT(self) -> int:
         return self._rot
 
-    def set_int_ROT(self, value):
+    def set_int_ROT(self, value) -> None:
         self._rot = value
 
     int_ROT = property(get_int_ROT, set_int_ROT)
@@ -861,12 +861,12 @@ class AIS_Data:
     def get_NavStatus(self):
         return self._nstatus
 
-    def set_NavStatus(self, value):
+    def set_NavStatus(self, value) -> None:
         self._nstatus = value
 
     NavStatus = property(get_NavStatus, set_NavStatus)
 
-    def set_int_latitude(self, value):
+    def set_int_latitude(self, value) -> None:
         # print(' setting int latitude', value)
         if isinstance(value, int):
             self._lat = value
@@ -875,12 +875,12 @@ class AIS_Data:
             raise RuntimeError(
                 "incorrect type {} in set_ini_latitude should be int".format(type(value)))
 
-    def get_int_latitude(self):  # unused
+    def get_int_latitude(self) -> int:  # unused
         return 0
 
     int_latitude = property(get_int_latitude, set_int_latitude)
 
-    def set_int_longitude(self, value):
+    def set_int_longitude(self, value) -> None:
         # print (' setting int longitude', value)
         if isinstance(value, int):
             self._long = value
@@ -890,17 +890,17 @@ class AIS_Data:
                 "incorrect type {} in set_ini_longitufde should be int".format(type(value))
             )
 
-    def get_int_longitude(self):  # unused
+    def get_int_longitude(self) -> int:  # unused
         return 0
 
     int_longitude = property(get_int_longitude, set_int_longitude)
 
-    def get_Latitude(self):
+    def get_Latitude(self) -> float:
         return self._flat
 
     Latitude = property(get_Latitude)
 
-    def get_Longitude(self):
+    def get_Longitude(self) -> float:
         return self._flong
 
     Longitude = property(get_Longitude)
@@ -908,15 +908,15 @@ class AIS_Data:
     def get_Pos_Accuracy(self):
         return self._pa
 
-    def set_Pos_Accuracy(self, value):
+    def set_Pos_Accuracy(self, value) -> None:
         self._pa = value
 
     Pos_Accuracy = property(get_Pos_Accuracy, set_Pos_Accuracy)
 
-    def get_COG(self):
+    def get_COG(self) -> float:
         return float(round((float(self._cog) / 10), 1))
 
-    def set_COG(self, value):
+    def set_COG(self, value) -> None:
         if isinstance(value, float):
             self._cog = int(value)
         elif isinstance(value, int):
@@ -927,7 +927,7 @@ class AIS_Data:
 
     COG = property(get_COG, set_COG)
 
-    def set_int_COG(self, value):
+    def set_int_COG(self, value) -> None:
         if isinstance(value, float):
             self._cog = int(value)
         elif isinstance(value, int):
@@ -937,16 +937,16 @@ class AIS_Data:
                 'in AISDATA setting int_COG got incorect type not int or float type = ',
                 type(value))
 
-    def get_int_COG(self):  # not used
+    def get_int_COG(self) -> int:  # not used
         return 0
 
     int_COG = property(get_int_COG, set_int_COG)
 
-    def get_HDG(self):
+    def get_HDG(self) -> float:
         # print('getting HDG ', float(self._truhead))
         return float(self._truhead)
 
-    def set_HDG(self, value):
+    def set_HDG(self, value) -> None:
         # print('setting HDG ', float(value))
         if isinstance(value, float):
             self._truhead = int(value)
@@ -960,10 +960,10 @@ class AIS_Data:
     # need to pass back the number of bits in the payload
     # it looks as though type 5 static data packets may
     # not conform to standard (destination truncated
-    def Binary_length(self):
+    def Binary_length(self) -> int:
         return int(self._binary_length)
 
-    def get_Timestamp(self):
+    def get_Timestamp(self) -> int:
         # seconds of UTC Timestamp
         # 60 timestamp unavailable
         # 61 positioning system in manual input mode
@@ -971,25 +971,25 @@ class AIS_Data:
         # 63 if positioning system inoperative
         return int(self._time)
 
-    def set_Timestamp(self, value):
+    def set_Timestamp(self, value) -> None:
         self._time = int(value)
 
     Timestamp = property(get_Timestamp, set_Timestamp)
 
-    def get_MAN_Indicator(self):
+    def get_MAN_Indicator(self) -> int:
         return int(self._man)
 
-    def set_MAN_Indicator(self, value):
+    def set_MAN_Indicator(self, value) -> None:
         self._man = int(value)
 
     MAN_Indicator = property(get_MAN_Indicator, set_MAN_Indicator)
 
-    def get_RAIM(self):
+    def get_RAIM(self) -> bool:
         # boolean
         # Receiver Augmented Integrity Monitoring
         return self._raim
 
-    def set_RAIM(self, value):
+    def set_RAIM(self, value) -> None:
         if isinstance(value, bool):
             self._raim = value
         else:
@@ -997,7 +997,7 @@ class AIS_Data:
 
     RAIM = property(get_RAIM, set_RAIM)
 
-    def get_Name(self):
+    def get_Name(self) -> str:
         # Console.WriteLine("returning p_name = " + p_name);
         # name can be padded with trailing @ which needs removing
         if self._name.find('@') > 0:
@@ -1009,7 +1009,7 @@ class AIS_Data:
             else:
                 return str(self._name)
 
-    def set_Name(self, value):
+    def set_Name(self, value) -> None:
         if isinstance(value, str):
             self._name = value
             self._name = self.Remove_at(self._name)
@@ -1020,7 +1020,7 @@ class AIS_Data:
 
     Name = property(get_Name, set_Name)
 
-    def get_Callsign(self):
+    def get_Callsign(self) -> str:
         if self._call.find('@') > 0:
             self._call = self._call[0: self._call.find('@')]
             return str(self._call)
@@ -1030,7 +1030,7 @@ class AIS_Data:
             else:
                 return str(self._call)
 
-    def set_Callsign(self, value):
+    def set_Callsign(self, value) -> None:
         if isinstance(value, str):
             self._call = value
             self._call = self.Remove_at(self._call)
@@ -1041,10 +1041,10 @@ class AIS_Data:
 
     Callsign = property(get_Callsign, set_Callsign)
 
-    def get_IMO(self):
+    def get_IMO(self) -> int:
         return int(self._IMO)
 
-    def set_IMO(self, value):
+    def set_IMO(self, value) -> None:
         if isinstance(value, int):
             self._IMO = value
         else:
@@ -1053,10 +1053,10 @@ class AIS_Data:
 
     IMO = property(get_IMO, set_IMO)
 
-    def get_Version(self):
+    def get_Version(self) -> int:
         return int(self._version)
 
-    def set_Version(self, value):
+    def set_Version(self, value) -> None:
         if isinstance(value, int):
             self._version = value
         else:
@@ -1065,7 +1065,7 @@ class AIS_Data:
 
     Version = property(get_Version, set_Version)
 
-    def get_Destination(self):
+    def get_Destination(self) -> str:
         if self._destination.find('@') > 0:
             self._destination = self._destination[0: self._destination.find('@')]
             return str(self._destination)
@@ -1075,7 +1075,7 @@ class AIS_Data:
             else:
                 return str(self._destination)
 
-    def set_Destination(self, value):
+    def set_Destination(self, value) -> None:
         if isinstance(value, str):
             self._destination = value
             self._destination = self.Remove_at(self._destination)
@@ -1086,10 +1086,10 @@ class AIS_Data:
 
     Destination = property(get_Destination, set_Destination)
 
-    def get_Display(self):
+    def get_Display(self) -> bool:
         return self._disp
 
-    def set_Display(self, value):
+    def set_Display(self, value) -> None:
         if isinstance(value, bool):
             self._disp = value
         else:
@@ -1099,10 +1099,10 @@ class AIS_Data:
     Display = property(get_Display, set_Display)
 
     # public bool DSC
-    def get_DSC(self):
+    def get_DSC(self) -> bool:
         return self._dsc
 
-    def set_DSC(self, value):
+    def set_DSC(self, value) -> None:
         if isinstance(value, bool):
             self._dsc = value
         else:
@@ -1111,10 +1111,10 @@ class AIS_Data:
 
     DSC = property(get_DSC, set_DSC)
 
-    def get_BAND(self):
+    def get_BAND(self) -> bool:
         return self._band
 
-    def set_BAND(self, value):
+    def set_BAND(self, value) -> None:
         if isinstance(value, bool):
             self._band = value
         else:
@@ -1126,7 +1126,7 @@ class AIS_Data:
     def get_Message22(self) -> bool:
         return self._m22
 
-    def set_Message22(self, value):
+    def set_Message22(self, value) -> None:
         if isinstance(value, bool):
             self._m22 = value
         else:
@@ -1136,10 +1136,10 @@ class AIS_Data:
     Message22 = property(get_Message22, set_Message22)
 
     # public bool Assigned
-    def get_Assigned(self):
+    def get_Assigned(self) -> bool:
         return self._assigned
 
-    def set_Assigned(self, value):
+    def set_Assigned(self, value) -> None:
         if isinstance(value, bool):
             self._assigned = value
         else:
@@ -1152,7 +1152,7 @@ class AIS_Data:
     def get_ShipType(self) -> int:
         return self._type
 
-    def set_ShipType(self, value):
+    def set_ShipType(self, value) -> None:
         if isinstance(value, int):
             self._type = value
         else:
@@ -1165,7 +1165,7 @@ class AIS_Data:
     def get_Dim2Bow(self):
         return int(self._d2bow)
 
-    def set_Dim2Bow(self, value):
+    def set_Dim2Bow(self, value) -> None:
         if isinstance(value, int):
             self._d2bow = value
         else:
@@ -1178,7 +1178,7 @@ class AIS_Data:
     def get_Dim2Stern(self) -> int:
         return int(self._d2stern)
 
-    def set_Dim2Stern(self, value):
+    def set_Dim2Stern(self, value) -> None:
         if isinstance(value, int):
             self._d2stern = value
         else:
@@ -1189,7 +1189,7 @@ class AIS_Data:
     def get_Dim2Port(self) -> int:
         return int(self._d2port)
 
-    def set_Dim2Port(self, value):
+    def set_Dim2Port(self, value) -> None:
         if isinstance(value, int):
             self._d2port = value
         else:
@@ -1200,7 +1200,7 @@ class AIS_Data:
         return int(self._d2starboard)
         # set { p_d2starboard = value; }
 
-    def set_Dim2Starboard(self, value):
+    def set_Dim2Starboard(self, value) -> None:
         if isinstance(value, int):
             self._d2starboard = value
         else:
@@ -1213,7 +1213,7 @@ class AIS_Data:
     def get_FixType(self) -> int:
         return int(self._fix_type)
 
-    def set_FixType(self, value):
+    def set_FixType(self, value) -> None:
         if isinstance(value, int):
             self._fix_type = value
         else:
@@ -1226,7 +1226,7 @@ class AIS_Data:
     def get_ETA_Month(self) -> int:
         return int(self._ETA_month)
 
-    def set_ETA_Month(self, value):
+    def set_ETA_Month(self, value) -> None:
         if isinstance(value, int):
             self._ETA_month = value
         else:
@@ -1239,7 +1239,7 @@ class AIS_Data:
     def get_ETA_Day(self) -> int:
         return int(self._ETA_day)
 
-    def set_ETA_Day(self, value):
+    def set_ETA_Day(self, value) -> None:
         if isinstance(value, int):
             self._ETA_day = value
         else:
@@ -1252,7 +1252,7 @@ class AIS_Data:
     def get_ETA_Hour(self) -> int:
         return int(self._ETA_hour)
 
-    def set_ETA_Hour(self, value):
+    def set_ETA_Hour(self, value) -> None:
         if isinstance(value, int):
             self._ETA_hour = value
         else:
@@ -1265,7 +1265,7 @@ class AIS_Data:
     def get_ETA_Minute(self) -> int:
         return int(self.self._ETA_minute)
 
-    def set_ETA_Minute(self, value):
+    def set_ETA_Minute(self, value) -> None:
         if isinstance(value, int):
             self._ETA_minute = value
         else:
@@ -1278,7 +1278,7 @@ class AIS_Data:
     def get_Draught(self) -> int:
         return int(self._draught)
 
-    def set_Draught(self, value):
+    def set_Draught(self, value) -> None:
         if isinstance(value, int):
             self._draught = value
         else:
@@ -1291,7 +1291,7 @@ class AIS_Data:
     def get_DTE(self) -> int:
         return int(self._DTE)
 
-    def set_DTE(self, value):
+    def set_DTE(self, value: int) -> None:
         if isinstance(value, int):
             self._DTE = value
         else:
@@ -1303,7 +1303,7 @@ class AIS_Data:
     def Radio_Status(self):
         raise NameError("Radio Status Unavailable")
 
-    def Type24PartNo(self):
+    def Type24PartNo(self) -> int:
         # if p_payload_ID is 24 then extract bits 38-39 and return integer value
         # valid values are 0 or 1, if called with non-valid payload type returns -1
         # throws exception if data stream returns 2 or 3
@@ -1394,7 +1394,7 @@ class AIS_Data:
             print("Exception while ExtractString startpos", sys.exc_info()[0])
             raise
 
-    def ExtractInt(self, startpos: int, blength: int):  # int
+    def ExtractInt(self, startpos: int, blength: int) -> int:  # int
         # extracts an integer from the binary payload
         # use Binary_Item to get the actual bits
         return int(self.Binary_Item(startpos, blength))
@@ -1413,7 +1413,7 @@ class AIS_Data:
 
     # endregion
     # region Private Methods
-    def create_binary_payload(p_payload: str):
+    def create_binary_payload(p_payload: str) -> str:
         # based on using a supersized string rather than bytearray
         #
         printdiag = False
