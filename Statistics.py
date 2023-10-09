@@ -26,7 +26,11 @@ class NoLoggingWSGIRequestHandler(WSGIRequestHandler):
         )
 
 
-class statistics:
+class Statistics:
+
+    def __init__(self):
+        pass
+
     _hello_response = """\
     <html>
     <head>
@@ -142,13 +146,13 @@ class statistics:
         uptime_c = " {:03}:{:02}:{:02}".format(int(hours), int(minutes), int(seconds))
         resp = self._stats_response
         resp = (
-            resp
-            + "<p><h2>Up Time "
-            + uptime_c
-            + " </h2><h2>Station "
-            + Global.Station
-            + "</h2></p>"
-            + self._stats_response_middle
+                resp
+                + "<p><h2>Up Time "
+                + uptime_c
+                + " </h2><h2>Station "
+                + Global.Station
+                + "</h2></p>"
+                + self._stats_response_middle
         )
         resp = resp + "<tr><td>UDP</td><td>{UFrames}</td><td>{UDropped}</td><td>{URate}</td></tr>".format(
             UFrames=Global.Statistics["Nr_UDP_Frames_RX"],
@@ -165,10 +169,10 @@ class statistics:
             AFrames=Global.Statistics["Nr_APRS_TX"],
         )
         resp = (
-            resp + "</table><p> </p><p><h2>Stations from which frames Received</h2></p>"
-            '<p></p><table style = "width : 40%;">'
-            '<th style = "width : 20%; padding : 10px" > IP Address </th>'
-            '<th style = "width : 20% ; padding : 10px" > Frames Received </th>'
+                resp + "</table><p> </p><p><h2>Stations from which frames Received</h2></p>"
+                       '<p></p><table style = "width : 40%;">'
+                       '<th style = "width : 20%; padding : 10px" > IP Address </th>'
+                       '<th style = "width : 20% ; padding : 10px" > Frames Received </th>'
         )
         for xx in Global.UDP_Received_IP_Addresses:
             resp = resp + "\n<tr><td>{IP}</td><td>{Frames}</td></tr>".format(
@@ -185,8 +189,13 @@ class statistics:
             resp = resp + "\n<tr><td>{IP}</td><td>{Frames}</td></tr>".format(
                 IP=xx, Frames=Global.UDP_Received_IP_Addresses[xx]
             )
+
         resp = resp + " </table>" + self._station_response_tail
         yield resp.encode("utf-8")
+
+    def get_name_from_ip(self, ip: str) -> str:
+        addrs =  reversename.from_address(ip)
+        return str(resolver.resolve(addrs, "PTR")[0])
 
     def do_ships(self, environ, start_response):
         start_response("200 OK", [("Content-type", "text/html")])
@@ -241,13 +250,11 @@ class statistics:
 
         try:
             if self.do_check_server():
-                print( "server address and server port being used are")
+                print("server address and server port being used are")
                 do_print_server_address(GlobalDefinitions.Global.UseRemote)
         except Exception as e:
-            print("Error - No valid APRS Server available\n%s",e)
+            print("Error - No valid APRS Server available\n%s", e)
             GlobalDefinitions.Global.CloseDown = True
-
-
 
         httpd.serve_forever()
         while True:
@@ -298,4 +305,3 @@ class statistics:
             ) from e
 
         return True
-
