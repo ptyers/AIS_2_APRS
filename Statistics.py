@@ -128,6 +128,7 @@ class Statistics:
     <h2>UpTime {Uptime}</h2<p></p>
     <table style = "width: 50%">
     <th  style = "width : 30%; padding : 10px"> IP Address </th>
+    <th  style = "width : 30%; padding : 10px"> Name </th>
     <th  style = "width : 10% ; padding : 10px">Frames Received </th>
     <tr><td> </td> <td> </td></tr>
 
@@ -186,15 +187,22 @@ class Statistics:
         params = environ["params"]
         resp = self._station_response_head
         for xx in Global.UDP_Received_IP_Addresses:
-            resp = resp + "\n<tr><td>{IP}</td><td>{Frames}</td></tr>".format(
-                IP=xx, Frames=Global.UDP_Received_IP_Addresses[xx]
+            try:
+                cname = self.get_name_from_ip(xx)
+            except:
+                cname = " "
+
+            resp = resp + "\n<tr><td>{IP}</td><td>{CName}</td><td>{Frames}</td></tr>".format(
+                IP=xx,
+                CName=cname,
+                Frames=Global.UDP_Received_IP_Addresses[xx]
             )
 
         resp = resp + " </table>" + self._station_response_tail
         yield resp.encode("utf-8")
 
     def get_name_from_ip(self, ip: str) -> str:
-        addrs =  reversename.from_address(ip)
+        addrs = reversename.from_address(ip)
         return str(resolver.resolve(addrs, "PTR")[0])
 
     def do_ships(self, environ, start_response):

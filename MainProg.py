@@ -75,7 +75,7 @@ def main():
 
         # and start up a thread looking after reporting Statistics
         # dst = Statistics.statistics()
-        sts = Statistics.statistics()
+        sts = Statistics.Statistics()
         tstats = Thread(target=sts.loopstats, args=())
         tstats.start()
 
