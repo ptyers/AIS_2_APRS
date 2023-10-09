@@ -66,7 +66,7 @@ class STATIC24:
         if AISObject.AIS_Payload_ID == 5:
             if GlobalDefinitions.Global.diagnostic3:
                 print(
-                    "ín 5 AISObjrct Binary",
+                    "ín 5 AISObject Binary",
                     len(AISObject.AIS_Binary_Payload),
                     " ",
                     AISObject.AIS_Binary_Payload,
