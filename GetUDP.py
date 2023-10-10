@@ -1,5 +1,6 @@
+import sys
 from socket import socket, AF_INET, SOCK_DGRAM
-
+import GlobalDefinitions
 from GlobalDefinitions import Global
 from datetime import datetime
 
@@ -71,6 +72,8 @@ class GetDataUDP:
             # IPEndPoint RemoteIpEndPoint = new IPEndPoint(IPAddress.Any, _Port)
 
             while self._keepgoing:
+                if GlobalDefinitions.Global.CloseDown:
+                    self._keepgoing = False
                 try:
 
                     if diagnostic3:
@@ -141,7 +144,10 @@ class GetDataUDP:
                     current_time = datetime.now()
                     current_input_frames = 0
                     current_dropped = 0
+            # close out thread
 
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt
         except Exception as e:
             #  Last gasp attempt to catch thread failure
             raise RuntimeError("Thread getting UDP data failed", e) from e

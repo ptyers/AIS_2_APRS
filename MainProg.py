@@ -172,6 +172,11 @@ def main():
                         print(xx, Global.Statistics[xx])
                     for xx in Global.UDP_Received_IP_Addresses:
                         print(xx)
+        except KeyboardInterrupt as e:
+            print('Keyboard Interrupt occurred - ending threads and exiting')
+            GlobalDefinitions.Global.CloseDown = True
+
+            sys.exit()
 
         except Exception as e:
             print("Restarting processes after exception\r\n", e)
