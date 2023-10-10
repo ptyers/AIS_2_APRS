@@ -547,7 +547,7 @@ class AIS_Data:
     def __init__(self, talker: str, fragcount: str, fragno: str,
                  messid: str, channel: str, payload: str, trailer: str):
         # first predefine the known internals
-        # if no args then we may assume its the AISSData(enconded_string) form
+        # if no args then we may assume it's the AISSData(enconded_string) form
         # and afterwards execute tne initialise_encoded function
         # otherwise it contains the following
         # talker,fragcount ,fragno ,_messid,channel ,payload,trailer variables
@@ -653,6 +653,10 @@ class AIS_Data:
                     print('in m_setup_Payload_ID = ', self._Payload_ID)
                 self._binary_payload, self._binary_length = AIS_Data.create_binary_payload(
                     self._payload)  # binary form of payload
+                # not currently used but available if converting to use bytearray instead of str for binary payload
+                # _byte_payload = AIS_Data.create_bytearray_payload(self._payload)
+                # self._binary_length = len(_byte_payload)
+
                 if diagnostic4:
                     print('in m_setup_binary_Payload = ', bin(self._binary_payload))
                 # Console.WriteLine("Payload_ID = " + p_Payload_ID)
@@ -1420,6 +1424,11 @@ class AIS_Data:
         #
         # define a null string
         _binary_payload = ''
+        _byte_payload = bytearray()
+        _byte_payload.extend(p_payload.encode())
+        # print('bytearray version of payload\n', _byte_payload,
+        #       '\nhex version\n', _byte_payload.hex(),
+        #       '\nfrom \n',p_payload)
         for i in range(0, len(p_payload)):
             if printdiag:
                 print('in create binary payload ', len(p_payload), i)
@@ -1430,13 +1439,44 @@ class AIS_Data:
             if printdiag:
                 print('nibble', bin(nibble))
 
-            # now append the nible to the stream
+            # now append the nibble to the stream
             _binary_payload = _binary_payload + format(nibble, '06b')
 
             if printdiag:
                 print(_binary_payload)
 
         return _binary_payload, len(_binary_payload)
+
+    def create_bytearray_payload(p_payload: str) -> bytearray:
+        # based on using a supersized string rather than bytearray
+        #
+        printdiag = False
+        #
+        # define a null bytearray
+        _byte_payload = bytearray()
+        # convert from str to the bytearray
+        _byte_payload.extend(p_payload.encode())
+        # print('bytearray version of payload\n', _byte_payload,
+        #       '\nhex version\n', _byte_payload.hex(),
+        #       '\nfrom \n',p_payload)
+
+        newbytes = bytearray()
+        for i in range(0, len(_byte_payload)-1):
+            if printdiag:
+                print('in create binary payload ', len(p_payload), i)
+            # iterate through the string payload masking to lower 6 bits
+            thebyte :int = int(_byte_payload[i] )
+            thebyte = thebyte - 48
+            if thebyte > 40:
+                newbytes.extend((thebyte - 8).to_bytes(1, "big"))
+            else:
+                newbytes.extend(thebyte.to_bytes(1, "big"))
+
+
+
+        if printdiag:
+            print(_byte_payload.hex())
+        return _byte_payload
 
     def m_to_int(parameter: str) -> int:
         # takes in a encoded string of variable length and returns positive integer

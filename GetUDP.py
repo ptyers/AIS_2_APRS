@@ -103,7 +103,6 @@ class GetDataUDP:
                         except:
                             print("Invalid utf-8", receiveBytes[0], receiveBytes)
                             dumpit = True
-
                         if self._logincoming or diagnostic3:
                             # print("returnData = ", returnData[0:returnData.find('\r')])
                             f = open("AISdatastream.txt", "a")
