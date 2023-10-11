@@ -76,8 +76,13 @@ class FileData:
 
                 # check if we need stop
                 _keepgoing = Global._keepgoing
+
+            except KeyboardInterrupt as e:
+                self.f.close()
+                raise KeyboardInterrupt from e
+
             except Exception as e:
-                raise RuntimeError("Exception in Get File Data", e)
+                raise RuntimeError("Exception in Get File Data", e) from e
 
 
 def main(self):

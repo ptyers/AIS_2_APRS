@@ -13,9 +13,13 @@ from datetime import datetime
 
 
 class GetSerial:
-    def __init__(selfself, ComPort: str, Speed: int):
+    def __init__(self, ComPort: str, Speed: int):
         # at the moment nothing happens except defining the queue used to communicate with the AIS processing section
         outqueue = Global.inputqueue
+
+    def cleanup(self):
+        pass
+
 
     def GetSerial(self):
         # reads data from a previously recorded file iof AIS input;
@@ -106,6 +110,11 @@ class GetSerial:
 
                 # check if we need stop
                 _keepgoing = Global._keepgoing
+
+            except KeyboardInterrupt as e:
+                ser.close()
+                raise KeyboardInterrupt from e
+
             except Exception as e:
                 raise RuntimeError("Exception in Get Serial Data", e) from e
 

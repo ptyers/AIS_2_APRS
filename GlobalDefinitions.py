@@ -31,8 +31,10 @@ class Global:
     #  and an AIS_Data object for later use
 
     mydata = AISData.AIS_Data(
-        "!AIVDM", "1", "1", "", "A", "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
-    )
+        "!AIVDM", "1", "1", "", "A",
+        "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
+        )
+
     #  and an array to hold fragmented messages
     MyFrags = Fragment.FRAGMENT(
         "9,2,3,4,5,6,7"

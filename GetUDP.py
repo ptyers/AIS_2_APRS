@@ -11,9 +11,13 @@ class GetDataUDP:
     def __init__(self, address: str, udpport: int):
 
         # initialise by establishing the socket
+        self.set_Port(udpport)
         self.sock.bind((address, udpport))
         self._logincoming = Global.LogIncoming
         pass
+
+    def clean_up(self):
+        self.sock.close()
 
     def set_Port(self, value):
         if isinstance(value, int):
@@ -80,7 +84,8 @@ class GetDataUDP:
                         print("Getting Data")
                         #  Blocks until a message returns on this socket from a remote host.
                         pass
-                    receiveBytes, addr = self.sock.recvfrom(4158)
+                    #receiveBytes, addr = self.sock.recvfrom(4158)
+                    receiveBytes, addr = self.sock.recvfrom(self.get_Port())
                     if not (addr[0] == "121.214.34.47" or receiveBytes[0] == 10):
                         current_input_frames += 1
 
@@ -146,8 +151,9 @@ class GetDataUDP:
                     current_dropped = 0
             # close out thread
 
-        except KeyboardInterrupt:
-            raise KeyboardInterrupt
+        except KeyboardInterrupt as e:
+            self.clean_up()
+            raise KeyboardInterrupt from e
         except Exception as e:
             #  Last gasp attempt to catch thread failure
             raise RuntimeError("Thread getting UDP data failed", e) from e

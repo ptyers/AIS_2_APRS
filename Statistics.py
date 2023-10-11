@@ -1,3 +1,5 @@
+import logging
+
 from resty import PathDispatcher
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 from GlobalDefinitions import Global
@@ -258,10 +260,16 @@ class Statistics:
 
         try:
             if self.do_check_server():
-                print("server address and server port being used are")
+                print("APRS server address and server port being used are")
                 do_print_server_address(GlobalDefinitions.Global.UseRemote)
+
+        except KeyboardInterrupt as e:
+            httpd.shutdown()
+            raise KeyboardInterrupt from e
+
         except Exception as e:
             print("Error - No valid APRS Server available\n%s", e)
+            logging.CRITICAL("Error - No valid APRS Server available\n%s", e)
             GlobalDefinitions.Global.CloseDown = True
 
         httpd.serve_forever()

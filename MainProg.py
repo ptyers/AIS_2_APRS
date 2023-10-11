@@ -37,13 +37,14 @@ and finally start up a thread to report statistics communicating by yet another 
 
 def main():
     inqueue = Global.inputqueue
-    outqueue = Global.outputqueue
+    #outqueue = Global.outputqueue
     Statsqueue = Global.Statsqueue
     try:
 
         initialise = MyPreConfigs.MyPreConfigs()
 
     except Exception as e:
+        logging.critical("error initialising PreConfigs", e)
         raise RuntimeError("error initialising PreConfigs", e) from e
     """ the __init__ function in MyPreconfigs will read ini file
     and set any variables that are different from the defaults
@@ -80,6 +81,7 @@ def main():
         tstats.start()
 
     except Exception as e:
+        logging.critical("Error starting threads", e)
         print("Error starting threads", e)
 
     # ##################################################################################################################
@@ -175,10 +177,11 @@ def main():
         except KeyboardInterrupt as e:
             print('Keyboard Interrupt occurred - ending threads and exiting')
             GlobalDefinitions.Global.CloseDown = True
-
+            GlobalDefinitions.Global._keepgoing = False
             sys.exit()
 
         except Exception as e:
+            logging.info()
             print("Restarting processes after exception\r\n", e)
             processed = -True
             if not Global.Production:
@@ -287,6 +290,7 @@ def do_function(keyword, AISObject):
             )
 
         print(Errmess + "\nAIS Data PayLoad is\n" + AISObject.AIS_Payload)
+        logging.debug(Errmess + "\nAIS Data PayLoad is\n" + AISObject.AIS_Payload)
         return None
 
 
