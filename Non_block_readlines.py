@@ -42,10 +42,18 @@ def nonblocking_readlines(f):
 
             if r == -1 or r > n:
                 yield buf[: (n + 1)].decode(enc)
-                buf = buf[(n + 1) :]
+                buf = buf[(n + 1):]
             elif n == -1 or n > r:
                 yield buf[:r].decode(enc) + "\n"
                 if n == r + 1:
-                    buf = buf[(r + 2) :]
+                    buf = buf[(r + 2):]
                 else:
-                    buf = buf[(r + 1) :]
+                    buf = buf[(r + 1):]
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

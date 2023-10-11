@@ -189,3 +189,11 @@ class MAPPER:
         return self._timestamp
 
     TimeStamp = property(get_Timestamp, set_Timestamp)
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

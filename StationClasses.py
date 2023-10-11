@@ -201,3 +201,11 @@ class Diver(GenericStation):
 
     def __init__(self, in_mmsi: str):
         super().__init__(in_mmsi)
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

@@ -415,7 +415,7 @@ def update24(MMSI, MyMap, new24):
     tname = new24.Name
     while len(tname) > 1 and tname[len(tname) - 1] == " ":  # suppress trailing spaces
         if len(tname) > 1:
-            tname = tname[0 : (len(tname) - 1)]
+            tname = tname[0: (len(tname) - 1)]
         else:
             break
     new24.Name = tname
@@ -447,3 +447,11 @@ def flushMyMap():
 
     for xx in deletelist:
         del Global.MyMap[xx]
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

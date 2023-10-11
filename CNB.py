@@ -299,3 +299,11 @@ def decode_char(self, in_char: str) -> int:
     else:
         my_int = my_int - 48
     return my_int
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

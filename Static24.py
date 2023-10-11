@@ -127,15 +127,15 @@ class STATIC24:
         if diagnostic3:
             print("in get string start = ", sstart, " length = ", length)
         ba = bytearray()
-        st = Binarystring[sstart + 1 : sstart + length + 1]
+        st = Binarystring[sstart + 1: sstart + length + 1]
         if diagnostic3:
             print("length st =", len(st))
         while len(st) < length:
             st = st + "0"
         for i in range(0, int(length / 6)):
             if diagnostic3:
-                print(st[i * 6 : (i * 6) + 6])
-            temp = int(st[i * 6 : (i * 6) + 5], 2)
+                print(st[i * 6: (i * 6) + 6])
+            temp = int(st[i * 6: (i * 6) + 5], 2)
             # print("temp = " + temp);
             temp = temp & 0x3F
             if temp < 31:
@@ -159,7 +159,7 @@ class STATIC24:
         # Suppress trailing Spaces
         for i in range(len(no_at) - 1, 1):
             if no_at[i] == " ":
-                no_at = no_at[0 : i - 1]
+                no_at = no_at[0: i - 1]
             else:
                 break
 
@@ -177,7 +177,7 @@ class STATIC24:
         if diagnostic3:
             print("in get int static24 start = ", sstart, " length = ", length)
 
-        st = Binarystring[sstart + 1 : sstart + length + 1]
+        st = Binarystring[sstart + 1: sstart + length + 1]
         if diagnostic3:
             print("in static24 length st =", len(st))
         while len(st) < length:
@@ -391,7 +391,7 @@ class STATIC24:
 def Remove_at(p: str) -> str:
     try:
         if p.index("@") > 0:
-            p = p[0 : p.index("@")]
+            p = p[0: p.index("@")]
             return p
         else:
             if p.index("@") == 0:
@@ -410,11 +410,11 @@ def Remove_space(p: str) -> str:
         if p == "":
             return ""
         else:
-            if p[len(p) - 1 : 1] == " ":
-                while p[len(p) - 1 : 1] == " ":
+            if p[len(p) - 1: 1] == " ":
+                while p[len(p) - 1: 1] == " ":
 
                     if len(p) > 1:
-                        p = p[0 : len(p) - 1]
+                        p = p[0: len(p) - 1]
                     else:
                         return ""
             return p
@@ -425,3 +425,11 @@ def Remove_space(p: str) -> str:
             "Error T24 Remove_Space string = " + p + " length = " + str(len(p)) + "\r\n"
         )
         raise RuntimeError("Error in TYpe 24 Remove_Space")
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

@@ -13,7 +13,6 @@ import pathlib
 
 
 class MyPreConfigs:
-
     # flag starttime
     GlobalDefinitions.starttime = datetime.now()
 
@@ -73,7 +72,7 @@ class MyPreConfigs:
         )
         # entry in ini file for MappingTTL is in MINUTES not Seconds
         GlobalDefinitions.Global.MappingTTL = (
-            int(cfg.get("operation", "MappingTTL")) * 60
+                int(cfg.get("operation", "MappingTTL")) * 60
         )
 
         #  parameter to alow controlled closedown
@@ -179,3 +178,11 @@ class MyPreConfigs:
             return retstring
         else:
             return thisstring
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

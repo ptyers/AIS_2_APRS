@@ -155,7 +155,6 @@ class Global:
     SNMP = True
     SNMPServer = "192.168.80.3"
 
-
     # group of Statistics
     starttime = datetime.datetime.now()  # this will be overwritten on start up
 
@@ -188,3 +187,11 @@ class Global:
     Production = False  # used to allow recovery in production environment
     # where error message3s will be written to a file but
     # operation will continue having dumped whatever record caused grief
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

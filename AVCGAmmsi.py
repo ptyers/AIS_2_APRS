@@ -105,3 +105,11 @@ class AVCGAMMSI:
         _dsc = record[12]
         _ant_checked = record[13]
         _comment = record[14]
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

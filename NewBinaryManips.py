@@ -164,7 +164,7 @@ def newer_Binary_Item(bitarray, startpos: int, blength: int) -> int:
     for x in bitarray:
         s = s + format(x, "08b")
 
-    reqbits = s[startpos : startpos + blength - 1]
+    reqbits = s[startpos: startpos + blength - 1]
 
     return int(reqbits, 2)
 
@@ -206,7 +206,7 @@ def Binary_Item(bitarray, startpos: int, blength: int) -> int:
     endbyte = endpos / 8
     currentbyte = startbyte
     if (
-        endbyte == startbyte
+            endbyte == startbyte
     ):  # within same byte shift returnbits right to make finish bit LSB
         returnbits = returnbits >> (8 - startpos - blength)
     else:
@@ -231,9 +231,8 @@ def Binary_Item(bitarray, startpos: int, blength: int) -> int:
 
 
 def extend_binary_payload(
-    binarypayload, newpayload, oldlength: int, startpos: int, addlength: int
+        binarypayload, newpayload, oldlength: int, startpos: int, addlength: int
 ):
-
     """
     binarypayload and newpayload are each bitarrays of 8 bit bytes zero bit stuffed at LSB of last byte
     oldlength is nominal length in bits of original payload
@@ -244,7 +243,7 @@ def extend_binary_payload(
 
     origendbyte = oldlength / 8
     oldorigbits = (
-        oldlength % 8
+            oldlength % 8
     )  # which means there were 8-oldorigbits zero stuffed which must be replaced
     # sanity check the start bit position of the added payload should start at position oldorigbits+1 in last byte
     # and of course this should match the parameter startpos passed
@@ -280,7 +279,7 @@ def extend_binary_payload(
         startbyte += 1
         # first clear out the MSBs from byte[0] of new payload
         newpayload[newbytepos] = newpayload[newbytepos] & (
-            2 ** (8 - stuffcount) - 1
+                2 ** (8 - stuffcount) - 1
         )  # masked to the unused bits
         tempint = 0
         tempint = tempint + newpayload[newbytepos]
@@ -299,8 +298,8 @@ def extend_binary_payload(
                 newbytepos += 1
                 nrbits -= 8  # reducve bit count by 8
                 tempint = (
-                    tempint & (2 ** (8 - nrbits) - 1)
-                ) << 8  # mask to nrbits and shift up 8
+                                  tempint & (2 ** (8 - nrbits) - 1)
+                          ) << 8  # mask to nrbits and shift up 8
 
             # now working on last bits which do notr make up a full byte
             # from previous whiule have tempint containg some bits upshifted 8
@@ -311,8 +310,8 @@ def extend_binary_payload(
             tempint = tempint >> 8
             # shift the newpayload byte rightwards to get only relevant bits
             remainder = (
-                startpos + addlength - 1
-            ) % 8  # the remainder mod 8 is number of bits yto be used
+                                startpos + addlength - 1
+                        ) % 8  # the remainder mod 8 is number of bits yto be used
             tempbyte = newpayload[newbytepos] >> (8 - remainder)
             # there exists a posibility that the sum of nrbits plus left over may be more than eight
             # so the usual munging must occur
@@ -342,3 +341,11 @@ def extend_binary_payload(
                 )
 
         return binarypayload
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

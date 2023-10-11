@@ -43,9 +43,9 @@ class MergeFragments:
 
             f1payload = frag1.PayLoad
 
-            lastchar = f1payload[len(f1payload) - 1 : 1]
+            lastchar = f1payload[len(f1payload) - 1: 1]
 
-            f1payload = f1payload[0 : len(f1payload) - 2]
+            f1payload = f1payload[0: len(f1payload) - 2]
 
             #
             #  now convert the last character and the second payload to bytes
@@ -74,7 +74,7 @@ class MergeFragments:
                         holder2 = mybyte2[i]
                         holder = holder >> frag1.FillBits
                         holder = (
-                            holder << frag1.FillBits
+                                holder << frag1.FillBits
                         )  # now zero filled at lower bits
                         holder2 = holder2 >> frag1.FillBits
                         holder = holder + holder2
@@ -88,7 +88,7 @@ class MergeFragments:
                         holder2 = mybyte2[i]
                         holder = holder >> frag1.FillBits
                         holder = (
-                            holder << frag1.FillBits
+                                holder << frag1.FillBits
                         )  # now zero filled at lower bits
                         holder2 = holder2 >> frag1.FillBits
                         holder = holder + holder2
@@ -107,3 +107,11 @@ class MergeFragments:
             frag1.PayLoad = frag1.PayLoad + lastchar + secondstring
 
             return frag1.PayLoad  # returns a FRAGMENT
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

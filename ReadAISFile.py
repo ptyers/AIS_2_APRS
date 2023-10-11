@@ -69,3 +69,11 @@ class ReadAISFile:
 
         # Exceptionstring = ExceptionExtension.ToFullDisplayString(e)
         # print(Exceptionstring)
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

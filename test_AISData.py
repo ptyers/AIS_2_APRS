@@ -27,3 +27,14 @@ class TestAIS_Data(TestCase):
 
     def test_remove_space(self):
         self.fail()
+
+    def test_create_bytearray_payload(self):
+        self.fail()
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

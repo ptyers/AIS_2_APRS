@@ -21,3 +21,11 @@ class PathDispatcher:
     def register(self, method, path, function):
         self.pathmap[method.lower(), path] = function
         return function
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

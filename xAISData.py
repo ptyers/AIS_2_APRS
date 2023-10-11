@@ -1454,3 +1454,9 @@ class AIS_Data:
 
 
 # region Disposals
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

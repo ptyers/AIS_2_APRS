@@ -78,7 +78,7 @@ def handle_fragments(payload):
 
     """' Have got them all ?"""
     if len(ExtractedFrags) == int(
-        aisfields[1]
+            aisfields[1]
     ):  # Have we same number of fragments as Fragment Count?
         # YES
 
@@ -128,8 +128,8 @@ def handle_fragments(payload):
                 # remove fill bits from myAIS.AIS_Binary_Payload
                 # by slicing the string removing last fill chars bits
                 myAIS.AIS_Binary_Payload = myAIS.AIS_Binary_Payload[
-                    0 : -(int(lastfrag[6][0]))
-                ]
+                                           0: -(int(lastfrag[6][0]))
+                                           ]
                 if diagnostic3:
                     print("Fill bits removed\n", myAIS.AIS_Binary_Payload)
             # just append the binary string created from testfrag to myAIS.AIS_Binary_Payload
@@ -192,8 +192,8 @@ def handle_fragments(payload):
                         )
 
                 if (
-                    delta < GlobalDefinitions.Global.FragDictTTL
-                    and FragDict[key][3] != aisfields[3]
+                        delta < GlobalDefinitions.Global.FragDictTTL
+                        and FragDict[key][3] != aisfields[3]
                 ):
                     xyzzy[key] = FragDict[key]
                 else:
@@ -222,3 +222,11 @@ def handle_fragments(payload):
         return myAIS
     else:
         return None
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

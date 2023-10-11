@@ -313,3 +313,11 @@ class Statistics:
             ) from e
 
         return True
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

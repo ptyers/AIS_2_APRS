@@ -81,11 +81,11 @@ class GetDataUDP:
                         #  Blocks until a message returns on this socket from a remote host.
                         pass
                     receiveBytes, addr = self.sock.recvfrom(4158)
-                    if not (addr[0] == "121.214.34.47" or  receiveBytes[0] == 10):
+                    if not (addr[0] == "121.214.34.47" or receiveBytes[0] == 10):
                         current_input_frames += 1
 
                     if (
-                        addr[0] not in UDP_Received_IP_Addresses
+                            addr[0] not in UDP_Received_IP_Addresses
                     ):  # whether this gets used is uncertain
                         UDP_Received_IP_Addresses[addr[0]] = 1
                         if diagnostic3:
@@ -109,14 +109,14 @@ class GetDataUDP:
                         if self._logincoming or diagnostic3:
                             # print("returnData = ", returnData[0:returnData.find('\r')])
                             f = open("AISdatastream.txt", "a")
-                            f.write("%s" % returnData[0 : returnData.find("\r") + 1])
+                            f.write("%s" % returnData[0: returnData.find("\r") + 1])
                             f.close()
                         if addr[0] == "60.231.221.5":
                             dumpit = True
 
                         if not Global.inputqueue.full() and not dumpit:
                             Global.inputqueue.put(
-                                returnData[0 : returnData.find("\r") + 1]
+                                returnData[0: returnData.find("\r") + 1]
                             )
                         else:
                             # dump record - nowhere for it to go
@@ -154,3 +154,11 @@ class GetDataUDP:
 
         # Exceptionstring = ExceptionExtension.ToFullDisplayString(e)
         # print(Exceptionstring)
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

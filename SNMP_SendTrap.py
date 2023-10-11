@@ -29,7 +29,7 @@ extra trap (non-standard)
 Error Trap '1.3.6.1.6.3.1.1.5.6'
 
 
-"""#
+"""  #
 from pysnmp.hlapi import *
 
 iterator = sendNotification(
@@ -52,3 +52,11 @@ errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
 
 if errorIndication:
     print(errorIndication)
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

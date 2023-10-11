@@ -149,3 +149,11 @@ class FRAGMENT:
 
     def ValidBits(self) -> int:
         return 6 - int(self.p_trailer[0:1])
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

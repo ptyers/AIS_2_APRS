@@ -77,3 +77,11 @@ class BASESTATION:
                 " ",
                 aisdata.HDG,
             )
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

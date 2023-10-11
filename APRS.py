@@ -376,3 +376,11 @@ class APRS:
             )
 
         return message
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

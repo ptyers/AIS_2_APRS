@@ -77,7 +77,7 @@ class GetSerial:
                     if LogIncomming or diagnostic3:
                         # print("returnData = ", returnData[0:returnData.find('\r')])
                         f = open("AISdatastream.txt", "a")
-                        f.write("%s" % stringer[0 : stringer.find("\r") + 1])
+                        f.write("%s" % stringer[0: stringer.find("\r") + 1])
                         f.close()
 
                     if Global.inputqueue.full():
@@ -126,3 +126,11 @@ class GetSerial:
                 current_dropped = 0
 
     pass
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

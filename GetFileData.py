@@ -78,3 +78,11 @@ class FileData:
                 _keepgoing = Global._keepgoing
             except Exception as e:
                 raise RuntimeError("Exception in Get File Data", e)
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

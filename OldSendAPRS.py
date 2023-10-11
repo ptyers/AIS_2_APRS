@@ -4,6 +4,7 @@ from datetime import datetime
 from socket import socket, AF_INET, SOCK_STREAM, SOCK_DGRAM
 from APRS import APRS
 
+
 # region SendAPRS
 def SendAPRS(p, mydata, kill: bool, Bulletin: int):
     diagnostic = GlobalDefinitions.Global.diagnostic
@@ -31,7 +32,7 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int):
     except Exception as e:
         raise RuntimeError("Error creating myaprs in SendAPRS", e) from e
 
-    if p < 4 or p == 9 or p == 18:  #  types 1,2 , 3, 9 and 18 position reports
+    if p < 4 or p == 9 or p == 18:  # types 1,2 , 3, 9 and 18 position reports
         #            if ((mydata.Latitude < 91) && (mydata.Longitude < 181))  #  only send valid lat/long to server
         try:
             if diagnostic3 and len(mydata.Callsign) > 0:
@@ -336,3 +337,11 @@ def TransmitAPRS(tcpstream):
             raise RuntimeError("Error dequeinng in Transmit APRS", e) from e
 
         GlobalDefinitions.Global.APRS_Socket_Status = False
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

@@ -15,3 +15,12 @@ while True:
     if fields[5][0] == "H":
         s24.write(string24)
         pass
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()
+

@@ -115,3 +115,11 @@ def Parse_AIS(self, returnData: str, pre_validated: bool):
 
     except Exception as e:
         raise RuntimeError("Exception while parsing in send data", e) from e
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

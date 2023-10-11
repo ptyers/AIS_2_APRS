@@ -4,6 +4,7 @@ from datetime import datetime
 from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR, SOCK_DGRAM
 from APRS import APRS
 
+
 # region SendAPRS
 
 
@@ -390,3 +391,11 @@ def do_log_aprs(logaprs: bool, aprslogfile, tcpbytes):
     except Exception as e:
         raise RuntimeError("Exception while appending to logfile %s \n", e) from e
     return None
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()

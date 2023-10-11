@@ -12,7 +12,7 @@ def ProcessAVCGAList():
     loop = True
     AVCGADict = {}
     filename = (
-        GlobalDefinitions.Global.WorkingDir + "\\" + GlobalDefinitions.Global.AVCGAList
+            GlobalDefinitions.Global.WorkingDir + "\\" + GlobalDefinitions.Global.AVCGAList
     )
     try:
         csv = open(filename, "r")
@@ -50,3 +50,11 @@ def ProcessAVCGAList():
             loop = False
 
     return AVCGADict
+
+
+def main(self):
+    pass
+
+
+if __name__ == 'main':
+    main()
