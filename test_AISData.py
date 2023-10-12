@@ -1,5 +1,6 @@
 from unittest import TestCase
 from AISData import AIS_Data
+from AISDictionary import AISDictionaries
 
 
 class TestAIS_Data(TestCase):
@@ -40,24 +41,27 @@ class TestAIS_Data(TestCase):
             payload = self.mytestdata[i].split(',')
             self._binary_payload, self.binlen = AIS_Data.create_binary_payload(payload[5])
 
-            print(self._binary_payload)
+            #print(self._binary_payload)
 
             intmmsi = AIS_Data.Binary_Item(self, 8,30)
-            print(intmmsi)
+            #print(intmmsi)
 
 
 
 
     def test_create_binary_payload(self):
+        dict = AISDictionaries()
+        print('Testing create_binary_payload')
         for i in range(5):
+            self.testpay: str = ''
             payload = self.mytestdata[i].split(',')
-            print(payload[5].encode("utf-8").hex())
             self.binpay, self.binlen = AIS_Data.create_binary_payload(payload[5])
+            for char in payload[5]:
+                self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, char)
 
-            print(self.binpay)
+            self.assertEqual(self.binpay, self.testpay, "Create binary payload failure")
 
-            self.assertEqual(self.binpay,payload[5],
-                             "Create binary payload failure" )
+        print('Succeeded')
 
 
     def test_create_bytearray_payload(self):
