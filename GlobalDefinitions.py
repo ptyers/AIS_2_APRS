@@ -14,7 +14,7 @@ entries in APRS.ini override definitions in this file
 
 
 """
-import AISData
+from AISData import AIS_Data
 import Fragment
 import Static24
 import Mapper
@@ -30,7 +30,7 @@ class Global:
 
     #  and an AIS_Data object for later use
 
-    mydata = AISData.AIS_Data(
+    mydata = AIS_Data(
         "!AIVDM", "1", "1", "", "A",
         "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
         )

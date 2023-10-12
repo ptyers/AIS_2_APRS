@@ -1,7 +1,7 @@
 import math
 import sys
 import array as arr
-import MyPreConfigs
+
 
 
 def Dissemble_encoded_string(encoded_string: str):
@@ -505,7 +505,7 @@ class AIS_Data:
     def get_AIS_Binary_Payload(self):
         return self._binary_payload
 
-    def set_AIS_Binary_Payload(self, value):
+    def set_AIS_Binary_Payload(self, value: str):
         if isinstance(value, str):
             self._binary_payload = value
         else:
@@ -653,6 +653,8 @@ class AIS_Data:
                     print('in m_setup_Payload_ID = ', self._Payload_ID)
                 self._binary_payload, self._binary_length = AIS_Data.create_binary_payload(
                     self._payload)  # binary form of payload
+
+                #AIS_Data.set_AIS_Binary_Payload(self._binary_payload)
                 # not currently used but available if converting to use bytearray instead of str for binary payload
                 # _byte_payload = AIS_Data.create_bytearray_payload(self._payload)
                 # self._binary_length = len(_byte_payload)
@@ -1417,13 +1419,13 @@ class AIS_Data:
 
     # endregion
     # region Private Methods
-    def create_binary_payload(p_payload: str) -> str:
+    def create_binary_payload(p_payload: str) -> tuple:
         # based on using a supersized string rather than bytearray
         #
         printdiag = False
         #
         # define a null string
-        _binary_payload = ''
+        _abinary_payload = ''
         _byte_payload = bytearray()
         _byte_payload.extend(p_payload.encode())
         # print('bytearray version of payload\n', _byte_payload,
@@ -1440,12 +1442,14 @@ class AIS_Data:
                 print('nibble', bin(nibble))
 
             # now append the nibble to the stream
-            _binary_payload = _binary_payload + format(nibble, '06b')
+            _abinary_payload = _abinary_payload + format(nibble, '06b')
 
             if printdiag:
-                print(_binary_payload)
+                print(_abinary_payload)
 
-        return _binary_payload, len(_binary_payload)
+        _binary_payload = _abinary_payload
+
+        return _abinary_payload, len(_abinary_payload)
 
     def create_bytearray_payload(p_payload: str) -> bytearray:
         # based on using a supersized string rather than bytearray
