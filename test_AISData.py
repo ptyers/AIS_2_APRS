@@ -21,6 +21,47 @@ class TestAIS_Data(TestCase):
         '!AIVDM,1,1,,A,19NS6o002U:`fMQaqINBiBC20HCp,0*69'
     ]
 
+    def test_create_binary_payload(self):
+        dict = AISDictionaries()
+        print('Testing create_binary_payload')
+        for i in range(5):
+            self.testpay: str = ''
+            payload = self.mytestdata[i].split(',')
+            self.binpay, self.binlen = AIS_Data.create_binary_payload(payload[5])
+            for char in payload[5]:
+                self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, char)
+
+            self.assertEqual(self.binpay, self.testpay, "Create binary payload failure")
+
+        print('Succeeded')
+
+    def test_create_bytearray_payload(self):
+        dict = AISDictionaries()
+        print('Testing create_bytearray_payload')
+        for i in range(5):
+            self.testpay: str = ''
+            payload = self.mytestdata[i].split(',')
+            self.binpay= AIS_Data.create_bytearray_payload(payload[5])
+            print(self.binpay)
+            for char in payload[5]:
+                self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, char)
+
+            #self.assertEqual(self.binpay, self.testpay, "Create binary payload failure")
+
+        #print('Succeeded')
+        self.fail()
+
+    def test_binary_item(self):
+        for i in range(5):
+            payload = self.mytestdata[i].split(',')
+            self._binary_payload, self.binlen = AIS_Data.create_binary_payload(payload[5])
+
+            #print(self._binary_payload)
+
+            intmmsi = AIS_Data.Binary_Item(self, 8,30)
+            #print(intmmsi)
+
+
     def test_print_ais(self):
         self.fail()
 
@@ -36,36 +77,12 @@ class TestAIS_Data(TestCase):
     def test_extract_int(self):
         self.fail()
 
-    def test_binary_item(self):
-        for i in range(5):
-            payload = self.mytestdata[i].split(',')
-            self._binary_payload, self.binlen = AIS_Data.create_binary_payload(payload[5])
-
-            #print(self._binary_payload)
-
-            intmmsi = AIS_Data.Binary_Item(self, 8,30)
-            #print(intmmsi)
 
 
 
 
-    def test_create_binary_payload(self):
-        dict = AISDictionaries()
-        print('Testing create_binary_payload')
-        for i in range(5):
-            self.testpay: str = ''
-            payload = self.mytestdata[i].split(',')
-            self.binpay, self.binlen = AIS_Data.create_binary_payload(payload[5])
-            for char in payload[5]:
-                self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, char)
-
-            self.assertEqual(self.binpay, self.testpay, "Create binary payload failure")
-
-        print('Succeeded')
 
 
-    def test_create_bytearray_payload(self):
-        self.fail()
 
     def test_m_to_int(self):
         self.fail()
