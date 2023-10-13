@@ -2,6 +2,23 @@ from unittest import TestCase
 from AISData import AIS_Data
 from AISDictionary import AISDictionaries
 import logging
+import random
+
+class Prbs:
+    '''
+    Psuedo random Sequence Generator
+    Given an integer, the function will generate PRBS sequence a bit at a time
+    and return an integer containing the next 32 bits of the sequence.
+    Note the input integer's bits above x31 are irrelevant to the output.
+    '''
+    def __init__(self):
+        pass
+
+    def prbs31(self, code: int) -> int:
+        for i in range(32):
+            next_bit = ~((code >> 30) ^ (code >> 27)) & 0x01
+            code = ((code << 1) | next_bit) & 0xFFFFFFFF
+        return code
 
 
 class TestAIS_Data(TestCase):
@@ -64,14 +81,31 @@ class TestAIS_Data(TestCase):
 
 
     def test_binary_item(self):
-        for i in range(5):
-            payload = self.mytestdata[i].split(',')
-            self._binary_payload, self.binlen = AIS_Data.create_binary_payload(payload[5])
+        '''
+        Produces random number in rage 0 to 999999999 and sets up fake binary_payload string
+        then extracts that binary number from the string using AIS_Data.Binary_item
+        '''
+        # some necessary preconfig
+        dict = AISDictionaries()
+        mydata = AIS_Data(
+            "!AIVDM", "1", "1", "", "A",
+            "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
+        )
 
-            #print(self._binary_payload)
+        print("Testing Binary_item")
+        # Create fake AIS payload with a random binary number in bits 8 to 37
+        for i in range(10):
+            fakestream: str = '00010000'
+            faketail: str = '000000000000000000000000000000'
 
-            intmmsi = AIS_Data.Binary_Item(self, 8,30)
-            #print(intmmsi)
+            testnumber:int = random.randint(0,999999999)
+            strnumber:str = "{:030b}".format(testnumber)
+            fakestream = fakestream + strnumber + faketail
+            mydata.set_AIS_Binary_Payload(fakestream)
+            intmmsi = mydata.Binary_Item( 8, 30)
+            self.assertEqual(testnumber, intmmsi,"FAiled in test_binary_item")
+        print("Succeeded")
+
 
 
     def test_print_ais(self):
@@ -107,6 +141,7 @@ class TestAIS_Data(TestCase):
 
     def main(self):
         self.test_create_binary_payload()
+        self.test_create_bytearray_payload()
         pass
 
     if __name__ == "main":

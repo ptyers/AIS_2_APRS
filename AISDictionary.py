@@ -39,3 +39,6 @@ class AISDictionaries:
         #print(self.payload_armour[payload_char])
         #print(payload_char,"", self.payload_armour[payload_char] )
         return binpay + self.payload_armour[payload_char]
+
+    def get_payload_armour(self,char: str) -> str:
+        return self.payload_armour[char]
