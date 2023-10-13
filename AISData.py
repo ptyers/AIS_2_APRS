@@ -1,7 +1,6 @@
-import math
 import sys
-import array as arr
-
+import struct
+import logging
 
 
 def Dissemble_encoded_string(encoded_string: str):
@@ -654,7 +653,7 @@ class AIS_Data:
                 self._binary_payload, self._binary_length = AIS_Data.create_binary_payload(
                     self._payload)  # binary form of payload
 
-                #AIS_Data.set_AIS_Binary_Payload(self._binary_payload)
+                # AIS_Data.set_AIS_Binary_Payload(self._binary_payload)
                 # not currently used but available if converting to use bytearray instead of str for binary payload
                 # _byte_payload = AIS_Data.create_bytearray_payload(self._payload)
                 # self._binary_length = len(_byte_payload)
@@ -1408,10 +1407,10 @@ class AIS_Data:
     def Binary_Item(self, startpos: int, blength: int) -> int:
         # newer version concept only
         # convert bitarray to a string, use string slicing to get bits
-        # then con vert the slice to int using int(string,2)
+        # then convert the slice to int using int(string,2)
 
         reqbits = self._binary_payload[startpos:startpos + blength]
-        # print('in Binary Item type reqbits = ', type(reqbits), ' value reqbits =', reqbits)
+        logging.debug('in Binary Item type reqbits = ', type(reqbits), ' value reqbits =', reqbits)
         if len(reqbits) != 0:
             return int(reqbits, 2)
         else:
@@ -1451,7 +1450,7 @@ class AIS_Data:
 
         return _abinary_payload, len(_abinary_payload)
 
-    def create_bytearray_payload(p_payload: str) -> bytearray:
+    def create_bytearray_payload(p_payload: str) -> tuple:
         # based on using a supersized string rather than bytearray
         #
         printdiag = False
@@ -1465,22 +1464,78 @@ class AIS_Data:
         #       '\nfrom \n',p_payload)
 
         newbytes = bytearray()
-        for i in range(0, len(_byte_payload)-1):
+        _binlength = len(p_payload)
+        for i in range(0, len(p_payload)):
             if printdiag:
                 print('in create binary payload ', len(p_payload), i)
             # iterate through the string payload masking to lower 6 bits
-            thebyte :int = int(_byte_payload[i] )
+            thebyte: int = int(_byte_payload[i])
             thebyte = thebyte - 48
             if thebyte > 40:
                 newbytes.extend((thebyte - 8).to_bytes(1, "big"))
             else:
                 newbytes.extend(thebyte.to_bytes(1, "big"))
 
+        # now repack the bytearray as a string of 6 bit nibbles
+        _byte_payload = bytearray()
 
+        # need to keep track of the 8 bit byte into which we are putting the nibble part
+        #  (splits across bytes generally)
+        # for each 4 nibbles 3 output bytes will be created.
+        #
+        outbyte = 0
 
-        if printdiag:
-            print(_byte_payload.hex())
-        return _byte_payload
+        for innibble in range(_binlength):
+            # use modulas to keep track of where we are in sequence
+            ii = innibble % 4
+
+            match ii:
+                case 0:
+                    # mask to 6 bits and shift to MSB of outbyte
+                    _byte = (newbytes[innibble] & 0x3F) << 2
+                    _byte_payload.extend(struct.pack("B", (newbytes[innibble] & 0x3F) << 2))
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+
+                case 1:
+                    # mask to 2 MSB and put them into outbyte
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                    _byte_payload[outbyte] = ((newbytes[innibble] & 0x30) >> 4) + _byte_payload[outbyte]
+                    # now put 4 LSB into MSB of next outbyte
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                    outbyte += 1
+                    _byte = (newbytes[innibble] & 0x0F) << 4
+                    _byte_payload.extend(struct.pack("B", _byte))
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+
+                case 2:
+                    # mask  four MSB, move to lower bits  of outbyte
+                    _byte_payload[outbyte] = ((newbytes[innibble] & 0x3F) >> 2) + _byte_payload[outbyte]
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                    outbyte += 1
+                    # put 2 LSB into MSB of next outbyte
+                    _byte_payload.extend(struct.pack("B", (newbytes[innibble] & 0x03) << 6))
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+
+                case 3:
+                    # put 6 MSBbits into LSB of next outbyte
+                    _byte_payload[outbyte] = ((newbytes[innibble] & 0x3F)) + _byte_payload[outbyte]
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                    outbyte += 1
+
+                case _:
+                    _byte_payload = bytearray()
+                    _binlength = 0
+                    raise RuntimeError("error in selecting bytes in create_bytearray_payload")
+
+        logging.debug(_byte_payload.hex())
+        return _byte_payload, len(_byte_payload)
 
     def m_to_int(parameter: str) -> int:
         # takes in a encoded string of variable length and returns positive integer

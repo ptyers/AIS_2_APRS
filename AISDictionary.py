@@ -35,9 +35,7 @@ class AISDictionaries:
 
 
     def makebinpayload(self, binpay: str, payload_char: str) -> str:
-        #print(payload_char)
-        if payload_char == "'":
-            payload_char = 'Z'
 
         #print(self.payload_armour[payload_char])
+        #print(payload_char,"", self.payload_armour[payload_char] )
         return binpay + self.payload_armour[payload_char]

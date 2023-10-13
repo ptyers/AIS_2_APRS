@@ -1,6 +1,7 @@
 from unittest import TestCase
 from AISData import AIS_Data
 from AISDictionary import AISDictionaries
+import logging
 
 
 class TestAIS_Data(TestCase):
@@ -24,32 +25,43 @@ class TestAIS_Data(TestCase):
     def test_create_binary_payload(self):
         dict = AISDictionaries()
         print('Testing create_binary_payload')
-        for i in range(5):
+        for i in range(len(self.mytestdata)-1):
             self.testpay: str = ''
             payload = self.mytestdata[i].split(',')
             self.binpay, self.binlen = AIS_Data.create_binary_payload(payload[5])
             for char in payload[5]:
                 self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, char)
 
-            self.assertEqual(self.binpay, self.testpay, "Create binary payload failure")
+            self.assertEqual(self.testpay, self.binpay, "Create binary payload failure")
 
         print('Succeeded')
 
     def test_create_bytearray_payload(self):
         dict = AISDictionaries()
+        binpay : bytearray
         print('Testing create_bytearray_payload')
         for i in range(5):
             self.testpay: str = ''
             payload = self.mytestdata[i].split(',')
-            self.binpay= AIS_Data.create_bytearray_payload(payload[5])
-            print(self.binpay)
-            for char in payload[5]:
-                self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, char)
+            self.binpay, self.binlength = AIS_Data.create_bytearray_payload(payload[5])
+            self.ostring= ''
+            for i in range(len(self.binpay)):
+                self.ostring = self.ostring + "{:08b}".format(self.binpay[i])
 
-            #self.assertEqual(self.binpay, self.testpay, "Create binary payload failure")
+            logging.debug("character version of bytearray\n", self.ostring)
+            testpay = payload[5]
+            for ij in range(len(testpay)):
+                self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, testpay[ij])
 
-        #print('Succeeded')
-        self.fail()
+            # the create bytearray by default pads with 0's to byte boundary.
+            # to match the expected string needs to be padded as well
+            while len(self.testpay) % 24 != 0:
+                self.testpay = self.testpay + "0"
+
+            self.assertEqual(self.testpay, self.ostring, "Create bytearray payload failure")
+
+        print('Succeeded')
+
 
     def test_binary_item(self):
         for i in range(5):
