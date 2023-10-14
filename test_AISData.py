@@ -197,6 +197,8 @@ class TestAIS_Data(TestCase):
 
             self.assertEqual(rndtext, outstr, "Failed in Extract_String")
 
+##### Error still exists last character in string if @ returns as w
+
         print("Succeeded")
 
     def test_print_ais(self):
