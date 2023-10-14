@@ -6,6 +6,28 @@ import random
 
 
 class TestAIS_Data(TestCase):
+    # function used to initialise tests. sets up access to AIS_Data and Dictionary
+
+    mytestdata = [
+        '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05',
+        '!AIVDM,2,1,7,A,57Oi`:021ssqHiL6221L4l8U8V2222222222220l1@F476Ik0;QA1C`88888,0*1E',
+        '!AIVDM,2,2,7,A,88888888888,2*2B',
+        '!AIVDM,1,1,,A,404k0WivNUSSNbKvjEag;4W00HB@,0*34',
+        '!AIVDM,1,1,,B,177Q0U04BL:`kKQapd7RpB@v0HBB,0*6D',
+        '!AIVDM,1,1,,A,15Rl8D002I:irnQc>`@hg0Vr08BL,0*65',
+        '!AIVDM,1,1,,B,13loh<01Qm:jL<wcUG5p3nQ004J<,0*60',
+        '!AIVDM,1,1,,B,404kS@P000Htt<tSF0l4Q@100pBr,0*10',
+        '!AIVDM,1,1,,B,17Oosc0q2K:NrnOaf@Mobww200SB,0*28',
+        '!AIVDM,1,1,,A,19NS6o002U:`fMQaqINBiBC20HCp,0*69'
+    ]
+
+    def initialise(self):
+        diction = AISDictionaries()
+        mydata = AIS_Data(
+            "!AIVDM", "1", "1", "", "A",
+            "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
+        )
+        return diction, mydata
 
     def test_binary_item(self):
         '''
@@ -13,12 +35,12 @@ class TestAIS_Data(TestCase):
         then extracts that binary number from the string using AIS_Data.Binary_item
         '''
         # some necessary preconfig
-        dict = AISDictionaries()
-        mydata = AIS_Data(
-            "!AIVDM", "1", "1", "", "A",
-            "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
-        )
-
+        # dict = AISDictionaries()
+        # mydata = AIS_Data(
+        #     "!AIVDM", "1", "1", "", "A",
+        #     "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
+        # )
+        dict, mydata = self.initialise()
         print("Testing Binary_item")
         # Create fake AIS payload with a random binary number in bits 8 to 37
         for i in range(10):
@@ -36,19 +58,6 @@ class TestAIS_Data(TestCase):
     '''
     block of strings to get test data
     '''
-
-    mytestdata = [
-        '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05',
-        '!AIVDM,2,1,7,A,57Oi`:021ssqHiL6221L4l8U8V2222222222220l1@F476Ik0;QA1C`88888,0*1E',
-        '!AIVDM,2,2,7,A,88888888888,2*2B',
-        '!AIVDM,1,1,,A,404k0WivNUSSNbKvjEag;4W00HB@,0*34',
-        '!AIVDM,1,1,,B,177Q0U04BL:`kKQapd7RpB@v0HBB,0*6D',
-        '!AIVDM,1,1,,A,15Rl8D002I:irnQc>`@hg0Vr08BL,0*65',
-        '!AIVDM,1,1,,B,13loh<01Qm:jL<wcUG5p3nQ004J<,0*60',
-        '!AIVDM,1,1,,B,404kS@P000Htt<tSF0l4Q@100pBr,0*10',
-        '!AIVDM,1,1,,B,17Oosc0q2K:NrnOaf@Mobww200SB,0*28',
-        '!AIVDM,1,1,,A,19NS6o002U:`fMQaqINBiBC20HCp,0*69'
-    ]
 
     def test_create_binary_payload(self):
         dict = AISDictionaries()
@@ -89,33 +98,6 @@ class TestAIS_Data(TestCase):
             self.assertEqual(self.testpay, self.ostring, "Create bytearray payload failure")
 
         print('Succeeded')
-
-    def test_ExtractInt(self):
-        '''
-               Produces random number in rage 0 to 999999999 and sets up fake binary_payload string
-               then extracts that binary number from the string using AIS_Data.Binary_item
-               effectively same test as for Binary_item
-               '''
-        # some necessary preconfig
-        diction = AISDictionaries()
-        mydata = AIS_Data(
-            "!AIVDM", "1", "1", "", "A",
-            "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
-        )
-
-        print("Testing extract_int")
-        # Create fake AIS payload with a random binary number in bits 8 to 37
-        for i in range(10):
-            fakestream: str = '00010000'
-            faketail: str = '000000000000000000000000000000'
-
-            testnumber: int = random.randint(0, 999999999)
-            strnumber: str = "{:030b}".format(testnumber)
-            fakestream = fakestream + strnumber + faketail
-            mydata.set_AIS_Binary_Payload(fakestream)
-            intmmsi = mydata.ExtractInt(8, 30)
-            self.assertEqual(testnumber, intmmsi, "FAiled in test_binary_item")
-        print("Succeeded")
 
     def test_m_to_int(self):
         '''
@@ -166,11 +148,57 @@ class TestAIS_Data(TestCase):
             intmmsi = mydata.ExtractInt(8, 30)
             self.assertEqual(testnumber, intmmsi, "FAiled in test_binary_item")
         print("Succeeded")
-    def test_extract_string(self):
-        self.fail()
 
-    def test_get_ais_binary_payload(self):
-        self.fail()
+    def test_extract_string(self):
+        '''
+                Create dummy binary payload including some test strings use Extract_String to recover text
+        :return:
+            string text to be compared
+        '''
+        print("Testing ExtractString")
+        diction, mydata = self.initialise()
+
+        fakestream: str = '00010000'
+        faketail: str = '11111111111111111111'
+
+        testtext: str = 'ABCDEFGHIJKLMNOPQRSTUVWabcdefghijklmnopqrstuvw01234567890:;<>=?@@'
+
+        for _ in range(10):
+
+            for ik in range(len(testtext) - 1):
+                fakestream = diction.makebinpayload(fakestream, testtext[ik])
+            fakestream = fakestream + faketail
+
+            # set this as "binary_payload" in AIS_Data and set its length as 6 times the text length plus
+            # additional head/tail bits (28)
+            mydata.set_AIS_Binary_Payload(fakestream)
+            mydata.set_AIS_Binary_Payload_length((len(testtext) * 6) + 28)
+
+            # nominal start of text stream
+            basepos: int = 8
+            rndstrt = random.randint(0, len(testtext) - 1)
+            # can pick out any random portion no more than 30chars size
+            # then check if the combination of start posn plus length will not exceed binary_payload length
+            rndlen = random.randint(1, 30)
+            while rndstrt * 6 + rndlen * 6 > len(testtext) * 6:
+                rndlen = random.randint(1, 30)
+
+            # then extract the text segment we will be recovering from the binary_payload
+            rndtext = testtext[rndstrt:rndstrt + rndlen]
+
+            startpos: int = 8 + rndstrt * 6
+            blklen = rndlen * 6
+
+            logging.debug("DEBUG binary_payload from which string will be extracted\n",
+                          mydata.get_AIS_Binary_Payload())
+
+            outstr = mydata.ExtractString(startpos, rndlen * 6)
+            logging.debug('Extracted string ', outstr)
+
+            self.assertEqual(rndtext, outstr, "Failed in Extract_String")
+
+        print("Succeeded")
+
     def test_print_ais(self):
         self.fail()
 
@@ -182,13 +210,20 @@ class TestAIS_Data(TestCase):
         print("Testing m_setup")
         self.fail()
 
-
-
     def test_remove_at(self):
         self.fail()
 
     def test_set_Encoded_String(self):
-        self.fail()
+        diction, mydata = self.initialise()
+        mydata.set_Encoded_String(self.mytestdata[0].split(',')[5])
+        out = mydata.get_Encoded_String()
+        self.assertEqual(self.mytestdata[0].split(',')[5], out)
+
+    def test_get_Encoded_String(self):
+        diction, mydata = self.initialise()
+        mydata.set_Encoded_String(self.mytestdata[0].split(',')[5])
+        out = mydata.get_Encoded_String()
+        self.assertEqual(self.mytestdata[0].split(',')[5], out)
 
     def test_set_Fragment(self):
         self.fail()
@@ -207,8 +242,6 @@ class TestAIS_Data(TestCase):
 
     def test_get_ais_payload(self):
         self.fail()
-
-
 
     def test_set_ais_binary_payload(self):
         self.fail()

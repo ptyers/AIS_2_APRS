@@ -474,12 +474,12 @@ class AIS_Data:
     def get_AIS_FragCount(self):
         return self._Frag
 
-    #AIS_FragCount = property(get_AIS_FragCount)
+    # AIS_FragCount = property(get_AIS_FragCount)
 
     def get_AIS_FragNo(self):
         return self._Fragno
 
-    #AIS_FragNo = property(get_AIS_FragNo)
+    # AIS_FragNo = property(get_AIS_FragNo)
     '''
     def get_xx(self):
         return self.yy
@@ -489,17 +489,17 @@ class AIS_Data:
     def get_Message_ID(self):
         return self._Message_ID
 
-    #AIS_Message_ID = property(get_Message_ID)
+    # AIS_Message_ID = property(get_Message_ID)
 
     def get_AIS_Channel(self):
         return self._channel
 
-    #AIS_Channel = property(get_AIS_Channel)
+    # AIS_Channel = property(get_AIS_Channel)
 
     def get_AIS_Payload(self):
         return self._payload
 
-    #AIS_Payload = property(get_AIS_Payload)
+    # AIS_Payload = property(get_AIS_Payload)
 
     def get_AIS_Binary_Payload(self):
         return self._binary_payload
@@ -670,11 +670,14 @@ class AIS_Data:
                 print("Invalid Talker ID", sys.exc_info()[0])
                 raise RuntimeError("Invalid Talker ID")
 
-    def set_Encoded_String(self, value):
+    def set_Encoded_String(self, value: str) -> None:
         if isinstance(value, str):
             self._parameter = value
         else:
             raise (TypeError, "Value passed to set_Encoded_String not a string")
+
+    def get_Encoded_String(self) -> str:
+        return self._parameter
 
     def set_fragment(self, value):
         self._fragment = value
@@ -717,7 +720,7 @@ class AIS_Data:
         # print('  setting MMSI in set_MMSI')
         self._mmsi = value
 
-    #MMSI = property(get_MMSI, set_MMSI)
+    # MMSI = property(get_MMSI, set_MMSI)
 
     def get_String_MMSI(self) -> str:
         s_mmsi = str(self._mmsi)
@@ -730,7 +733,7 @@ class AIS_Data:
             # Console.WriteLine(" return string MMSI = " + s_mmsi)
         return s_mmsi
 
-    #String_MMSI = property(get_String_MMSI)
+    # String_MMSI = property(get_String_MMSI)
 
     def set_talker(self, value):
         if isinstance(value, str):
@@ -802,7 +805,7 @@ class AIS_Data:
     def set_RepeatIndicator(self, value):
         self._repeat = value
 
-    #RepeatIndicator = property(get_RepeatIndicator, set_RepeatIndicator)
+    # RepeatIndicator = property(get_RepeatIndicator, set_RepeatIndicator)
 
     def get_SOG(self) -> float:
         self._fsog = float(self._sog)
@@ -811,7 +814,7 @@ class AIS_Data:
     def set_SOG(self, value) -> None:
         self._sog = int(value)
 
-    #SOG = property(get_SOG, set_SOG)
+    # SOG = property(get_SOG, set_SOG)
 
     def get_int_HDG(self) -> int:
         # print('getting int HDG')
@@ -821,7 +824,7 @@ class AIS_Data:
         # print ('setting int HDG ', value)
         self._truhead = value
 
-    #int_HDG = property(get_int_HDG, set_int_HDG)
+    # int_HDG = property(get_int_HDG, set_int_HDG)
 
     def ROT(self) -> None:
         # ROT is coded as 4.733 * SQRT(p_rot)
@@ -1378,11 +1381,12 @@ class AIS_Data:
                     temp = self.Binary_Item(startpos + indexer, 6)
                     # print("temp = " + temp);
                     temp = temp & 0x3F
-                    if (temp < 31):
-                        temp = temp + 0x40
+                    temp = temp + 0x30
+                    if temp > 0x57:
+                        temp = temp + 0x8
                     # print('temp again', temp)
-                    cc = str(temp)
-                    # print(cc)
+                    cc = chr(temp)
+                    logging.debug("character to be returned ", cc)
                     #                        Console.WriteLine("temp = " + temp + " cc = " + cc);
                     buildit = buildit + cc
                     # print('buildit ',buildit)
@@ -1431,14 +1435,13 @@ class AIS_Data:
         #       '\nhex version\n', _byte_payload.hex(),
         #       '\nfrom \n',p_payload)
         for i in range(0, len(p_payload)):
-            if printdiag:
-                print('in create binary payload ', len(p_payload), i)
+            logging.debug('in create binary payload ', len(p_payload), i)
             # iterate through the string payload masking to lower 6 bits
             xchar = p_payload[i]
 
-            nibble = AIS_Data.m_to_int(xchar) & 0x3F  # ensures only 6 bits presented
-            if printdiag:
-                print('nibble', bin(nibble))
+            nibble = AIS_Data.m_to_int( xchar) & 0x3F  # ensures only 6 bits presented
+
+            logging.debug('nibble', bin(nibble))
 
             # now append the nibble to the stream
             _abinary_payload = _abinary_payload + format(nibble, '06b')
@@ -1539,7 +1542,8 @@ class AIS_Data:
 
     def m_to_int2(self, parameter: str) -> int:
         return int(parameter)
-    def m_to_int( parameter) -> int:
+
+    def m_to_int( parameter: str) -> int:
         # takes in a encoded string of variable length and returns positive integer
         # print('entering m_to_int parameter = ', parameter)
         my_int = int(0)
