@@ -30,6 +30,7 @@ class AISDictionaries:
                       't': '111100', 'u': '111101', 'v': '111110', 'w': '111111'
                       }
 
+
     def __init__(self):
         pass
 

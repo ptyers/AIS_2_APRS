@@ -474,12 +474,12 @@ class AIS_Data:
     def get_AIS_FragCount(self):
         return self._Frag
 
-    AIS_FragCount = property(get_AIS_FragCount)
+    #AIS_FragCount = property(get_AIS_FragCount)
 
     def get_AIS_FragNo(self):
         return self._Fragno
 
-    AIS_FragNo = property(get_AIS_FragNo)
+    #AIS_FragNo = property(get_AIS_FragNo)
     '''
     def get_xx(self):
         return self.yy
@@ -489,17 +489,17 @@ class AIS_Data:
     def get_Message_ID(self):
         return self._Message_ID
 
-    AIS_Message_ID = property(get_Message_ID)
+    #AIS_Message_ID = property(get_Message_ID)
 
     def get_AIS_Channel(self):
         return self._channel
 
-    AIS_Channel = property(get_AIS_Channel)
+    #AIS_Channel = property(get_AIS_Channel)
 
     def get_AIS_Payload(self):
         return self._payload
 
-    AIS_Payload = property(get_AIS_Payload)
+    #AIS_Payload = property(get_AIS_Payload)
 
     def get_AIS_Binary_Payload(self):
         return self._binary_payload
@@ -511,9 +511,9 @@ class AIS_Data:
             raise RuntimeError(
                 "Incorrect type not string supplied to set AIS_Binary_Payload")
 
-    AIS_Binary_Payload = property(
-        get_AIS_Binary_Payload,
-        set_AIS_Binary_Payload)
+    # AIS_Binary_Payload = property(
+    #     get_AIS_Binary_Payload,
+    #     set_AIS_Binary_Payload)
 
     def get_AIS_Binary_Payload_length(self):
         return self._binary_length
@@ -525,10 +525,10 @@ class AIS_Data:
             raise RuntimeError(
                 "Error setting binary payload length - non integer presented")
 
-    AIS_Binary_Payload_length = property(
-        get_AIS_Binary_Payload_length,
-        set_AIS_Binary_Payload_length
-    )
+    # AIS_Binary_Payload_length = property(
+    #     get_AIS_Binary_Payload_length,
+    #     set_AIS_Binary_Payload_length
+    # )
 
     def set_AIS_Payload_ID(self, value):
         if isinstance(value, int):
@@ -717,7 +717,7 @@ class AIS_Data:
         # print('  setting MMSI in set_MMSI')
         self._mmsi = value
 
-    MMSI = property(get_MMSI, set_MMSI)
+    #MMSI = property(get_MMSI, set_MMSI)
 
     def get_String_MMSI(self) -> str:
         s_mmsi = str(self._mmsi)
@@ -730,7 +730,7 @@ class AIS_Data:
             # Console.WriteLine(" return string MMSI = " + s_mmsi)
         return s_mmsi
 
-    String_MMSI = property(get_String_MMSI)
+    #String_MMSI = property(get_String_MMSI)
 
     def set_talker(self, value):
         if isinstance(value, str):
@@ -802,7 +802,7 @@ class AIS_Data:
     def set_RepeatIndicator(self, value):
         self._repeat = value
 
-    RepeatIndicator = property(get_RepeatIndicator, set_RepeatIndicator)
+    #RepeatIndicator = property(get_RepeatIndicator, set_RepeatIndicator)
 
     def get_SOG(self) -> float:
         self._fsog = float(self._sog)
@@ -811,7 +811,7 @@ class AIS_Data:
     def set_SOG(self, value) -> None:
         self._sog = int(value)
 
-    SOG = property(get_SOG, set_SOG)
+    #SOG = property(get_SOG, set_SOG)
 
     def get_int_HDG(self) -> int:
         # print('getting int HDG')
@@ -821,7 +821,7 @@ class AIS_Data:
         # print ('setting int HDG ', value)
         self._truhead = value
 
-    int_HDG = property(get_int_HDG, set_int_HDG)
+    #int_HDG = property(get_int_HDG, set_int_HDG)
 
     def ROT(self) -> None:
         # ROT is coded as 4.733 * SQRT(p_rot)
@@ -1537,7 +1537,9 @@ class AIS_Data:
         logging.debug(_byte_payload.hex())
         return _byte_payload, len(_byte_payload)
 
-    def m_to_int(parameter: str) -> int:
+    def m_to_int2(self, parameter: str) -> int:
+        return int(parameter)
+    def m_to_int( parameter) -> int:
         # takes in a encoded string of variable length and returns positive integer
         # print('entering m_to_int parameter = ', parameter)
         my_int = int(0)

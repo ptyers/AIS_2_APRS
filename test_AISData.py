@@ -4,24 +4,35 @@ from AISDictionary import AISDictionaries
 import logging
 import random
 
-class Prbs:
-    '''
-    Psuedo random Sequence Generator
-    Given an integer, the function will generate PRBS sequence a bit at a time
-    and return an integer containing the next 32 bits of the sequence.
-    Note the input integer's bits above x31 are irrelevant to the output.
-    '''
-    def __init__(self):
-        pass
-
-    def prbs31(self, code: int) -> int:
-        for i in range(32):
-            next_bit = ~((code >> 30) ^ (code >> 27)) & 0x01
-            code = ((code << 1) | next_bit) & 0xFFFFFFFF
-        return code
-
 
 class TestAIS_Data(TestCase):
+
+    def test_binary_item(self):
+        '''
+        Produces random number in rage 0 to 999999999 and sets up fake binary_payload string
+        then extracts that binary number from the string using AIS_Data.Binary_item
+        '''
+        # some necessary preconfig
+        dict = AISDictionaries()
+        mydata = AIS_Data(
+            "!AIVDM", "1", "1", "", "A",
+            "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
+        )
+
+        print("Testing Binary_item")
+        # Create fake AIS payload with a random binary number in bits 8 to 37
+        for i in range(10):
+            fakestream: str = '00010000'
+            faketail: str = '000000000000000000000000000000'
+
+            testnumber: int = random.randint(0, 999999999)
+            strnumber: str = "{:030b}".format(testnumber)
+            fakestream = fakestream + strnumber + faketail
+            mydata.set_AIS_Binary_Payload(fakestream)
+            intmmsi = mydata.Binary_Item(8, 30)
+            self.assertEqual(testnumber, intmmsi, "FAiled in test_binary_item")
+        print("Succeeded")
+
     '''
     block of strings to get test data
     '''
@@ -42,7 +53,7 @@ class TestAIS_Data(TestCase):
     def test_create_binary_payload(self):
         dict = AISDictionaries()
         print('Testing create_binary_payload')
-        for i in range(len(self.mytestdata)-1):
+        for i in range(len(self.mytestdata) - 1):
             self.testpay: str = ''
             payload = self.mytestdata[i].split(',')
             self.binpay, self.binlen = AIS_Data.create_binary_payload(payload[5])
@@ -55,13 +66,13 @@ class TestAIS_Data(TestCase):
 
     def test_create_bytearray_payload(self):
         dict = AISDictionaries()
-        binpay : bytearray
+        binpay: bytearray
         print('Testing create_bytearray_payload')
         for i in range(5):
             self.testpay: str = ''
             payload = self.mytestdata[i].split(',')
             self.binpay, self.binlength = AIS_Data.create_bytearray_payload(payload[5])
-            self.ostring= ''
+            self.ostring = ''
             for i in range(len(self.binpay)):
                 self.ostring = self.ostring + "{:08b}".format(self.binpay[i])
 
@@ -79,70 +90,435 @@ class TestAIS_Data(TestCase):
 
         print('Succeeded')
 
-
-    def test_binary_item(self):
+    def test_ExtractInt(self):
         '''
-        Produces random number in rage 0 to 999999999 and sets up fake binary_payload string
-        then extracts that binary number from the string using AIS_Data.Binary_item
-        '''
+               Produces random number in rage 0 to 999999999 and sets up fake binary_payload string
+               then extracts that binary number from the string using AIS_Data.Binary_item
+               effectively same test as for Binary_item
+               '''
         # some necessary preconfig
-        dict = AISDictionaries()
+        diction = AISDictionaries()
         mydata = AIS_Data(
             "!AIVDM", "1", "1", "", "A",
             "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
         )
 
-        print("Testing Binary_item")
+        print("Testing extract_int")
         # Create fake AIS payload with a random binary number in bits 8 to 37
         for i in range(10):
             fakestream: str = '00010000'
             faketail: str = '000000000000000000000000000000'
 
-            testnumber:int = random.randint(0,999999999)
-            strnumber:str = "{:030b}".format(testnumber)
+            testnumber: int = random.randint(0, 999999999)
+            strnumber: str = "{:030b}".format(testnumber)
             fakestream = fakestream + strnumber + faketail
             mydata.set_AIS_Binary_Payload(fakestream)
-            intmmsi = mydata.Binary_Item( 8, 30)
-            self.assertEqual(testnumber, intmmsi,"FAiled in test_binary_item")
+            intmmsi = mydata.ExtractInt(8, 30)
+            self.assertEqual(testnumber, intmmsi, "FAiled in test_binary_item")
         print("Succeeded")
 
+    def test_m_to_int(self):
+        '''
+        m_to_int takes an encoded (armoyed) string and returns an integer
+        :return:
+        '''
+        print("Testing m_to_int")
+        diction = AISDictionaries()
+        mydata = AIS_Data(
+            "!AIVDM", "1", "1", "", "A",
+            "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n")
 
+        for _ in range(20):
+            # create a random length integer
+            testlength: int = random.randint(1, 10)
+            testnumb: int = random.randint(0, 9999999999)
+            numstring: str = "{:010d}".format(testnumb)
+            # extract required length string from the 10 character string
+            numbstring = numstring[10 - testlength:]
+            # #make encoded string using dictionary
+            outint = mydata.m_to_int2(numbstring)
+            self.assertEqual(int(numbstring), outint, "Failure in m_to_int")
 
+        print('succeeded')
+
+    def test_ExtractInt(self):
+        '''
+               Produces random number in rage 0 to 999999999 and sets up fake binary_payload string
+               then extracts that binary number from the string using AIS_Data.Binary_item
+               effectively same test as for Binary_item
+               '''
+        # some necessary preconfig
+        dict = AISDictionaries()
+        mydata = AIS_Data(
+            "!AIVDM", "1", "1", "", "A",
+            "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n")
+
+        print("Testing extract_int")
+        # Create fake AIS payload with a random binary number in bits 8 to 37
+        for i in range(10):
+            fakestream: str = '00010000'
+            faketail: str = '000000000000000000000000000000'
+
+            testnumber: int = random.randint(0, 999999999)
+            strnumber: str = "{:030b}".format(testnumber)
+            fakestream = fakestream + strnumber + faketail
+            mydata.set_AIS_Binary_Payload(fakestream)
+            intmmsi = mydata.ExtractInt(8, 30)
+            self.assertEqual(testnumber, intmmsi, "FAiled in test_binary_item")
+        print("Succeeded")
+    def test_extract_string(self):
+        self.fail()
+
+    def test_get_ais_binary_payload(self):
+        self.fail()
     def test_print_ais(self):
         self.fail()
 
     def test_m_initialise(self):
+        print("Testing m_initialise")
         self.fail()
 
     def test_m_setup(self):
-        self.fail()
-
-    def test_extract_string(self):
-        self.fail()
-
-    def test_extract_int(self):
+        print("Testing m_setup")
         self.fail()
 
 
-
-
-
-
-
-
-    def test_m_to_int(self):
-        self.fail()
 
     def test_remove_at(self):
         self.fail()
 
-    def test_remove_space(self):
+    def test_set_Encoded_String(self):
         self.fail()
 
-    def main(self):
-        self.test_create_binary_payload()
-        self.test_create_bytearray_payload()
+    def test_set_Fragment(self):
+        self.fail()
+
+    def test_get_ais_frag_count(self):
+        self.fail()
+
+    def test_get_ais_frag_no(self):
+        self.fail()
+
+    def test_get_message_id(self):
+        self.fail()
+
+    def test_get_ais_channel(self):
+        self.fail()
+
+    def test_get_ais_payload(self):
+        self.fail()
+
+
+
+    def test_set_ais_binary_payload(self):
+        self.fail()
+
+    def test_get_ais_binary_payload_length(self):
+        self.fail()
+
+    def test_set_ais_binary_payload_length(self):
+        self.fail()
+
+    def test_set_ais_payload_id(self):
+        self.fail()
+
+    def test_get_ais_payload_id(self):
+        self.fail()
+
+    def test_set_fragment(self):
+        self.fail()
+
+    def test_set_fragno(self):
+        self.fail()
+
+    def test_set_messid(self):
+        self.fail()
+
+    def test_set_channel(self):
+        self.fail()
+
+    def test_set_payload(self):
+        self.fail()
+
+    def test_set_trailer(self):
+        self.fail()
+
+    def test_get_mmsi(self):
+        self.fail()
+
+    def test_set_mmsi(self):
+        self.fail()
+
+    def test_get_string_mmsi(self):
+        self.fail()
+
+    def test_set_talker(self):
+        self.fail()
+
+    def test_do_function(self):
         pass
 
-    if __name__ == "main":
-        main()
+    def test_get_repeat_indicator(self):
+        self.fail()
+
+    def test_set_repeat_indicator(self):
+        self.fail()
+
+    def test_get_sog(self):
+        self.fail()
+
+    def test_set_sog(self):
+        self.fail()
+
+    def test_get_int_hdg(self):
+        self.fail()
+
+    def test_set_int_hdg(self):
+        self.fail()
+
+    def test_rot(self):
+        self.fail()
+
+    def test_get_altitude(self):
+        self.fail()
+
+    def test_set_altitude(self):
+        self.fail()
+
+    def test_get_int_rot(self):
+        self.fail()
+
+    def test_set_int_rot(self):
+        self.fail()
+
+    def test_get_nav_status(self):
+        self.fail()
+
+    def test_set_nav_status(self):
+        self.fail()
+
+    def test_set_int_latitude(self):
+        self.fail()
+
+    def test_get_int_latitude(self):
+        self.fail()
+
+    def test_set_int_longitude(self):
+        self.fail()
+
+    def test_get_int_longitude(self):
+        self.fail()
+
+    def test_get_latitude(self):
+        self.fail()
+
+    def test_get_longitude(self):
+        self.fail()
+
+    def test_get_pos_accuracy(self):
+        self.fail()
+
+    def test_set_pos_accuracy(self):
+        self.fail()
+
+    def test_get_cog(self):
+        self.fail()
+
+    def test_set_cog(self):
+        self.fail()
+
+    def test_set_int_cog(self):
+        self.fail()
+
+    def test_get_int_cog(self):
+        self.fail()
+
+    def test_get_hdg(self):
+        self.fail()
+
+    def test_set_hdg(self):
+        self.fail()
+
+    def test_get_timestamp(self):
+        self.fail()
+
+    def test_set_timestamp(self):
+        self.fail()
+
+    def test_get_man_indicator(self):
+        self.fail()
+
+    def test_set_man_indicator(self):
+        self.fail()
+
+    def test_get_raim(self):
+        self.fail()
+
+    def test_set_raim(self):
+        self.fail()
+
+    def test_get_name(self):
+        self.fail()
+
+    def test_set_name(self):
+        self.fail()
+
+    def test_get_callsign(self):
+        self.fail()
+
+    def test_set_callsign(self):
+        self.fail()
+
+    def test_get_imo(self):
+        self.fail()
+
+    def test_set_imo(self):
+        self.fail()
+
+    def test_get_version(self):
+        self.fail()
+
+    def test_set_version(self):
+        self.fail()
+
+    def test_get_destination(self):
+        self.fail()
+
+    def test_set_destination(self):
+        self.fail()
+
+    def test_get_display(self):
+        self.fail()
+
+    def test_set_display(self):
+        self.fail()
+
+    def test_get_dsc(self):
+        self.fail()
+
+    def test_set_dsc(self):
+        self.fail()
+
+    def test_get_band(self):
+        self.fail()
+
+    def test_set_band(self):
+        self.fail()
+
+    def test_get_message22(self):
+        self.fail()
+
+    def test_set_message22(self):
+        self.fail()
+
+    def test_get_assigned(self):
+        self.fail()
+
+    def test_set_assigned(self):
+        self.fail()
+
+    def test_get_ship_type(self):
+        self.fail()
+
+    def test_set_ship_type(self):
+        self.fail()
+
+    def test_get_dim2bow(self):
+        self.fail()
+
+    def test_set_dim2bow(self):
+        self.fail()
+
+    def test_get_dim2stern(self):
+        self.fail()
+
+    def test_set_dim2stern(self):
+        self.fail()
+
+    def test_get_dim2port(self):
+        self.fail()
+
+    def test_set_dim2port(self):
+        self.fail()
+
+    def test_get_dim2starboard(self):
+        self.fail()
+
+    def test_set_dim2starboard(self):
+        self.fail()
+
+    def test_get_fix_type(self):
+        self.fail()
+
+    def test_set_fix_type(self):
+        self.fail()
+
+    def test_get_eta_month(self):
+        self.fail()
+
+    def test_set_eta_month(self):
+        self.fail()
+
+    def test_get_eta_day(self):
+        self.fail()
+
+    def test_set_eta_day(self):
+        self.fail()
+
+    def test_get_eta_hour(self):
+        self.fail()
+
+    def test_set_eta_hour(self):
+        self.fail()
+
+    def test_get_eta_minute(self):
+        self.fail()
+
+    def test_set_eta_minute(self):
+        self.fail()
+
+    def test_get_draught(self):
+        self.fail()
+
+    def test_set_draught(self):
+        self.fail()
+
+    def test_get_dte(self):
+        self.fail()
+
+    def test_set_dte(self):
+        self.fail()
+
+    def test_radio_status(self):
+        self.fail()
+
+    def test_type24part_no(self):
+        self.fail()
+
+    def test_get_safety_text(self):
+        self.fail()
+
+    def test_set_safety_text(self):
+        self.fail()
+
+    def test_get_is_avcga(self):
+        self.fail()
+
+    def test_set_is_avcga(self):
+        self.fail()
+
+    def test_set_rad_status(self):
+        self.fail()
+
+    def test_get_rad_status(self):
+        self.fail()
+
+
+def main(self):
+    self.test_create_binary_payload()
+    self.test_create_bytearray_payload()
+    pass
+
+
+if __name__ == "main":
+    main()
