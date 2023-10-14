@@ -237,7 +237,22 @@ class TestAIS_Data(TestCase):
         self.fail()
 
     def test_get_message_id(self):
-        self.fail()
+        diction, mydata = self.initialise()
+        print("Testing get_Message_ID")
+
+        # use first item in the list of AIS streams to get a message id, field
+        mydata.set_Message_ID(self.mytestdata[0].split(',')[3])
+        out = mydata.get_Message_ID()
+        self.assertEqual(self.mytestdata[0].split(',')[3], out)
+
+    def test_get_message_id(self):
+        diction, mydata = self.initialise()
+        print("Testing set_Message_ID")
+
+        # use first item in the list of AIS streams to get a message id, field
+        mydata.set_Message_ID(self.mytestdata[0].split(',')[3])
+        out = mydata.get_Message_ID()
+        self.assertEqual(self.mytestdata[0].split(',')[3], out)
 
     def test_get_ais_channel(self):
         self.fail()

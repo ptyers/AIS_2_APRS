@@ -489,6 +489,13 @@ class AIS_Data:
     def get_Message_ID(self):
         return self._Message_ID
 
+    def set_Message_ID(self, value: str):
+        if isinstance(value, str):
+            self._Message_ID = value
+        else:
+            raise RuntimeError(
+                "Incorrect type not string supplied to set Message_ID")
+
     # AIS_Message_ID = property(get_Message_ID)
 
     def get_AIS_Channel(self):
