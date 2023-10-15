@@ -129,10 +129,10 @@ def do123(AISObject):
         #
         if len(AISObject.AIS_Payload) >= 28:
 
-            AISObject.set_rad_status(AISObject.Binary_Item(149, 19))
+            AISObject.(AISObject.Binary_Item(149, 19))
             #          Console.WriteLine("RadioStatus  = " + p_rad_status)
         else:
-            AISObject.set_rad_status(0)
+            AISObject.(0)
 
     pass
 
@@ -208,10 +208,10 @@ def do9(AISObject):
     #
     if len(AISObject.AIS_Payload) >= 28:
 
-        AISObject.set_rad_status(AISObject.Binary_Item(148, 19))
+        AISObject.(AISObject.Binary_Item(148, 19))
         #          Console.WriteLine("RadioStatus  = " + p_rad_status)
     else:
-        AISObject.set_rad_status(0)
+        AISObject.(0)
 
     pass
 
@@ -281,10 +281,10 @@ def do18(AISObject):
     #
     if len(AISObject.AIS_Payload) >= 28:
 
-        AISObject.set_rad_status(AISObject.Binary_Item(148, 19))
+        AISObject.(AISObject.Binary_Item(148, 19))
         #          Console.WriteLine("RadioStatus  = " + p_rad_status)
     else:
-        AISObject.set_rad_status(0)
+        AISObject.(0)
 
 
 def decode_char(self, in_char: str) -> int:

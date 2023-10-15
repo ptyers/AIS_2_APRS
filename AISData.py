@@ -361,7 +361,7 @@ class AIS_Data:
     _lat = 0  # latitude
     _cog = 0
     _truhead = 0
-    _raim: bool  # RAIM not in use
+    _raim: int  # RAIM not in use
     _rad_status = 0  # special radio status generally unused
     _time = 0
     _man = 0
@@ -714,7 +714,7 @@ class AIS_Data:
             raise (TypeError, "Value passed to set_channel not a string")
 
         if value in diction.ch_numb_dict:
-            self._channel = diction.ch_numb_dict[self._channel]
+            self._channel = diction.ch_numb_dict[value]
         else:
             raise ValueError
 
@@ -949,31 +949,33 @@ class AIS_Data:
         # 63 if positioning system inoperative
         return int(self._time)
 
-    def set_Timestamp(self, value) -> None:
-        self._time = int(value)
+    def set_Timestamp(self, value: int) -> None:
+        if value in range(0,63):
+            self._time = int(value)
+        else:
+            raise ValueError('UTC seconds timestamp outside 0-63')
 
-    Timestamp = property(get_Timestamp, set_Timestamp)
 
-    def get_MAN_Indicator(self) -> int:
-        return int(self._man)
+    def set_MAN_Indicator(self, value: int) -> None:
+        if value in range(0,2):
+            self._man = int(value)
+        else:
+            raise ValueError('Maneuver Indicator outside 0-2')
 
-    def set_MAN_Indicator(self, value) -> None:
-        self._man = int(value)
+    def get_MAN_Indicator(self):
+        return self._man
 
-    MAN_Indicator = property(get_MAN_Indicator, set_MAN_Indicator)
 
-    def get_RAIM(self) -> bool:
-        # boolean
-        # Receiver Augmented Integrity Monitoring
-        return self._raim
 
     def set_RAIM(self, value) -> None:
-        if isinstance(value, bool):
+        if value in range(0,1):
             self._raim = value
         else:
-            raise TypeError("RAIM must be boolean")
+            raise ValueError("RAIM must be integer 0/1")
 
-    RAIM = property(get_RAIM, set_RAIM)
+    def get_RAIM(self) -> int:
+
+            return self._raim
 
     def get_Name(self) -> str:
         # Console.WriteLine("returning p_name = " + p_name);
@@ -1022,26 +1024,25 @@ class AIS_Data:
     def get_IMO(self) -> int:
         return int(self._IMO)
 
-    def set_IMO(self, value) -> None:
-        if isinstance(value, int):
+    def set_IMO(self, value: int) -> None:
+        # IMO Number nominally a text indentifier "IMO" and seven digits
+        if value in range(0,9999999):
             self._IMO = value
         else:
             self._IMO = 0  # CHECK THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            raise TypeError("IMO must be integer")
+            raise ValueError("IMO must be 7 digit integer > 0")
 
-    IMO = property(get_IMO, set_IMO)
 
     def get_Version(self) -> int:
-        return int(self._version)
+        return self._version
 
     def set_Version(self, value) -> None:
-        if isinstance(value, int):
+        if value in range(0,3):
             self._version = value
         else:
             self._version = 0
-            raise TypeError('Version should be integer')
+            raise ValueError('Version should be integer 0-3')
 
-    Version = property(get_Version, set_Version)
 
     def get_Destination(self) -> str:
         if self._destination.find('@') > 0:
@@ -1117,7 +1118,7 @@ class AIS_Data:
     def get_Assigned(self) -> bool:
         return self._assigned
 
-    def set_Assigned(self, value) -> None:
+    def set_Assigned(self, value: bool) -> None:
         if isinstance(value, bool):
             self._assigned = value
         else:
@@ -1131,47 +1132,55 @@ class AIS_Data:
         return self._type
 
     def set_ShipType(self, value) -> None:
-        if isinstance(value, int):
+        # Ship TYpe range 0-99 values above 99 set to zero (coders in the wild unreliable)
+        if value in range(0,99):
             self._type = value
+        elif value < 256:
+            self._typ = 0
         else:
-            self._type = 0  # CHECK THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            raise TypeError("ShipType must integer")
+            self._type = 0
+            raise ValueError("Ship TYpe outside range 0-256 - with > 99 set to 0")
 
-    ShipType = property(get_ShipType, set_ShipType)
+
 
     # public int Dim2Bow
     def get_Dim2Bow(self):
         return int(self._d2bow)
 
     def set_Dim2Bow(self, value) -> None:
-        if isinstance(value, int):
+        # in metres
+        if value in range(1,1023):
             self._d2bow = value
         else:
             self._d2bow = 0
-            raise TypeError("Dim2bow must be integer")
+            raise ValueError("Dim2bow must be integer 1 _ 1023")
 
     Dim2bow = property(get_Dim2Bow, set_Dim2Bow)
 
     # public int Dim2Stern
     def get_Dim2Stern(self) -> int:
+        # in metres
         return int(self._d2stern)
 
     def set_Dim2Stern(self, value) -> None:
-        if isinstance(value, int):
+        # in metres
+        if value in range(1,1023):
             self._d2stern = value
         else:
             self._d2stern = 0
-            raise TypeError('Dim2Stern must be integer')
+            raise ValueError("Dim2stern must be integer 1 _ 1023")
 
     # public int Dim2Port
     def get_Dim2Port(self) -> int:
         return int(self._d2port)
 
     def set_Dim2Port(self, value) -> None:
-        if isinstance(value, int):
+        # in metres
+        if value in range(1,63):
             self._d2port = value
         else:
             self._d2port = 0
+            raise ValueError("Dim2bow must be integer 1 _ 63")
 
     # public int Dim2Starboard
     def get_Dim2Starboard(self) -> int:
@@ -1179,6 +1188,7 @@ class AIS_Data:
         # set { p_d2starboard = value; }
 
     def set_Dim2Starboard(self, value) -> None:
+        # in metres
         if isinstance(value, int):
             self._d2starboard = value
         else:
@@ -1191,95 +1201,103 @@ class AIS_Data:
     def get_FixType(self) -> int:
         return int(self._fix_type)
 
-    def set_FixType(self, value) -> None:
-        if isinstance(value, int):
+    def set_FixType(self, value: int) -> None:
+        # enumerated 0-8
+        if value in range(0, 8):
             self._fix_type = value
         else:
             self._fix_type = 0
-            raise TypeError('FixType must be integer')
+            raise ValueError('FixType must be integer 0-8')
 
-    FixType = property(get_FixType, set_FixType)
 
     # public int ETA_Month
     def get_ETA_Month(self) -> int:
         return int(self._ETA_month)
 
-    def set_ETA_Month(self, value) -> None:
-        if isinstance(value, int):
+    def set_ETA_Month(self, value: int) -> None:
+        if value in range(0, 12):
             self._ETA_month = value
         else:
-            self._ETA_month = 0
-            raise TypeError('ETA_Month must be integer')
+            self.ETA_month = 0
+            raise ValueError('ETA Month must be integer 0-12')
 
-    ETA_Month = property(get_ETA_Month, set_ETA_Month)
+
 
     # public int ETA_Day
     def get_ETA_Day(self) -> int:
-        return int(self._ETA_day)
+        return int(self._ETA_Day)
 
-    def set_ETA_Day(self, value) -> None:
-        if isinstance(value, int):
-            self._ETA_day = value
+    def set_ETA_Day(self, value: int) -> None:
+        if value in range(0, 24):
+            self._ETA_Day = value
         else:
-            self._ETA_day = 0
-            raise TypeError('ETA_Day must be integer')
+            self.ETA_Day = 0
+            raise ValueError('ETA Day must be integer 0-12')
 
-    ETA_Day = property(get_ETA_Day, set_ETA_Day)
+
+
 
     # public int ETA_Hour
     def get_ETA_Hour(self) -> int:
         return int(self._ETA_hour)
 
     def set_ETA_Hour(self, value) -> None:
-        if isinstance(value, int):
+        if value in range(0, 24):
             self._ETA_hour = value
         else:
             self._ETA_hour = 0
-            raise TypeError('ETA_Hour must be integer')
+            raise ValueError('ETA Hour must be integer 0-12')
 
-    ETA_Hour = property(get_ETA_Hour, set_ETA_Hour)
 
     # public int ETA_Minute
     def get_ETA_Minute(self) -> int:
-        return int(self.self._ETA_minute)
+        return int(self._ETA_minute)
 
     def set_ETA_Minute(self, value) -> None:
-        if isinstance(value, int):
-            self._ETA_minute = value
+        # 60 == Not Applicable
+        if value in range(0, 60):
+            self._ETA_month = value
         else:
-            self._ETA_minute = 0
-            raise TypeError('ETA_Minute must be integer')
+            self.ETA_Month = 0
+            raise ValueError('ETA Minute must be integer 0-60')
+
 
     ETA_Minute = property(get_ETA_Minute, set_ETA_Minute)
 
     # public int Draught
     def get_Draught(self) -> int:
+        # value returned is scaled up by 10
         return int(self._draught)
 
-    def set_Draught(self, value) -> None:
-        if isinstance(value, int):
+    def set_Draught(self, value: int) -> None:
+        # metres  scaled by 10 stored as raw value
+        if value in range(0, 511):
             self._draught = value
         else:
             self._draught = 0
-            raise TypeError('Draught must be integer')
+            raise ValueError('Draught must be integer 0-511, scaled by factor of 10')
 
-    Draught = property(get_Draught, set_Draught)
+
+
 
     # public int DTE
     def get_DTE(self) -> int:
         return int(self._DTE)
 
     def set_DTE(self, value: int) -> None:
-        if isinstance(value, int):
+        if value in range(0, 1):
             self._DTE = value
         else:
-            self._DTE = 0
-            raise TypeError('DTE must be integer')
+            self.DTE = 0
+            raise ValueError('DTE boolean must be 0 or 1')
 
-    DTE = property(get_DTE, set_DTE)
+
 
     def Radio_Status(self):
         raise NameError("Radio Status Unavailable")
+    
+    def get_Radio_Status(self):
+        return "Radio Status Unavailable"
 
     def Type24PartNo(self) -> int:
         # if p_payload_ID is 24 then extract bits 38-39 and return integer value
@@ -1309,32 +1327,17 @@ class AIS_Data:
     SafetyText = property(get_SafetyText, set_SafetyText)
 
     # public bool isAVCGA
-    def get_isAVCGA(self):
+    def get_isAVCGA(self) -> bool:
         return int(self._isavcga)
 
-    def set_isAVCGA(self, value):
-        if isinstance(value, bool):
+    def set_isAVCGA(self, value: bool):
+        if value in range(0, 1):
             self._isavcga = value
         else:
             self._isavcga = False
-            raise TypeError('isAVCGA must be boolean')
+            raise ValueError('isAVCGA must be boolean 0/1')
 
     isAVCGA = property(get_isAVCGA, set_isAVCGA)
-
-    def set_rad_status(self, value):
-        self._rad_status = value
-
-    def get_rad_status(self):
-        return self._rad_status
-
-    Rad_status = property(get_rad_status, set_rad_status)
-
-    # endregion
-
-    # region Private Properties
-
-    # endregion
-    # region Constructors
 
     def ExtractString(self, startpos: int, blength: int) -> str:
         # grab data 6 bit byte by byte checking that the

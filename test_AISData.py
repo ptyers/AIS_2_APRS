@@ -348,6 +348,10 @@ class TestAIS_Data(TestCase):
             try:
                 mydata.set_channel(char)
                 out = mydata.get_channel()
+                if char == '1':
+                    char = 'A'
+                elif char == '2':
+                    char = 'B'
                 self.assertEqual(char, out, "Failed in set channel")
             except ValueError:
                 # if channel nuber == 3 invalid
@@ -456,9 +460,9 @@ class TestAIS_Data(TestCase):
         ilat = 60000000
         mydata.set_int_latitude(ilat)
         outi = mydata.get_int_latitude()
-        outf= mydata.get_Latitude()
-        self.assertEqual(ilat,outi , "Failed in set int latitude")
-        self.assertEqual(10.0,outf , "Failed in getting floting point latitude")
+        outf = mydata.get_Latitude()
+        self.assertEqual(ilat, outi, "Failed in set int latitude")
+        self.assertEqual(10.0, outf, "Failed in getting floting point latitude")
 
     def test_set_int_longitude(self):
         print("Testing set int longitude")
@@ -476,11 +480,10 @@ class TestAIS_Data(TestCase):
         diction, mydata = self.initialise()
         print("Testing set/get Pos Accuracy")
 
-        mydata.set_Pos_Accuracy(0)
-        self.assertEqual(1, mydata.get_Pos_Accuracy, 'Failed in get/set pos accuyracy')
-        mydata.set_Pos_Accuracy(0)
-        self.assertEqual(0, mydata.get_Pos_Accuracy, 'Failed in get/set pos accuyracy')
-
+        mydata.set_Pos_Accuracy(value=1)
+        self.assertEqual(1, mydata.get_Pos_Accuracy(), 'Failed in get/set pos accuracy')
+        mydata.set_Pos_Accuracy(value=0)
+        self.assertEqual(0, mydata.get_Pos_Accuracy(), 'Failed in get/set pos accuracy')
 
     def test_set_cog(self):
         diction, mydata = self.initialise()
@@ -489,10 +492,8 @@ class TestAIS_Data(TestCase):
             ispd = random.randint(0, 3600)
             mydata.set_COG(ispd)
             out: float = mydata.get_COG()
-            self.assertEqual(float(ispd/10), out, "Failed in set_COG")
-            self.assertEqual(int(ispd/10), mydata.get_int_COG(), "Failed in get_int_COG")
-
-
+            self.assertEqual(float(ispd / 10), out, "Failed in set_COG")
+            self.assertEqual(int(ispd / 10), mydata.get_int_COG(), "Failed in get_int_COG")
 
     def test_set_hdg(self):
         diction, mydata = self.initialise()
@@ -503,23 +504,41 @@ class TestAIS_Data(TestCase):
             out: int = mydata.get_HDG()
             self.assertEqual(ispd, out, "Failed in set_HDG")
 
-    def test_get_timestamp(self):
-        self.fail()
-
     def test_set_timestamp(self):
-        self.fail()
+        print('Testing set timestamp')
+        diction, mydata = self.initialise()
+        for _ in range(100):
+            utc = random.randint(0,64)
+            try:
+                mydata.set_Timestamp(utc)
+                self.assertEqual(utc, mydata.get_Timestamp(), "Failed in get/set timestamp")
+            except ValueError:
+                pass
+
 
     def test_get_man_indicator(self):
         self.fail()
 
     def test_set_man_indicator(self):
-        self.fail()
+        print('Testing set manouver indicator')
+        diction, mydata = self.initialise()
+        for i in range(0,3):
+            try:
+                mydata.set_MAN_Indicator(i)
+                self.assertEqual(i, mydata.get_MAN_Indicator(), "Failed in get/set manouver indicator")
+            except ValueError:
+                pass
 
-    def test_get_raim(self):
-        self.fail()
 
     def test_set_raim(self):
-        self.fail()
+        print('Testing set RAIM')
+        diction, mydata = self.initialise()
+        for i in range(0,2):
+            try:
+                mydata.set_RAIM(i)
+                self.assertEqual(i, mydata.get_RAIM(), "Failed in get/set manouver indicator")
+            except ValueError:
+                pass
 
     def test_get_name(self):
         self.fail()
@@ -533,17 +552,35 @@ class TestAIS_Data(TestCase):
     def test_set_callsign(self):
         self.fail()
 
-    def test_get_imo(self):
-        self.fail()
 
     def test_set_imo(self):
-        self.fail()
+        print('Testing set IMO')
+        diction, mydata = self.initialise()
+        for _ in range(1000):
+            i = random.randint(0,9999999)
+            try:
+                mydata.set_IMO(i)
+                self.assertEqual(i, mydata.get_IMO(), "Failed in get/set manouver indicator")
+            except ValueError:
+                pass
+        try:
+            mydata.set_IMO(11111111)
+            self.fail()
+        except ValueError:
+            pass
 
-    def test_get_version(self):
-        self.fail()
+
+
 
     def test_set_version(self):
-        self.fail()
+        print('Testing set AIS Vesion')
+        diction, mydata = self.initialise()
+        for i in range(0,4):
+            try:
+                mydata.set_Version(i)
+                self.assertEqual(i, mydata.get_Version(), "Failed in get/set AIS Version")
+            except ValueError:
+                pass
 
     def test_get_destination(self):
         self.fail()
@@ -585,31 +622,66 @@ class TestAIS_Data(TestCase):
         self.fail()
 
     def test_set_ship_type(self):
-        self.fail()
+        print('Testing set Ship Type')
+        diction, mydata = self.initialise()
+        for _ in range(100):
+            i = random.randint(0,101)
+            try:
+                mydata.set_ShipType(i)
+                self.assertEqual(i, mydata.get_ShipType(), "Failed in get/set Ship Type")
+            except ValueError:
+                pass
 
-    def test_get_dim2bow(self):
-        self.fail()
 
     def test_set_dim2bow(self):
-        self.fail()
+        print('Testing set Dim to Bow')
+        diction, mydata = self.initialise()
+        for _ in range(100):
+            i = random.randint(1, 1023)
+            try:
+                mydata.set_Dim2Bow(i)
+                self.assertEqual(i, mydata.get_Dim2Bow(), "Failed in get/set Dimm to Bow")
+            except ValueError:
+                pass
 
     def test_get_dim2stern(self):
         self.fail()
 
     def test_set_dim2stern(self):
-        self.fail()
+        print('Testing set Dim to Stern')
+        diction, mydata = self.initialise()
+        for _ in range(100):
+            i = random.randint(1, 1023)
+            try:
+                mydata.set_Dim2Stern(i)
+                self.assertEqual(i, mydata.get_Dim2Stern(), "Failed in get/set Dim to Stern")
+            except ValueError:
+                pass
 
-    def test_get_dim2port(self):
-        self.fail()
+
 
     def test_set_dim2port(self):
-        self.fail()
+        print('Testing set Dim to Portr')
+        diction, mydata = self.initialise()
+        for _ in range(100):
+            i = random.randint(1, 63)
+            try:
+                mydata.set_Dim2Port(i)
+                self.assertEqual(i, mydata.get_Dim2Port(), "Failed in get/set Dim to Port")
+            except ValueError:
+                pass
 
-    def test_get_dim2starboard(self):
-        self.fail()
 
     def test_set_dim2starboard(self):
-        self.fail()
+        print('Testing set Dim to Starboard')
+        diction, mydata = self.initialise()
+        for _ in range(100):
+            i = random.randint(1, 63)
+            try:
+                mydata.set_Dim2Starboard(i)
+                self.assertEqual(i, mydata.get_Dim2Starboard(), "Failed in get/set Dim to Starboard")
+            except ValueError:
+                pass
 
     def test_get_fix_type(self):
         self.fail()
@@ -617,35 +689,66 @@ class TestAIS_Data(TestCase):
     def test_set_fix_type(self):
         self.fail()
 
-    def test_get_eta_month(self):
-        self.fail()
 
     def test_set_eta_month(self):
-        self.fail()
+        print('Testing set ETA Month')
+        diction, mydata = self.initialise()
+        for _ in range(20):
+            i = random.randint(0, 12)
+            try:
+                mydata.set_ETA_Month(i)
+                self.assertEqual(i, mydata.get_ETA_Month(), "Failed in get/set ETA Month")
+            except ValueError:
+                pass
 
-    def test_get_eta_day(self):
-        self.fail()
+
 
     def test_set_eta_day(self):
-        self.fail()
+        print('Testing set ETA Day')
+        diction, mydata = self.initialise()
+        for _ in range(50):
+            i = random.randint(0, 31)
+            try:
+                mydata.set_ETA_Day(i)
+                self.assertEqual(i, mydata.get_ETA_Day(), "Failed in get/set ETA Dasy")
+            except ValueError:
+                pass
 
-    def test_get_eta_hour(self):
-        self.fail()
 
     def test_set_eta_hour(self):
-        self.fail()
+        print('Testing set ETA Hour')
+        diction, mydata = self.initialise()
+        for _ in range(50):
+            i = random.randint(0, 24)
+            try:
+                mydata.set_ETA_Hour(i)
+                self.assertEqual(i, mydata.get_ETA_Hour(), "Failed in get/set ETA Hour")
+            except ValueError:
+                pass
 
-    def test_get_eta_minute(self):
-        self.fail()
 
     def test_set_eta_minute(self):
-        self.fail()
+        print('Testing set ETA Minute')
+        diction, mydata = self.initialise()
+        for _ in range(50):
+            i = random.randint(0, 60)
+            try:
+                mydata.set_ETA_Minute(i)
+                self.assertEqual(i, mydata.get_ETA_Minute(), "Failed in get/set ETA Minute")
+            except ValueError:
+                pass
 
-    def test_get_draught(self):
-        self.fail()
 
     def test_set_draught(self):
-        self.fail()
+        print('Testing set Draught')
+        diction, mydata = self.initialise()
+        for _ in range(50):
+            i = random.randint(0, 512)
+            try:
+                mydata.set_Draught(i)
+                self.assertEqual(i, mydata.get_Draught(), "Failed in get/set Draughjt")
+            except ValueError:
+                pass
 
     def test_get_dte(self):
         self.fail()
@@ -653,8 +756,17 @@ class TestAIS_Data(TestCase):
     def test_set_dte(self):
         self.fail()
 
-    def test_radio_status(self):
-        self.fail()
+    def test_get_radio_status(self):
+        diction, mydata = self.initialise()
+        self.assertEqual("Radio Status Unavailable",mydata.get_Radio_Status(), "Failed in get Radio Status")
+
+    def test_Radio_status(self):
+        diction, mydata = self.initialise()
+        try:
+            mydata.Radio_Status()
+            self.assertEqual(1,2,"Radio Status does not raise an error")
+        except NameError:
+            pass
 
     def test_type24part_no(self):
         self.fail()
@@ -665,17 +777,19 @@ class TestAIS_Data(TestCase):
     def test_set_safety_text(self):
         self.fail()
 
-    def test_get_is_avcga(self):
-        self.fail()
 
     def test_set_is_avcga(self):
-        self.fail()
+        print('Testing set isAVCGA')
+        diction, mydata = self.initialise()
+        mydata.set_isAVCGA(1)
+        self.assertEqual(1, mydata.get_isAVCGA(), "Failed in get/set isAVCGA")
+        mydata.set_isAVCGA(0)
+        self.assertEqual(0, mydata.get_isAVCGA(), "Failed in get/set isAVCGA")
+        try:
+            mydata.set_isAVCGA(3)
+        except ValueError:
+                pass
 
-    def test_set_rad_status(self):
-        self.fail()
-
-    def test_get_rad_status(self):
-        self.fail()
 
     def main(self):
         pass
