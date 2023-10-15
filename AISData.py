@@ -1,6 +1,7 @@
 import sys
 import struct
 import logging
+from AISDictionary import AISDictionaries
 
 
 def Dissemble_encoded_string(encoded_string: str):
@@ -360,7 +361,7 @@ class AIS_Data:
     _lat = 0  # latitude
     _cog = 0
     _truhead = 0
-    _raim = False  # RAIM not in use
+    _raim: bool  # RAIM not in use
     _rad_status = 0  # special radio status generally unused
     _time = 0
     _man = 0
@@ -368,7 +369,7 @@ class AIS_Data:
     _call = ''  # string
     _destination = ''  # string
     _nstatus = 15  # not defined
-    _pa = False  # unaugmented GPS fix
+    _pa: int  # unaugmented GPS fix
     _disp = False  # Display flag derived from type 18
     _dsc = False  # DSC flag - unit attached to VHF radio with DSC capability
     _band = False
@@ -393,14 +394,13 @@ class AIS_Data:
     _draught = 0
     _DTE = 0
     _t14text = ''  # Type 14 Safety Announcement text
-    _isavcga = False
+    _isavcga: bool
     _trailer = ''
     _flat = float(0)
     _flong = float(0)
     _talker = ''
     _Frag = 0
     _Fragno = 0
-    _messid = ''
     _Message_ID = -1
     _channel = ''  # string
     _Payload_ID = 0
@@ -456,15 +456,12 @@ class AIS_Data:
         print('trailer ', self._trailer)
         print('flat ', self._flat)
         print('flong ', self._flong)
-        print('talker ', self._talker)
         print('FragCount ', self._Frag)
         print('FragNo ', self._Fragno)
-        print('messid ', self._messid)
         print('Message_ID ', self._Message_ID)
         print('channel ', self._channel)
         print('Payload_ID ', self._Payload_ID)
         print('Payload ', self._payload)
-        print('repeat ', self._repeat)
         print('binarylength ', self._binary_length)
         print('mmsi ', self._mmsi)
         print('binaryPayLoad ', self._binary_payload)
@@ -479,7 +476,6 @@ class AIS_Data:
     def get_AIS_FragNo(self):
         return self._Fragno
 
-    # AIS_FragNo = property(get_AIS_FragNo)
     '''
     def get_xx(self):
         return self.yy
@@ -523,16 +519,22 @@ class AIS_Data:
     # AIS_Payload = property(get_AIS_Payload)
 
     def get_AIS_Binary_Payload(self):
+        # print("To be returned ",self._binary_payload)
         return self._binary_payload
 
     def set_AIS_Binary_Payload(self, value: str):
+        self._binary_payload = ''
         if isinstance(value, str):
+            # print("setting ", value)
+            # print("current ", self._binary_payload)
             self._binary_payload = value
+            # print("after ", self._binary_payload)
         else:
             raise RuntimeError(
                 "Incorrect type not string supplied to set AIS_Binary_Payload")
 
     def get_AIS_Binary_Payload_length(self):
+
         return self._binary_length
 
     def set_AIS_Binary_Payload_length(self, value):
@@ -559,8 +561,6 @@ class AIS_Data:
 
     def get_AIS_Payload_ID(self) -> int:
         return self._Payload_ID
-
-
 
     def __init__(self, talker: str, fragcount: str, fragno: str,
                  messid: str, channel: str, payload: str, trailer: str):
@@ -601,12 +601,12 @@ class AIS_Data:
         _payload = ''  # String.Empty
 
     def m_setup(self, Encoded_String: str):
+        diction = AISDictionaries()
         nr_items = 0
         # dictionary used to avoid a case statement in AIS_Data
         # translates channel number
         # if non standard 1 or 2 used
 
-        ch_numb_dict = {'1': 'A', '2': 'B', 'A': 'A', 'B': 'B'}
         diagnostic3 = False
         diagnostic4 = False
 
@@ -632,23 +632,21 @@ class AIS_Data:
 
             if discrete_items[0] == "!AIVDM":
                 if nr_items > 4:
-                    if diagnostic4:
-                        print('in m_setup valid string')
-                    self._Frag = int(discrete_items[1])
+                    logging.debug('in m_setup valid string')
                     # number of fragments to make complete message
-                    self.set_fragno(discrete_items[2])
+                    self.set_fragment(int(discrete_items[1]))
+                    self.set_fragnumber(mvalue=discrete_items[2])
                     # current fragment number
                     xx = discrete_items[3]
                     # message id for multifragment message
                     if (len(xx) > 0):
                         self.set_Message_ID(discrete_items[3])
 
-                    if discrete_items[4] in ch_numb_dict:
-                        self.set_ais_Channel(ch_numb_dict[discrete_items[4]])  # radio channel used
+                    if discrete_items[4] in diction.ch_numb_dict:
+                        self.set_ais_Channel(diction.ch_numb_dict[discrete_items[4]])  # radio channel used
                     else:
                         raise RuntimeError(
-                            "channel number not in range {A,B,1,2"
-                        )
+                            "channel number not in range {A,B,1,2")
                     try:
                         self.set_AIS_Payload(discrete_items[5])
                         # actual payload of the message, may need to be
@@ -657,7 +655,7 @@ class AIS_Data:
                         raise
 
                     logging.debug('in m_setup _Frag = ', self._Frag,
-                                  '\r\n_Frag_no = ', self._fragno,
+                                  '\r\n_Frag_no = ', self._Fragno,
                                   '\r\n_channel = ', self._channel,
                                   '\r\n_payload = ', self._payload
                                   )
@@ -666,16 +664,15 @@ class AIS_Data:
                     print("Insufficient fields in string " + Encoded_String, sys.exc_info()[0])
                     raise
 
-                intid: int = AIS_Data.m_to_int(self._payload[0])  # payload type
-                self.set_AIS_Payload_ID(intid) # payload type)
+                intid: int = self.m_to_int(self._payload[0])  # payload type
+                self.set_AIS_Payload_ID(intid)  # payload type)
                 logging.debug('in m_setup_Payload_ID = ', self._Payload_ID)
-                self._binary_payload, self._binary_length = AIS_Data.create_binary_payload(
+                self._binary_payload, self._binary_length = self.create_binary_payload(
                     self._payload)  # binary form of payload
 
                 self.set_AIS_Binary_Payload(self._binary_payload)
-                self.set_AIS_Binary_Payload_length( self._binary_length)
+                self.set_AIS_Binary_Payload_length(self._binary_length)
 
-                # AIS_Data.set_AIS_Binary_Payload(self._binary_payload)
                 # not currently used but available if converting to use bytearray instead of str for binary payload
                 # _byte_payload = AIS_Data.create_bytearray_payload(self._payload)
                 # self._binary_length = len(_byte_payload)
@@ -699,48 +696,36 @@ class AIS_Data:
     def get_Encoded_String(self) -> str:
         return self._parameter
 
-    def set_fragment(self, value):
-        self._fragment = value
+    def set_fragment(self, value: int) -> None:
+        self._Frag = value
 
-    def set_fragno(self, value):
-        if isinstance(value, str):
-            self._fragno = value
-        else:
-            raise (TypeError, "Value passed to set_fragno not a string")
+    def get_fragment(self) -> int:
+        return self._Frag
 
-    def set_messid(self, value):
-        if isinstance(value, str):
-            self._messid = value
-        else:
-            raise (TypeError, "Value passed to set_messid not a string")
+    def set_fragnumber(self, *, mvalue: str = '') -> None:
+        self._Fragno = mvalue
 
-    def set_channel(self, value):
-        if isinstance(value, str):
-            self._channel = value
-        else:
+    def get_fragno(self) -> str:
+        return self._Fragno
+
+    def set_channel(self, value: str) -> None:
+        diction = AISDictionaries()
+        if not isinstance(value, str):
             raise (TypeError, "Value passed to set_channel not a string")
 
-    def set_payload(self, value):
-        if isinstance(value, str):
-            self._payload = value
+        if value in diction.ch_numb_dict:
+            self._channel = diction.ch_numb_dict[self._channel]
         else:
-            raise (TypeError, "Value passed to set_payload not a string")
+            raise ValueError
+
+    def get_channel(self) -> str:
+        return self._channel
 
     def set_trailer(self, value):
         if isinstance(value, str):
             self._trailer = value
         else:
             raise (TypeError, "Value passed to set_trailer not a string")
-
-    def get_MMSI(self):
-        # print('getting MMSI in get_MMSI')
-        return self._mmsi
-
-    def set_MMSI(self, value):
-        # print('  setting MMSI in set_MMSI')
-        self._mmsi = value
-
-    # MMSI = property(get_MMSI, set_MMSI)
 
     def get_String_MMSI(self) -> str:
         s_mmsi = str(self._mmsi)
@@ -755,25 +740,15 @@ class AIS_Data:
 
     # String_MMSI = property(get_String_MMSI)
 
-    def set_talker(self, value):
-        if isinstance(value, str):
-            self._talker = value
-        else:
-            raise (TypeError, "Value passed to set_talker not a string")
-
     def do_function(self, keyword, value):
         # create a dictionary of functions related to keywords that might be being initialised
         Funcdict = \
             {
                 'Encoded_String': self.set_Encoded_String,
-                'talker': self.set_talker,
                 'fragcount': self.set_fragment,
-                'fragno': self.set_fragno,
-                'messid': self.set_messid,
                 'channel': self.set_channel,
-                'payload': self.set_payload,
+                'payload': self.set_AIS_Payload,
                 'trailer': self.set_trailer,
-                'MMSI': self.set_MMSI,
                 'RepeatIndicator': self.set_RepeatIndicator,
                 'SOG': self.set_SOG,
                 'int_HDG': self.set_int_HDG,
@@ -817,24 +792,12 @@ class AIS_Data:
         else:
             raise (ValueError, "parameter name unknown")
 
-    # region Public Properties
-
-    def get_RepeatIndicator(self):
-        return self._repeat
-
-    def set_RepeatIndicator(self, value):
-        self._repeat = value
-
-    # RepeatIndicator = property(get_RepeatIndicator, set_RepeatIndicator)
-
     def get_SOG(self) -> float:
         self._fsog = float(self._sog)
         return self._fsog / 10
 
     def set_SOG(self, value) -> None:
         self._sog = int(value)
-
-    # SOG = property(get_SOG, set_SOG)
 
     def get_int_HDG(self) -> int:
         # print('getting int HDG')
@@ -846,7 +809,7 @@ class AIS_Data:
 
     # int_HDG = property(get_int_HDG, set_int_HDG)
 
-    def ROT(self) -> None:
+    def ROT(self) -> float:
         # ROT is coded as 4.733 * SQRT(p_rot)
         # to decode divide bcoded value by 4.733 then square.
         # Returns rate in degrees per minute to three decimal places
@@ -870,13 +833,14 @@ class AIS_Data:
 
         return float(self._frot)
 
-    def get_Altitude(self):
+    def get_Altitude(self) -> int:
         return self._altitude
 
-    def set_Altitude(self, value) -> None:
-        self._altitude = value
-
-    Altitude = property(get_Altitude, set_Altitude)
+    def set_Altitude(self, value: int) -> None:
+        if 0 >= value <= 4095:
+            self._altitude = value
+        else:
+            raise ValueError
 
     def get_int_ROT(self) -> int:
         return self._rot
@@ -886,42 +850,46 @@ class AIS_Data:
 
     int_ROT = property(get_int_ROT, set_int_ROT)
 
-    def get_NavStatus(self):
+    def get_NavStatus(self) -> int:
         return self._nstatus
 
-    def set_NavStatus(self, value) -> None:
-        self._nstatus = value
-
-    NavStatus = property(get_NavStatus, set_NavStatus)
+    def set_NavStatus(self, value: int) -> None:
+        if value in range(1, 15):
+            self._nstatus = value
+        else:
+            raise ValueError
 
     def set_int_latitude(self, value) -> None:
         # print(' setting int latitude', value)
-        if isinstance(value, int):
+        # in 1/10000 of a minute  +/- 180 degrees
+        if not isinstance(value, int):
+            raise RuntimeError(
+                "incorrect type {} in set_ini_latitude should be int".format(type(value)))
+        if -108000000 >= value <= 108000000:
             self._lat = value
             self._flat = float(self._lat) / 600000
         else:
-            raise RuntimeError(
-                "incorrect type {} in set_ini_latitude should be int".format(type(value)))
+            raise ValueError(
+                "Latitude range +/- 180 degrees")
 
     def get_int_latitude(self) -> int:  # unused
-        return 0
+        return self._lat
 
-    int_latitude = property(get_int_latitude, set_int_latitude)
-
-    def set_int_longitude(self, value) -> None:
+    def set_int_longitude(self, value: int) -> None:
         # print (' setting int longitude', value)
-        if isinstance(value, int):
-            self._long = value
-            self._flong = float(self._long) / 600000
-        else:
+        # in 1/10000 of a minute  +/- 180 degrees
+        if not isinstance(value, int):
             raise RuntimeError(
-                "incorrect type {} in set_ini_longitufde should be int".format(type(value))
-            )
+                "incorrect type {} in set_ini_longitude should be int".format(type(value)))
+        if -108000000 >= value <= 108000000:
+            self._lat = value
+            self._flat = float(self._lat) / 600000
+        else:
+            raise ValueError(
+                "Longitude range +/- 180 degrees")
 
     def get_int_longitude(self) -> int:  # unused
-        return 0
-
-    int_longitude = property(get_int_longitude, set_int_longitude)
+        return self._long
 
     def get_Latitude(self) -> float:
         return self._flat
@@ -931,12 +899,10 @@ class AIS_Data:
     def get_Longitude(self) -> float:
         return self._flong
 
-    Longitude = property(get_Longitude)
-
-    def get_Pos_Accuracy(self):
+    def get_Pos_Accuracy(self) -> int:
         return self._pa
 
-    def set_Pos_Accuracy(self, value) -> None:
+    def set_Pos_Accuracy(self, *, value: int = 0):
         self._pa = value
 
     Pos_Accuracy = property(get_Pos_Accuracy, set_Pos_Accuracy)
@@ -1235,7 +1201,7 @@ class AIS_Data:
             self._d2starboard = 0
             raise TypeError('Dim2Starboard must be integer')
 
-    #Dim2Starboard = property(get_Dim2Starboard, set_Dim2Starboard)
+    # Dim2Starboard = property(get_Dim2Starboard, set_Dim2Starboard)
 
     # public int FixType
     def get_FixType(self) -> int:
@@ -1442,7 +1408,7 @@ class AIS_Data:
 
     # endregion
     # region Private Methods
-    def create_binary_payload(p_payload: str) -> tuple:
+    def create_binary_payload(self, p_payload: str) -> tuple:
         # based on using a supersized string rather than bytearray
         #
         printdiag = False
@@ -1459,7 +1425,7 @@ class AIS_Data:
             # iterate through the string payload masking to lower 6 bits
             xchar = p_payload[i]
 
-            nibble = AIS_Data.m_to_int(xchar) & 0x3F  # ensures only 6 bits presented
+            nibble = self.m_to_int(xchar) & 0x3F  # ensures only 6 bits presented
 
             logging.debug('nibble', bin(nibble))
 
@@ -1470,8 +1436,6 @@ class AIS_Data:
                 print(_abinary_payload)
 
         _binary_payload = _abinary_payload
-
-
 
         return _abinary_payload, len(_abinary_payload)
 
@@ -1565,7 +1529,7 @@ class AIS_Data:
     def m_to_int2(self, parameter: str) -> int:
         return int(parameter)
 
-    def m_to_int(parameter: str) -> int:
+    def m_to_int(self, parameter: str) -> int:
         # takes in a encoded string of variable length and returns positive integer
         # print('entering m_to_int parameter = ', parameter)
         my_int = int(0)
@@ -1609,6 +1573,7 @@ class AIS_Data:
                     p = ''  # String.Empty
         return p
 
-    _hasbeenDisposed = False
+
+_hasbeenDisposed = False
 
 # region Disposals

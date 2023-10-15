@@ -143,9 +143,9 @@ def doCommon123_9(AISObject):
     # next position accuracy True/False indicated by 0/1 bit 60 character position 10 bit 0
     # p_pa True indicates augmented system
     if AISObject.Binary_Item(60, 1) > 0:
-        AISObject.set_Pos_Accuracy(True)
+        AISObject.set_Pos_Accuracy(True, 1)
     else:
-        AISObject.set_Pos_Accuracy(False)
+        AISObject.set_Pos_Accuracy(False, 1)
 
     # get longitude from binary
     p_ulong = AISObject.Binary_Item(61, 28)
@@ -183,9 +183,9 @@ def do9(AISObject):
     # next position accuracy True/False indicated by 0/1 bit 60 character position 10 bit 0
     # p_pa True indicates augmented system
     if AISObject.Binary_Item(60, 1) > 0:
-        AISObject.set_Pos_Accuracy(True)
+        AISObject.set_Pos_Accuracy(True, 1)
     else:
-        AISObject.set_Pos_Accuracy(False)
+        AISObject.set_Pos_Accuracy(False, 1)
 
     # some things lat/long/COG common to 123 and 9
     doCommon123_9(AISObject)
@@ -219,9 +219,9 @@ def do9(AISObject):
 def do18(AISObject):
     AISObject.set_SOG(AISObject.Binary_Item(46, 10))
     if AISObject.Binary_Item(56, 1) > 0:
-        AISObject.set_Pos_Accuracy(True)
+        AISObject.set_Pos_Accuracy(True, 1)
     else:
-        AISObject.set_Pos_Accuracy(False)
+        AISObject.set_Pos_Accuracy(False, 1)
 
     p_ulong = AISObject.Binary_Item(57, 28)  # Longitude
     if (p_ulong & 0x8000000) > 0:

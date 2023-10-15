@@ -42,7 +42,7 @@ class FRAGMENT:
             "Fragno": self.set_Fragno,
             "Message_ID": self.set_Message_ID,
             "Channel": self.set_Channel,
-            "Payload": self.set_Payload,
+            "Payload": self.set_AIS_Payload,
             "Trailer": self.set_Trailer,
         }
         if keyword in Funcdict:
@@ -120,7 +120,7 @@ class FRAGMENT:
 
     Channel = property(get_Channel, set_Channel)
 
-    def set_Payload(self, value):
+    def set_AIS_Payload(self, value):
         if isinstance(value, str):
             self.p_payload = value
         else:
@@ -130,7 +130,7 @@ class FRAGMENT:
     def get_Payload(self):
         return self.p_payload
 
-    PayLoad = property(get_Payload, set_Payload)
+    PayLoad = property(get_Payload, set_AIS_Payload)
 
     def set_Trailer(self, value):
         if isinstance(value, str):

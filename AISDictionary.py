@@ -30,6 +30,7 @@ class AISDictionaries:
                       't': '111100', 'u': '111101', 'v': '111110', 'w': '111111'
                       }
 
+    ch_numb_dict = {'1': 'A', '2': 'B', 'A': 'A', 'B': 'B'}
 
     def __init__(self):
         pass
