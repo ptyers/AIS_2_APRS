@@ -486,10 +486,10 @@ class AIS_Data:
     xx = property(get_xx)
     '''
 
-    def get_Message_ID(self):
+    def get_Message_ID(self) -> str:
         return self._Message_ID
 
-    def set_Message_ID(self, value: str):
+    def set_Message_ID(self, value: str) -> None:
         if isinstance(value, str):
             self._Message_ID = value
         else:
@@ -501,10 +501,24 @@ class AIS_Data:
     def get_AIS_Channel(self):
         return self._channel
 
+    def set_ais_Channel(self, value: str):
+        if isinstance(value, str):
+            self._channel = value
+        else:
+            raise RuntimeError(
+                "Incorrect type not string supplied to set AIS_Channel")
+
     # AIS_Channel = property(get_AIS_Channel)
 
-    def get_AIS_Payload(self):
+    def get_AIS_Payload(self) -> str:
         return self._payload
+
+    def set_AIS_Payload(self, value: str) -> None:
+        if isinstance(value, str):
+            self._payload = value
+        else:
+            raise RuntimeError(
+                "Incorrect type not string supplied to set AIS_Payload")
 
     # AIS_Payload = property(get_AIS_Payload)
 
@@ -517,10 +531,6 @@ class AIS_Data:
         else:
             raise RuntimeError(
                 "Incorrect type not string supplied to set AIS_Binary_Payload")
-
-    # AIS_Binary_Payload = property(
-    #     get_AIS_Binary_Payload,
-    #     set_AIS_Binary_Payload)
 
     def get_AIS_Binary_Payload_length(self):
         return self._binary_length
@@ -537,18 +547,20 @@ class AIS_Data:
     #     set_AIS_Binary_Payload_length
     # )
 
-    def set_AIS_Payload_ID(self, value):
-        if isinstance(value, int):
-            self._binary_length = value
-        else:
+    def set_AIS_Payload_ID(self, value: int) -> None:
+        if not isinstance(value, int):
             raise RuntimeError(
-                "Error setting binary payload length - non integer presented"
-            )
+                "Error setting binary payload ID - non integer presented")
 
-    def get_AIS_Payload_ID(self):
+        if value in range(1, 27):
+            self._Payload_ID = value
+        else:
+            raise ValueError("Error setting binary payload ID - non valid ID type")
+
+    def get_AIS_Payload_ID(self) -> int:
         return self._Payload_ID
 
-    AIS_Payload_ID = property(get_AIS_Payload_ID, set_AIS_Payload_ID)
+
 
     def __init__(self, talker: str, fragcount: str, fragno: str,
                  messid: str, channel: str, payload: str, trailer: str):
@@ -624,50 +636,51 @@ class AIS_Data:
                         print('in m_setup valid string')
                     self._Frag = int(discrete_items[1])
                     # number of fragments to make complete message
-                    self._Frag_no = int(discrete_items[2])
+                    self.set_fragno(discrete_items[2])
                     # current fragment number
                     xx = discrete_items[3]
                     # message id for multifragment message
                     if (len(xx) > 0):
-                        self._Message_ID = int(discrete_items[3])
-                    self._channel = discrete_items[4]  # radio channel used
-                    if self._channel in ch_numb_dict:
-                        self._channel = ch_numb_dict[self._channel]
+                        self.set_Message_ID(discrete_items[3])
+
+                    if discrete_items[4] in ch_numb_dict:
+                        self.set_ais_Channel(ch_numb_dict[discrete_items[4]])  # radio channel used
                     else:
                         raise RuntimeError(
                             "channel number not in range {A,B,1,2"
                         )
                     try:
-                        self._payload = discrete_items[5]
+                        self.set_AIS_Payload(discrete_items[5])
                         # actual payload of the message, may need to be
                     except:
                         print("Error in extracting payload", sys.exc_info()[0])
                         raise
-                    if diagnostic4:
-                        print('in m_setup _Frag = ', self._Frag,
-                              '\r\n_Frag_no = ', self._Frag_no,
-                              '\r\n_channel = ', self._channel,
-                              '\r\n_payload = ', self._payload
-                              )
+
+                    logging.debug('in m_setup _Frag = ', self._Frag,
+                                  '\r\n_Frag_no = ', self._fragno,
+                                  '\r\n_channel = ', self._channel,
+                                  '\r\n_payload = ', self._payload
+                                  )
 
                 else:
                     print("Insufficient fields in string " + Encoded_String, sys.exc_info()[0])
                     raise
 
-                self._Payload_ID = AIS_Data.m_to_int(self._payload[0])  # payload type
-                if diagnostic4:
-                    print('in m_setup_Payload_ID = ', self._Payload_ID)
+                intid: int = AIS_Data.m_to_int(self._payload[0])  # payload type
+                self.set_AIS_Payload_ID(intid) # payload type)
+                logging.debug('in m_setup_Payload_ID = ', self._Payload_ID)
                 self._binary_payload, self._binary_length = AIS_Data.create_binary_payload(
                     self._payload)  # binary form of payload
+
+                self.set_AIS_Binary_Payload(self._binary_payload)
+                self.set_AIS_Binary_Payload_length( self._binary_length)
 
                 # AIS_Data.set_AIS_Binary_Payload(self._binary_payload)
                 # not currently used but available if converting to use bytearray instead of str for binary payload
                 # _byte_payload = AIS_Data.create_bytearray_payload(self._payload)
                 # self._binary_length = len(_byte_payload)
 
-                if diagnostic4:
-                    print('in m_setup_binary_Payload = ', bin(self._binary_payload))
-                # Console.WriteLine("Payload_ID = " + p_Payload_ID)
+                logging.debug('in m_setup_binary_Payload = ', self._binary_payload)
 
                 # if message type is 14 we need to create the safety message text
                 #
@@ -1222,7 +1235,7 @@ class AIS_Data:
             self._d2starboard = 0
             raise TypeError('Dim2Starboard must be integer')
 
-    Dim2Starboard = property(get_Dim2Starboard, set_Dim2Starboard)
+    #Dim2Starboard = property(get_Dim2Starboard, set_Dim2Starboard)
 
     # public int FixType
     def get_FixType(self) -> int:
@@ -1446,7 +1459,7 @@ class AIS_Data:
             # iterate through the string payload masking to lower 6 bits
             xchar = p_payload[i]
 
-            nibble = AIS_Data.m_to_int( xchar) & 0x3F  # ensures only 6 bits presented
+            nibble = AIS_Data.m_to_int(xchar) & 0x3F  # ensures only 6 bits presented
 
             logging.debug('nibble', bin(nibble))
 
@@ -1457,6 +1470,8 @@ class AIS_Data:
                 print(_abinary_payload)
 
         _binary_payload = _abinary_payload
+
+
 
         return _abinary_payload, len(_abinary_payload)
 
@@ -1550,7 +1565,7 @@ class AIS_Data:
     def m_to_int2(self, parameter: str) -> int:
         return int(parameter)
 
-    def m_to_int( parameter: str) -> int:
+    def m_to_int(parameter: str) -> int:
         # takes in a encoded string of variable length and returns positive integer
         # print('entering m_to_int parameter = ', parameter)
         my_int = int(0)

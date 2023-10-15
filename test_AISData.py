@@ -197,7 +197,7 @@ class TestAIS_Data(TestCase):
 
             self.assertEqual(rndtext, outstr, "Failed in Extract_String")
 
-##### Error still exists last character in string if @ returns as w
+        ##### Error still exists last character in string if @ returns as w
 
         print("Succeeded")
 
@@ -254,26 +254,79 @@ class TestAIS_Data(TestCase):
         out = mydata.get_Message_ID()
         self.assertEqual(self.mytestdata[0].split(',')[3], out)
 
-    def test_get_ais_channel(self):
-        self.fail()
+    def test_get_AIS_channel(self):
+        diction, mydata = self.initialise()
 
-    def test_get_ais_payload(self):
-        self.fail()
+        mydata.set_ais_Channel('A')
+        out = mydata.get_AIS_Channel()
+        self.assertEqual("A", out, "Failed in test get_AIS_Channel")
 
-    def test_set_ais_binary_payload(self):
-        self.fail()
+    def test_get_AIS_payload(self):
+        diction, mydata = self.initialise()
 
-    def test_get_ais_binary_payload_length(self):
-        self.fail()
+        mydata.set_AIS_Payload(self.mytestdata[0].split(',')[5])
+        out = mydata.get_AIS_Payload()
+        self.assertEqual(self.mytestdata[0].split(',')[5], out, "Failed in test get_AIS_Payload")
 
-    def test_set_ais_binary_payload_length(self):
-        self.fail()
+    def test_set_AIS_payload(self):
+        diction, mydata = self.initialise()
 
-    def test_set_ais_payload_id(self):
-        self.fail()
+        mydata.set_AIS_Payload(self.mytestdata[0].split(',')[5])
+        out = mydata.get_AIS_Payload()
+        self.assertEqual(self.mytestdata[0].split(',')[5], out, "Failed in test set_AIS_Payload")
 
-    def test_get_ais_payload_id(self):
-        self.fail()
+    def test_set_AIS_Binary_Payload(self):
+        diction, mydata = self.initialise()
+        fakestream: str = '00010000'
+        faketail: str = '11111111111111111111'
+        fakebinary = '00010000' + '11111111111111111111' + '00010000'
+
+        mydata.set_ais_Channel(fakebinary)
+        out = mydata.get_AIS_Binary_Payload()
+        self.assertEqual(fakebinary, out, "Failed in test set_AIS_Binary_Payload")
+
+    def test_get_AIS_Binary_Payload(self):
+        diction, mydata = self.initialise()
+        fakestream: str = '00010000'
+        faketail: str = '11111111111111111111'
+        fakebinary = '00010000' + '11111111111111111111' + '00010000'
+
+        mydata.set_AIS_Binary_Payload(fakebinary)
+        out = mydata.get_AIS_Binary_Payload()
+        self.assertEqual(fakebinary, out, "Failed in test get_AIS_Binary_Payload")
+
+    def test_get_AIS_Binary_Payload_length(self):
+        diction, mydata = self.initialise()
+        mydata.set_AIS_Binary_Payload_length(160)
+        out = mydata.get_AIS_Binary_Payload_length()
+        self.assertEqual(160, out, "Failed in test get_AIS_Binary_Payload")
+
+    def test_set_AIS_Binary_Payload_length(self):
+        diction, mydata = self.initialise()
+        mydata.set_AIS_Binary_Payload_length(160)
+        out = mydata.get_AIS_Binary_Payload_length()
+        self.assertEqual(160, out, "Failed in test get_AIS_Binary_Payload")
+
+    def test_set_AIS_Payload_ID(self):
+        diction, mydata = self.initialise()
+        for intid in range(0, 27):
+            mydata.set_AIS_Payload_ID(intid)
+            intout = mydata.get_AIS_Payload_ID()
+            self.assertEqual(intid, intout, "Failed in test get_AIS_Binary_ID")
+        # try with invalid id
+        try:
+            mydata.set_AIS_Payload_ID(28)
+            self.fail()
+        except ValueError:
+            pass
+
+
+
+    def test_get_AIS_Payload_ID(self):
+        diction, mydata = self.initialise()
+        mydata.set_AIS_Payload_ID(1)
+        intout = mydata.get_AIS_Payload_ID()
+        self.assertEqual(1, intout, "Failed in test get_AIS_Payload_ID")
 
     def test_set_fragment(self):
         self.fail()
