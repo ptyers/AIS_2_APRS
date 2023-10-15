@@ -455,11 +455,10 @@ class TestAIS_Data(TestCase):
         diction, mydata = self.initialise()
         ilat = 60000000
         mydata.set_int_latitude(ilat)
-        self.assertEqual(ilat, mydata.get_int_latitude(), "Failed in set int latitude")
-        self.assertEqual(10.0, mydata.get_Latitude, "Failed in getting floting point latitude")
-
-    def test_get_int_latitude(self):
-        self.fail()
+        outi = mydata.get_int_latitude()
+        outf= mydata.get_Latitude()
+        self.assertEqual(ilat,outi , "Failed in set int latitude")
+        self.assertEqual(10.0,outf , "Failed in getting floting point latitude")
 
     def test_set_int_longitude(self):
         print("Testing set int longitude")
@@ -468,8 +467,10 @@ class TestAIS_Data(TestCase):
         diction, mydata = self.initialise()
         ilat = 60000000
         mydata.set_int_longitude(ilat)
-        self.assertEqual(ilat, mydata.get_int_latitude(), "Failed in set int longitude")
-        self.assertEqual(10.0, mydata.get_Longitude(), "Failed in getting floting point longitude")
+        outi = mydata.get_int_longitude()
+        outf = mydata.get_Longitude()
+        self.assertEqual(ilat, outi, "Failed in set int longitude")
+        self.assertEqual(10.0, outf, "Failed in getting floating point longitude")
 
     def test_set_pos_accuracy(self):
         diction, mydata = self.initialise()
@@ -480,23 +481,27 @@ class TestAIS_Data(TestCase):
         mydata.set_Pos_Accuracy(0)
         self.assertEqual(0, mydata.get_Pos_Accuracy, 'Failed in get/set pos accuyracy')
 
-    def test_get_cog(self):
-        self.fail()
 
     def test_set_cog(self):
-        self.fail()
+        diction, mydata = self.initialise()
+        print("Test set COG")
+        for _ in range(100):
+            ispd = random.randint(0, 3600)
+            mydata.set_COG(ispd)
+            out: float = mydata.get_COG()
+            self.assertEqual(float(ispd/10), out, "Failed in set_COG")
+            self.assertEqual(int(ispd/10), mydata.get_int_COG(), "Failed in get_int_COG")
 
-    def test_set_int_cog(self):
-        self.fail()
 
-    def test_get_int_cog(self):
-        self.fail()
-
-    def test_get_hdg(self):
-        self.fail()
 
     def test_set_hdg(self):
-        self.fail()
+        diction, mydata = self.initialise()
+        print("Test set HDG")
+        for _ in range(100):
+            ispd = random.randint(0, 359)
+            mydata.set_HDG(ispd)
+            out: int = mydata.get_HDG()
+            self.assertEqual(ispd, out, "Failed in set_HDG")
 
     def test_get_timestamp(self):
         self.fail()

@@ -610,8 +610,8 @@ class AIS_Data:
         diagnostic3 = False
         diagnostic4 = False
 
-        if (diagnostic3):
-            print('ïn AIS_Data.m_setup encoded string = ', Encoded_String)
+
+        logging.debug('ïn AIS_Data.m_setup encoded string = ', Encoded_String)
 
         try:
             # under c# discrete_items would be a string array,
@@ -837,7 +837,7 @@ class AIS_Data:
         return self._altitude
 
     def set_Altitude(self, value: int) -> None:
-        if 0 >= value <= 4095:
+        if value >= 0 and value <= 4095:
             self._altitude = value
         else:
             raise ValueError
@@ -865,9 +865,9 @@ class AIS_Data:
         if not isinstance(value, int):
             raise RuntimeError(
                 "incorrect type {} in set_ini_latitude should be int".format(type(value)))
-        if -108000000 >= value <= 108000000:
+        if (value >= -108000000) and  (value <= 108000000):
             self._lat = value
-            self._flat = float(self._lat) / 600000
+            self._flat = float(self._lat / 6000000)
         else:
             raise ValueError(
                 "Latitude range +/- 180 degrees")
@@ -881,9 +881,10 @@ class AIS_Data:
         if not isinstance(value, int):
             raise RuntimeError(
                 "incorrect type {} in set_ini_longitude should be int".format(type(value)))
-        if -108000000 >= value <= 108000000:
-            self._lat = value
-            self._flat = float(self._lat) / 600000
+
+        if (value >= -108000000) and (value <= 108000000):
+            self._long = value
+            self._flong = float(self._long / 6000000)
         else:
             raise ValueError(
                 "Longitude range +/- 180 degrees")
@@ -894,7 +895,6 @@ class AIS_Data:
     def get_Latitude(self) -> float:
         return self._flat
 
-    Latitude = property(get_Latitude)
 
     def get_Longitude(self) -> float:
         return self._flong
@@ -908,48 +908,32 @@ class AIS_Data:
     Pos_Accuracy = property(get_Pos_Accuracy, set_Pos_Accuracy)
 
     def get_COG(self) -> float:
-        return float(round((float(self._cog) / 10), 1))
+        return  self._cog
 
-    def set_COG(self, value) -> None:
-        if isinstance(value, float):
-            self._cog = int(value)
-        elif isinstance(value, int):
-            self._cog = value
+    def set_COG(self, value: int) -> None:
+        if value in range(0,3600):
+            self._cog = float (value/10)
         else:
-            print('in AISDATA setting COG got incorect type not int or float type = ', type(value))
-        self._cog = value
+            print('in AISDATA setting COG got incorect value = ', value)
+            raise ValueError
 
-    COG = property(get_COG, set_COG)
 
     def set_int_COG(self, value) -> None:
-        if isinstance(value, float):
-            self._cog = int(value)
-        elif isinstance(value, int):
-            self._cog = value
-        else:
-            print(
-                'in AISDATA setting int_COG got incorect type not int or float type = ',
-                type(value))
+        self.set_COG(value)
 
     def get_int_COG(self) -> int:  # not used
-        return 0
+        return int(self._cog)
 
-    int_COG = property(get_int_COG, set_int_COG)
 
-    def get_HDG(self) -> float:
-        # print('getting HDG ', float(self._truhead))
-        return float(self._truhead)
+    def get_HDG(self) -> int:
+        return self._truhead
 
-    def set_HDG(self, value) -> None:
-        # print('setting HDG ', float(value))
-        if isinstance(value, float):
-            self._truhead = int(value)
-        elif isinstance(value, int):
+    def set_HDG(self, value: int) -> None:
+        if (value in range(0,359)) or value == 511:
             self._truhead = value
         else:
-            print('Error setting heading incorrect type excpected int or float got ', type(value))
+            print('Error setting heading incorrect value  got ', value)
 
-    HDG = property(get_HDG, set_HDG)
 
     # need to pass back the number of bits in the payload
     # it looks as though type 5 static data packets may
