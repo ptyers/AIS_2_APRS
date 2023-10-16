@@ -34,7 +34,6 @@ class APRS:
             self._course = ""
             raise TypeError("Course must be string")
 
-    Course = property(get_Course, set_Course)
 
     def get_Speed(self):
         return self._speed
@@ -46,7 +45,6 @@ class APRS:
             self._speed = ""
             raise TypeError("Speed must be string")
 
-    Speed = property(get_Speed, set_Speed)
 
     def get_Name(self):
         return self._name
@@ -58,7 +56,6 @@ class APRS:
             self._name = ""
             raise TypeError("Name must be string")
 
-    Name = property(get_Name, set_Name)
 
     def get_Callsign(self):
         return self._callsign
@@ -70,7 +67,6 @@ class APRS:
             self._callsign = ""
             raise TypeError("Callsign must be string")
 
-    Callsign = property(get_Callsign, set_Callsign)
 
     def get_MMSI(self):
         return self._callsign
@@ -82,7 +78,6 @@ class APRS:
             self._mmsi = "Unknown"
             raise TypeError("Callsign must be string")
 
-    MMSI = property(get_MMSI, set_MMSI)
 
     # endregion
     # endregion

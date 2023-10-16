@@ -32,6 +32,38 @@ class AISDictionaries:
 
     ch_numb_dict = {'1': 'A', '2': 'B', 'A': 'A', 'B': 'B'}
 
+    MIDFormats: dict = {
+                '8MIDXXXXX': 'Diver’s radio (not used in the U.S. in 2013)',
+                'MIDXXXXXX': 'Ship',
+                '0MIDXXXXX': 'Group of ships; the U.S. Coast Guard, for example, is 03699999',
+                '00MIDXXXX': 'Coastal stations',
+                '111MIDXXX': 'SAR (Search and Rescue) aircraft',
+                '99MIDXXXX': 'Aids to Navigation',
+                '98MIDXXXX': "Auxiliary craft associated with a parent ship",
+                '970MIDXXX': 'AIS SART (Search and Rescue Transmitter)',
+                '972XXXXXX': 'MOB (Man Overboard) device',
+                '974XXXXXX': 'EPIRB (Emergency Position Indicating Radio Beacon) AIS'
+                    }
+
+    Navigation_Status: dict = {
+        0: 'Under way using engin', 1: 'At anchor',
+        2: 'Not under command',
+        3: 'Restricted manoeuverability',
+        4: 'Constrained by er draught',
+        5:  'Moored',
+        6: 'Aground',
+        7: 'Engaged in Fishing',
+        8: 'Under way sailing',
+        9: 'Reserved for future amendment of Navigational Status for HSC',
+        10: 'Reserved for future amendment of Navigational Status for WIG',
+        11: 'Power-driven vessel towing astern (regional use)',
+        12: 'Power-driven vessel pushing ahead or towing alongside (regional use)',
+        13: 'Reserved for future use',
+        14: 'AIS-SART is active',
+        15: 'Ubdefined (default)'
+                                 }
+
+
     def __init__(self):
         pass
 
