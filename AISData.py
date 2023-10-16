@@ -370,14 +370,14 @@ class AIS_Data:
     _destination = ''  # string
     _nstatus = 15  # not defined
     _pa: int  # unaugmented GPS fix
-    _disp = False  # Display flag derived from type 18
-    _dsc = False  # DSC flag - unit attached to VHF radio with DSC capability
-    _band = False
+    _disp: int = 0  # Display flag derived from type 18
+    _dsc: int  = 0  # DSC flag - unit attached to VHF radio with DSC capability
+    _band: int  = 0
     # base stations can command units to switch frequency
     # if True unit can use any part of band
-    _m22 = False
+    _m22: int = 0
     # Unit can accept channel assignment via message type 22
-    _assigned = True
+    _assigned: int = 0
     # Assigned mode flag False = autonomous, true = assigned mode
     _version = 0
     _IMO = 0
@@ -394,7 +394,7 @@ class AIS_Data:
     _draught = 0
     _DTE = 0
     _t14text = ''  # Type 14 Safety Announcement text
-    _isavcga: bool
+    _isavcga:int = 0
     _trailer = ''
     _flat = float(0)
     _flong = float(0)
@@ -634,8 +634,8 @@ class AIS_Data:
                 if nr_items > 4:
                     logging.debug('in m_setup valid string')
                     # number of fragments to make complete message
-                    self.set_fragment(int(discrete_items[1]))
-                    self.set_fragnumber(mvalue=discrete_items[2])
+                    self.set_fragment(int(int(discrete_items[1])))
+                    self.set_fragnumber(value=int(discrete_items[2]))
                     # current fragment number
                     xx = discrete_items[3]
                     # message id for multifragment message
@@ -667,8 +667,8 @@ class AIS_Data:
                 intid: int = self.m_to_int(self._payload[0])  # payload type
                 self.set_AIS_Payload_ID(intid)  # payload type)
                 logging.debug('in m_setup_Payload_ID = ', self._Payload_ID)
-                self._binary_payload, self._binary_length = self.create_binary_payload(
-                    self._payload)  # binary form of payload
+                self._binary_payload, self._binary_length = (
+                    self.create_binary_payload(self._payload))  # binary form of payload
 
                 self.set_AIS_Binary_Payload(self._binary_payload)
                 self.set_AIS_Binary_Payload_length(self._binary_length)
@@ -682,7 +682,7 @@ class AIS_Data:
                 # if message type is 14 we need to create the safety message text
                 #
                 if self._Payload_ID == 14:
-                    _t14text = self.ExtractString(40, self._binary_length - 41)
+                    self.set_SafetyText(self.ExtractString(40, self._binary_length - 41))
             else:
                 print("Invalid Talker ID", sys.exc_info()[0])
                 raise RuntimeError("Invalid Talker ID")
@@ -697,15 +697,23 @@ class AIS_Data:
         return self._parameter
 
     def set_fragment(self, value: int) -> None:
-        self._Frag = value
+        if 0 <= value <= 9:
+            self._Frag = value
+        else:
+            self._Frag = 0
+            raise ValueError("Number of fragments cannot exceed 9")
 
     def get_fragment(self) -> int:
         return self._Frag
 
-    def set_fragnumber(self, *, mvalue: str = '') -> None:
-        self._Fragno = mvalue
+    def set_fragnumber(self, *, value: int = 0) -> None:
+        if 0 <= value <= 9:
+            self._Fragno = value
+        else:
+            self._Fragno = 0
+            raise ValueError("Number of fragments cannot exceed 9")
 
-    def get_fragno(self) -> str:
+    def get_fragno(self) -> int:
         return self._Fragno
 
     def set_channel(self, value: str) -> None:
@@ -911,7 +919,7 @@ class AIS_Data:
         return  self._cog
 
     def set_COG(self, value: int) -> None:
-        if value in range(0,3600):
+        if 0 <= value <= 3600:
             self._cog = float (value/10)
         else:
             print('in AISDATA setting COG got incorect value = ', value)
@@ -929,7 +937,7 @@ class AIS_Data:
         return self._truhead
 
     def set_HDG(self, value: int) -> None:
-        if (value in range(0,359)) or value == 511:
+        if value >= 0 and value <= 359:
             self._truhead = value
         else:
             print('Error setting heading incorrect value  got ', value)
@@ -965,6 +973,14 @@ class AIS_Data:
     def get_MAN_Indicator(self):
         return self._man
 
+    def set_RepeatIndicator(self, value: bin) -> None:
+        if value in range(0, 1):
+            self._repeat = value
+        else:
+            raise ValueError("Repeart Indicator must be integer 0/1")
+
+    def get_RepeatIndicator(self) -> int:
+        return self._repeat
 
 
     def set_RAIM(self, value) -> None:
@@ -1010,7 +1026,7 @@ class AIS_Data:
             else:
                 return str(self._call)
 
-    def set_Callsign(self, value) -> None:
+    def set_Callsign(self, value: str) -> None:
         if isinstance(value, str):
             self._call = value
             self._call = self.Remove_at(self._call)
@@ -1019,7 +1035,6 @@ class AIS_Data:
             self._call = ''
             raise TypeError("Callsign must be string")
 
-    Callsign = property(get_Callsign, set_Callsign)
 
     def get_IMO(self) -> int:
         return int(self._IMO)
@@ -1073,9 +1088,8 @@ class AIS_Data:
             self._disp = value
         else:
             self._disp = False
-            raise TypeError('Display must be boolean')
+            raise ValueError('Display must be boolean')
 
-    Display = property(get_Display, set_Display)
 
     # public bool DSC
     def get_DSC(self) -> bool:
@@ -1086,46 +1100,44 @@ class AIS_Data:
             self._dsc = value
         else:
             self._dsc = False
-            raise TypeError("DSC must be boolean")
+            raise ValueError("DSC must be boolean")
 
     DSC = property(get_DSC, set_DSC)
 
-    def get_BAND(self) -> bool:
+    def get_BAND(self) -> int:
         return self._band
 
-    def set_BAND(self, value) -> None:
-        if isinstance(value, bool):
+    def set_BAND(self, value: int) -> None:
+        if value in range(0, 1):
             self._band = value
         else:
-            self._band = False
-            raise TypeError("BAND must be boolean")
+            self._band = 0
+            raise ValueError("BAND must be boolean")
 
-    BAND = property(get_BAND, set_BAND)
 
-    def get_Message22(self) -> bool:
+    def get_Message22(self) -> int:
         return self._m22
 
-    def set_Message22(self, value) -> None:
-        if isinstance(value, bool):
-            self._m22 = value
-        else:
-            self._m22 = False
-            raise TypeError("Message22 must be boolean")
+    def set_Message22(self, value: int) -> None:
+            if value in range(0, 1):
+                self._m22 = value
+            else:
+                self._m22 = 0
+                raise ValueError("Message 22 Flag  must be boolean")
 
-    Message22 = property(get_Message22, set_Message22)
 
     # public bool Assigned
-    def get_Assigned(self) -> bool:
+    def get_Assigned(self) -> int:
         return self._assigned
 
-    def set_Assigned(self, value: bool) -> None:
-        if isinstance(value, bool):
+    def set_Assigned(self, value: int) -> None:
+        if value in range(0,1):
             self._assigned = value
         else:
-            self._assigned = False
-            raise TypeError('Assigned must be boolean')
+            self._assigned = 0
+            raise ValueError('Assigned must be boolean')
 
-    Assigned = property(get_Assigned, set_Assigned)
+
 
     # public int ShipType
     def get_ShipType(self) -> int:
@@ -1133,10 +1145,10 @@ class AIS_Data:
 
     def set_ShipType(self, value) -> None:
         # Ship TYpe range 0-99 values above 99 set to zero (coders in the wild unreliable)
-        if value in range(0,99):
+        if 0 <= value <= 99:
             self._type = value
         elif value < 256:
-            self._typ = 0
+            self._type = 0
         else:
             self._type = 0
             raise ValueError("Ship TYpe outside range 0-256 - with > 99 set to 0")
@@ -1202,12 +1214,12 @@ class AIS_Data:
         return int(self._fix_type)
 
     def set_FixType(self, value: int) -> None:
-        # enumerated 0-8
-        if value in range(0, 8):
+        # range 0-8 valid, 15 often appears as undefined, 9-14 shouldn't happen
+        if value in range(0, 8 or value == 15):
             self._fix_type = value
         else:
-            self._fix_type = 0
-            raise ValueError('FixType must be integer 0-8')
+            self._fix_type = 15
+            raise ValueError('FixType must be integer 0-8 or 15')
 
 
     # public int ETA_Month
@@ -1228,11 +1240,11 @@ class AIS_Data:
         return int(self._ETA_Day)
 
     def set_ETA_Day(self, value: int) -> None:
-        if value in range(0, 24):
+        if value >= 0 and value <= 31:
             self._ETA_Day = value
         else:
             self.ETA_Day = 0
-            raise ValueError('ETA Day must be integer 0-12')
+            raise ValueError('ETA Day must be integer 0-31')
 
 
 
@@ -1242,11 +1254,11 @@ class AIS_Data:
         return int(self._ETA_hour)
 
     def set_ETA_Hour(self, value) -> None:
-        if value in range(0, 24):
+        if value >= 0 and value <= 24:
             self._ETA_hour = value
         else:
             self._ETA_hour = 0
-            raise ValueError('ETA Hour must be integer 0-12')
+            raise ValueError('ETA Hour must be integer 0-24')
 
 
     # public int ETA_Minute
@@ -1255,10 +1267,10 @@ class AIS_Data:
 
     def set_ETA_Minute(self, value) -> None:
         # 60 == Not Applicable
-        if value in range(0, 60):
-            self._ETA_month = value
+        if 0 <= value <= 60:
+            self._ETA_minute = value
         else:
-            self.ETA_Month = 0
+            self.ETA_Minute = 0
             raise ValueError('ETA Minute must be integer 0-60')
 
 
@@ -1309,7 +1321,7 @@ class AIS_Data:
             if (self.part < 2):
                 return int(self.part)
             else:
-                raise NameError("Invalid Part No in Type 24 payload = " + str(self.part))
+                raise ValueError("Invalid Part No in Type 24 payload = " + str(self.part))
         else:
             return -1
 
@@ -1324,18 +1336,17 @@ class AIS_Data:
             self._t14text = ''
             raise TypeError('SafetyText must be string')
 
-    SafetyText = property(get_SafetyText, set_SafetyText)
 
     # public bool isAVCGA
-    def get_isAVCGA(self) -> bool:
+    def get_isAVCGA(self) -> int:
         return int(self._isavcga)
 
-    def set_isAVCGA(self, value: bool):
-        if value in range(0, 1):
+    def set_isAVCGA(self, value: int):
+        if value == 0 or value == 1:
             self._isavcga = value
         else:
-            self._isavcga = False
-            raise ValueError('isAVCGA must be boolean 0/1')
+            self._isavcga = 0
+            raise ValueError('isAVCGA must be boolean 0/1', value)
 
     isAVCGA = property(get_isAVCGA, set_isAVCGA)
 
@@ -1352,17 +1363,17 @@ class AIS_Data:
                 if (startpos + indexer + 6) < self._binary_length:
 
                     temp = self.Binary_Item(startpos + indexer, 6)
-                    # print("temp = " + temp);
+                    #print("temp = ", temp)
                     temp = temp & 0x3F
                     temp = temp + 0x30
                     if temp > 0x57:
                         temp = temp + 0x8
-                    # print('temp again', temp)
+                    #print('temp again', temp)
                     cc = chr(temp)
-                    logging.debug("character to be returned ", cc)
+                    #print("character to be returned ", cc)
                     #                        Console.WriteLine("temp = " + temp + " cc = " + cc);
                     buildit = buildit + cc
-                    # print('buildit ',buildit)
+                    #print('buildit ',buildit)
                     indexer = indexer + 6
                 else:
                     indexer = blength
@@ -1542,23 +1553,33 @@ class AIS_Data:
 
     def Remove_at(self, p: str) -> str:
         if (p.find('@') > 0):
-            p = p[0: p.find('@')]
-            return p
+            pp = ''
+            for i in p:
+                if not (i == '@'):
+                    pp = pp + i
+            return pp
+
         else:
 
             if (p.find('@') == 0):
-                return ''  # equivalent to String.Empty
+                return p  # equivalent to String.Empty
             else:
                 return p
 
     def Remove_space(self, p: str) -> str:
-        if len(p) > 0 and p[- 1: 1] == " ":
-            while p[len(p) - 1: 1] == " ":
-                if (len(p) > 1):
-                    p = p[0: len(p) - 1]
-                else:
-                    p = ''  # String.Empty
-        return p
+        if (p.find(' ') > 0):
+            pp = ''
+            for i in p:
+                if not (i == ' '):
+                    pp = pp + i
+            return pp
+
+        else:
+
+            if (p.find(' ') == 0):
+                return p  # equivalent to String.Empty
+            else:
+                return p
 
 
 _hasbeenDisposed = False
