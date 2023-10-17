@@ -408,6 +408,7 @@ class AIS_Data:
     _repeat = 3  # dont
     _binary_length = 0
     _mmsi = 0
+    _smmsi = '000000000'
     _binary_payload = ''
 
     # ########################## ######################### ###################
@@ -735,6 +736,34 @@ class AIS_Data:
         else:
             raise (TypeError, "Value passed to set_trailer not a string")
 
+    def extract_random_mmsi(self,  startpos: int, length: int) -> tuple:
+        immsi = self.Binary_Item(startpos, length)
+        smmsi = "{:09d}".format(immsi)
+        # string mmsi derived from immsi
+        logging.debug(" return string MMSI = " + smmsi)
+        return immsi, smmsi
+
+    def set_mmsi(self, value: int):
+    # mmsi is nine digits which may start with any digit from 0 to 9.
+    # string MMSI will be zero filled MSC if not 9 chars long
+        immsi = value
+        if 0 <= value <= 999999999:
+            self._mmsi = value
+            self._smmsi = "{:09}".format(value)
+        else:
+            self._mmsi = 0
+            self._smmsi = '000000000"'
+            raise ValueError("attempted to set MMSI outside 0-999999999")
+
+    def get_mmsi(self):
+        return self._mmsi
+
+    def get_smmsi(self):
+        return self._smmsi
+
+
+
+
     def get_String_MMSI(self) -> str:
         s_mmsi = str(self._mmsi)
         if len(s_mmsi) == 9:
@@ -746,7 +775,6 @@ class AIS_Data:
             # Console.WriteLine(" return string MMSI = " + s_mmsi)
         return s_mmsi
 
-    # String_MMSI = property(get_String_MMSI)
 
     def do_function(self, keyword, value):
         # create a dictionary of functions related to keywords that might be being initialised
@@ -1409,7 +1437,7 @@ class AIS_Data:
     def create_binary_payload(self, p_payload: str) -> tuple:
         # based on using a supersized string rather than bytearray
         #
-        printdiag = False
+        #print("ïnput payload "+ p_payload)
         #
         # define a null string
         _abinary_payload = ''
@@ -1419,21 +1447,23 @@ class AIS_Data:
         #       '\nhex version\n', _byte_payload.hex(),
         #       '\nfrom \n',p_payload)
         for i in range(0, len(p_payload)):
-            logging.debug('in create binary payload ', len(p_payload), i)
+            #print('in create binary payload ', len(p_payload), i)
             # iterate through the string payload masking to lower 6 bits
             xchar = p_payload[i]
 
             nibble = self.m_to_int(xchar) & 0x3F  # ensures only 6 bits presented
+            #print(xchar, nibble, p_payload[i], i, len(p_payload))
 
             logging.debug('nibble', bin(nibble))
 
             # now append the nibble to the stream
             _abinary_payload = _abinary_payload + format(nibble, '06b')
 
-            if printdiag:
-                print(_abinary_payload)
+
 
         _binary_payload = _abinary_payload
+
+        #print(_abinary_payload)
 
         return _abinary_payload, len(_abinary_payload)
 

@@ -9,16 +9,17 @@ class TestAIS_Data(TestCase):
     # function used to initialise tests. sets up access to AIS_Data and Dictionary
 
     mytestdata = [
-        '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05',
-        '!AIVDM,2,1,7,A,57Oi`:021ssqHiL6221L4l8U8V2222222222220l1@F476Ik0;QA1C`88888,0*1E',
-        '!AIVDM,2,2,7,A,88888888888,2*2B',
-        '!AIVDM,1,1,,A,404k0WivNUSSNbKvjEag;4W00HB@,0*34',
-        '!AIVDM,1,1,,B,177Q0U04BL:`kKQapd7RpB@v0HBB,0*6D',
-        '!AIVDM,1,1,,A,15Rl8D002I:irnQc>`@hg0Vr08BL,0*65',
-        '!AIVDM,1,1,,B,13loh<01Qm:jL<wcUG5p3nQ004J<,0*60',
-        '!AIVDM,1,1,,B,404kS@P000Htt<tSF0l4Q@100pBr,0*10',
-        '!AIVDM,1,1,,B,17Oosc0q2K:NrnOaf@Mobww200SB,0*28',
-        '!AIVDM,1,1,,A,19NS6o002U:`fMQaqINBiBC20HCp,0*69'
+       '!AIVDM,1,1,,A,404,0*05',
+       '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05',
+       '!AIVDM,2,1,7,A,57Oi`:021ssqHiL6221L4l8U8V2222222222220l1@F476Ik0;QA1C`88888,0*1E',
+       '!AIVDM,2,2,7,A,88888888888,2*2B',
+       '!AIVDM,1,1,,A,404k0WivNUSSNbKvjEag;4W00HB@,0*34',
+       '!AIVDM,1,1,,B,177Q0U04BL:`kKQapd7RpB@v0HBB,0*6D',
+       '!AIVDM,1,1,,A,15Rl8D002I:irnQc>`@hg0Vr08BL,0*65',
+       '!AIVDM,1,1,,B,13loh<01Qm:jL<wcUG5p3nQ004J<,0*60',
+       '!AIVDM,1,1,,B,404kS@P000Htt<tSF0l4Q@100pBr,0*10',
+       '!AIVDM,1,1,,B,17Oosc0q2K:NrnOaf@Mobww200SB,0*28',
+       '!AIVDM,1,1,,A,19NS6o002U:`fMQaqINBiBC20HCp,0*69'
     ]
 
     def initialise(self):
@@ -65,8 +66,24 @@ class TestAIS_Data(TestCase):
             self.testpay: str = ''
             payload = self.mytestdata[i].split(',')
             self.binpay, self.binlen = mydata.create_binary_payload(payload[5])
+            mydata.set_AIS_Binary_Payload(self.binpay)
+            mydata.set_AIS_Binary_Payload_length(self.binlen)
             for char in payload[5]:
                 self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, char)
+
+            # outstring = mydata.ExtractString(0, self.binlen+6)
+            # print('outstring ', outstring)
+            # print('instring  ', payload[5])
+            #
+            # if len(self.binpay) != len(self.testpay):
+            #     print("lengths differ", len(self.binpay), len(self.testpay))
+            #
+            # for ii in range(len(self.testpay) -1):
+            #     if self.testpay[ii] != self.binpay[ii]:
+            #         print('differ at ', ii, "in string of length ", len(self.testpay),
+            #               len(self.binpay), self.binlen, self.testpay[ii], self.binpay[ii])
+
+
 
             self.assertEqual(self.testpay, self.binpay, "Create binary payload failure")
 
@@ -94,7 +111,6 @@ class TestAIS_Data(TestCase):
 
             self.assertEqual(self.testpay, self.ostring, "Create bytearray payload failure")
 
-
     def test_m_to_int(self):
         '''
         m_to_int takes an encoded (armoyed) string and returns an integer
@@ -116,7 +132,6 @@ class TestAIS_Data(TestCase):
             # #make encoded string using dictionary
             outint = mydata.m_to_int2(numbstring)
             self.assertEqual(int(numbstring), outint, "Failure in m_to_int")
-
 
     def test_ExtractInt(self):
         '''
@@ -193,13 +208,59 @@ class TestAIS_Data(TestCase):
 
         ##### Error still exists last character in string if @ returns as w
 
+    def test_extract_random_mmsi(self):
+        # takes in a variety of MMSIs as per the dictionary
+        # sets upo dummy binary sequence and extracts them
+        # tests for both integer MMSI and String MMSI
 
+        print("Testing extract_random MMSI")
+        diction, mydata = self.initialise()
+
+        smmsi_list: list = [
+            '850312345', '503543210', '050398765', '005037651', '111504678',
+            '998761234', '984135432', '970654987', '972654321', '974765432'
+        ]
+
+        for im in smmsi_list:
+            binstring = "{:030b}".format(int(im))
+            # setup fake header  type 4 repeat  indicator = 1, then the 30 bit MMSI and a fake tail (using fake header
+            fakehead = '00100000'
+            binary_stream = fakehead + binstring + fakehead
+            mydata.set_AIS_Binary_Payload(binary_stream)
+            ommsi, osmmsi = mydata.extract_random_mmsi(8, 30)
+            self.assertEqual(int(im), ommsi, "Failed in get random mmsi integer form")
+            self.assertEqual(im, osmmsi, "Failed in get random mmsi string form")
+
+    def test_set_mmsi(self):
+        print('Testing set mmsi')
+        diction, mydata = self.initialise()
+        smmsi_list: list = [
+            '850312345', '503543210', '050398765', '005037651', '111504678',
+            '998761234', '984135432', '970654987', '972654321', '974765432',
+            '9999999999', 'A99999999'
+                            ]
+        for sm in smmsi_list:
+            if sm[0] != "A":
+                try:
+                    mydata.set_mmsi(int(sm))
+                    ommsi = mydata.get_mmsi()
+                    self.assertEqual(int(sm), ommsi, "Failed in get/set random mmsi integer form")
+                    osmmsi = mydata.get_smmsi()
+                    self.assertEqual(sm, osmmsi, "Failed in get/set random mmsi in string form")
+                except ValueError:
+                    pass
+            if sm[0] == 'Á':
+                try:
+                    mydata.set_mmsi(int(sm))
+                    self.assertNotEquals(1,1,"Failed allowed alphabetic MMSI to be offewred")
+                except ValueError:
+                    pass
 
     def test_print_ais(self):
         self.assertEqual(1, 1, "Print_ais not tested")
 
     def test_m_initialise(self):
-        self.assertEqual(1,1,"m_initialise not tested")
+        self.assertEqual(1, 1, "m_initialise not tested")
 
     def test_m_setup(self):
         self.assertEqual(1, 1, "m_setup not tested")
@@ -213,7 +274,7 @@ class TestAIS_Data(TestCase):
                 out = mydata.Remove_at(cs)
 
                 for i in cs:
-                    if not (i == '@' ):
+                    if not (i == '@'):
                         result = result + i
                 self.assertEqual(result, out, "Failed in remove at")
             except ValueError:
@@ -228,7 +289,7 @@ class TestAIS_Data(TestCase):
                 out = mydata.Remove_space(cs)
 
                 for i in cs:
-                    if not (i == ' ' ):
+                    if not (i == ' '):
                         result = result + i
                 self.assertEqual(result, out, "Failed in remove at")
             except ValueError:
@@ -259,14 +320,14 @@ class TestAIS_Data(TestCase):
             except ValueError:
                 pass
 
-    def test_set_Fragment(self):
-        print("Testing set_Fragment to Complete")
+    def test_set_Fragmentno(self):
+        print("Testing set_Fragment count to Complete")
         diction, mydata = self.initialise()
         for intid in range(0, 10):
             try:
                 mydata.set_fragnumber(value=intid)
                 intout = mydata.get_fragno()
-                self.assertEqual(intid, intout, "Failed in test get/set Fragment Count")
+                self.assertEqual(intid, intout, "Failed in test get/set Fragment Count to complete")
             except ValueError:
                 pass
 
@@ -398,7 +459,6 @@ class TestAIS_Data(TestCase):
 
     def test_do_function(self):
         pass
-
 
     def test_set_repeat_indicator(self):
         print('Testing set assigned')
@@ -574,7 +634,6 @@ class TestAIS_Data(TestCase):
             except ValueError:
                 pass
 
-
     def test_set_name(self):
         print('Testing set Vessel Name')
         diction, mydata = self.initialise()
@@ -589,8 +648,6 @@ class TestAIS_Data(TestCase):
                 self.assertEqual(result, mydata.get_Name(), "Failed in get/set Vessel Name")
             except ValueError:
                 pass
-
-
 
     def test_set_callsign(self):
         print('Testing set callsign')
@@ -633,7 +690,6 @@ class TestAIS_Data(TestCase):
             except ValueError:
                 pass
 
-
     def test_set_destination(self):
         print('Testing set Desination')
         diction, mydata = self.initialise()
@@ -648,8 +704,6 @@ class TestAIS_Data(TestCase):
                 self.assertEqual(result, mydata.get_Name(), "Failed in get/set Destination")
             except ValueError:
                 pass
-
-
 
     def test_set_display(self):
         print('Testing setdisplay')
@@ -675,8 +729,6 @@ class TestAIS_Data(TestCase):
             except ValueError:
                 pass
 
-
-
     def test_set_band(self) -> None:
         print('Testing set band flag')
         diction, mydata = self.initialise()
@@ -688,7 +740,6 @@ class TestAIS_Data(TestCase):
                 self.assertEqual(tpl, out, "Failedc in get/set Band Flag")
             except ValueError:
                 pass
-
 
     def test_set_message22(self):
         print('Testing set bmessage22 flag')
@@ -702,7 +753,6 @@ class TestAIS_Data(TestCase):
             except ValueError:
                 pass
 
-
     def test_set_assigned(self):
         print('Testing set assigned')
         diction, mydata = self.initialise()
@@ -714,7 +764,6 @@ class TestAIS_Data(TestCase):
                 self.assertEqual(tpl, out, "Failedc in get/set assigned")
             except ValueError:
                 pass
-
 
     def test_set_ship_type(self):
         print('Testing set Ship Type')
@@ -739,7 +788,6 @@ class TestAIS_Data(TestCase):
                 self.assertEqual(i, mydata.get_Dim2Bow(), "Failed in get/set Dimm to Bow")
             except ValueError:
                 pass
-
 
     def test_set_dim2stern(self):
         print('Testing set Dim to Stern')
@@ -847,7 +895,7 @@ class TestAIS_Data(TestCase):
     def test_set_dte(self):
         print('Testing set DTE')
         diction, mydata = self.initialise()
-        testitems = [0,1,3]
+        testitems = [0, 1, 3]
         for tpl in testitems:
             try:
                 mydata.set_DTE(tpl)
@@ -855,6 +903,7 @@ class TestAIS_Data(TestCase):
                 self.assertEqual(tpl, out, "Failedc in get/set DTE")
             except ValueError:
                 pass
+
     def test_get_radio_status(self):
         diction, mydata = self.initialise()
         self.assertEqual("Radio Status Unavailable", mydata.get_Radio_Status(), "Failed in get Radio Status")
@@ -876,7 +925,7 @@ class TestAIS_Data(TestCase):
         falsehead = '00000000000000000000000000000000000000'
 
         # test for 0, 1 2, 3
-        testitems =[('00',0), ('01',1), ('10',2), ('11',3)]
+        testitems = [('00', 0), ('01', 1), ('10', 2), ('11', 3)]
         for tpl in testitems:
             teststream = falsehead + tpl[0] + falsehead
             mydata.set_AIS_Binary_Payload_length(len(teststream))
@@ -884,10 +933,9 @@ class TestAIS_Data(TestCase):
             mydata.set_AIS_Payload_ID(24)
             try:
                 out = mydata.Type24PartNo()
-                self.assertEqual(tpl[1],out,"Failedc in Type24PartNo")
+                self.assertEqual(tpl[1], out, "Failedc in Type24PartNo")
             except ValueError:
                 pass
-
 
         try:
             mydata.set_isAVCGA(3)
@@ -901,9 +949,10 @@ class TestAIS_Data(TestCase):
         self.assertEqual('asdfghjkl', mydata.get_SafetyText(), "Failed in get/set Safety Text")
         try:
             mydata.set_SafetyText(1)
-            self.assertEqual(1,0,"Failed in get set Safety text accepted non string")
+            self.assertEqual(1, 0, "Failed in get set Safety text accepted non string")
         except TypeError:
             pass
+
     def test_set_is_avcga(self):
         print('Testing set isAVCGA')
         diction, mydata = self.initialise()

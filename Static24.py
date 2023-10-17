@@ -63,7 +63,7 @@ class STATIC24:
         # first
         # print('Instantiating Type 24')
         # AISObject.print_AIS()
-        if AISObject.AIS_Payload_ID == 5:
+        if AISObject._Payload_ID == 5:
             if GlobalDefinitions.Global.diagnostic3:
                 print(
                     "ín 5 AISObject Binary",
@@ -92,7 +92,7 @@ class STATIC24:
             )
             AISObject.DTE = AISObject.ExtractInt(422, 1)
 
-        if AISObject.AIS_Payload_ID == 24:
+        if AISObject._Payload_ID == 24:
             # now we update the objrct just created -
             # whether part A or part B will be chcked in update()
             self.update(AISObject)

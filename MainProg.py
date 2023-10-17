@@ -148,7 +148,7 @@ def main():
                 # TEMPORARY ######throw away fragmented packets
                 if int(aisfields[1]) == 1:
                     # print('doing stuff nonfragmented pasyload id =',myAIS.AIS_Payload_ID)
-                    do_function(myAIS.AIS_Payload_ID, myAIS)
+                    do_function(myAIS._Payload_ID, myAIS)
                 else:
                     # now handle the fragments
                     # function will return True when fragments have been merged

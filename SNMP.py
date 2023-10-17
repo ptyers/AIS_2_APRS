@@ -50,35 +50,35 @@ Functionally similar to:
 """
 
 
-def sendtrap(
-    community="public",
-    mpmodel=0,
-    snmpmanager="102.168.80.3",
-    snmpport=162,
-    objectid="1.3.6.1.2.1.1.5",
-    **varbinds
-):
-    print("about to send")
-    iterator = sendNotification(
-        SnmpEngine(),
-        CommunityData(community, mpmodel),
-        UdpTransportTarget((snmpmanager, snmpport)),
-        ContextData(),
-        "trap",
-        NotificationType(ObjectIdentity(objectid))
-        .addVarBinds(
-            ("1.3.6.1.2.1.1.3.0", 12345),
-            ("1.3.6.1.6.3.18.1.3.0", "127.0.0.1"),
-            ("1.3.6.1.6.3.1.1.4.3.0", "1.3.6.1.4.1.65000.4.1.1.2"),
-            ("1.3.6.1.2.1.1.1.0", OctetString("my system")),
+    def sendtrap(
+        community="public",
+        mpmodel=0,
+        snmpmanager="102.168.80.3",
+        snmpport=162,
+        objectid="1.3.6.1.2.1.1.5",
+        **varbinds
+    ):
+        print("about to send")
+        iterator = sendNotification(
+            SnmpEngine(),
+            CommunityData(community, mpmodel),
+            UdpTransportTarget((snmpmanager, snmpport)),
+            ContextData(),
+            "trap",
+            NotificationType(ObjectIdentity(objectid))
+            .addVarBinds(
+                ("1.3.6.1.2.1.1.3.0", 12345),
+                ("1.3.6.1.6.3.18.1.3.0", "127.0.0.1"),
+                ("1.3.6.1.6.3.1.1.4.3.0", "1.3.6.1.4.1.65000.4.1.1.2"),
+                ("1.3.6.1.2.1.1.1.0", OctetString("my system")),
+            )
+            .loadMibs("SNMPv2-MIB", "SNMP-COMMUNITY-MIB"),
         )
-        .loadMibs("SNMPv2-MIB", "SNMP-COMMUNITY-MIB"),
-    )
 
-    errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
+        errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
 
-    if errorIndication:
-        print(errorIndication)
+        if errorIndication:
+            print(errorIndication)
 
 
 if __name__ == "__main__":

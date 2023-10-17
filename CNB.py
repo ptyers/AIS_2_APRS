@@ -59,7 +59,7 @@ def do_CNB(AISObject):
         pass
 
     # now bits 8-37 the MMSI - character positions 1 to 6
-    AISObject.set_MMSI(AISObject.Binary_Item(8, 30))
+    AISObject.get_string_MMSI(AISObject.Binary_Item(8, 30))
 
     if diagnostic3:
         print("got MMSI = ", AISObject.MMSI)
@@ -129,10 +129,10 @@ def do123(AISObject):
         #
         if len(AISObject.AIS_Payload) >= 28:
 
-            AISObject.(AISObject.Binary_Item(149, 19))
+            AISObject.AISObject.Binary_Item(149, 19)
             #          Console.WriteLine("RadioStatus  = " + p_rad_status)
-        else:
-            AISObject.(0)
+        # else:
+        #     AISObject.ra(0)
 
     pass
 
@@ -208,10 +208,10 @@ def do9(AISObject):
     #
     if len(AISObject.AIS_Payload) >= 28:
 
-        AISObject.(AISObject.Binary_Item(148, 19))
+        AISObject.AISObject.Binary_Item(148, 19)
         #          Console.WriteLine("RadioStatus  = " + p_rad_status)
-    else:
-        AISObject.(0)
+    # else:
+    #     AISObject.(0)
 
     pass
 
@@ -281,10 +281,10 @@ def do18(AISObject):
     #
     if len(AISObject.AIS_Payload) >= 28:
 
-        AISObject.(AISObject.Binary_Item(148, 19))
+        AISObject.AISObject.Binary_Item(148, 19)
         #          Console.WriteLine("RadioStatus  = " + p_rad_status)
-    else:
-        AISObject.(0)
+    # else:
+    #     AISObject.(0)
 
 
 def decode_char(self, in_char: str) -> int:
