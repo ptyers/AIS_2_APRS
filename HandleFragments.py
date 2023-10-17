@@ -1,10 +1,11 @@
-from  GlobalDefinitions import Global
+from GlobalDefinitions import Global
 from datetime import datetime
 import AISData
 import logging
 
 
 def handle_fragments(payload):
+    logging.basicConfig(level=logging.DEBUG)
     # payload id the tuple aisfields which is the AIS datastream
     # aisfields[5] is the actual payload, aisfields[1] is the fragment count
     # aisfields[2] is the fragment number of the sentence(payload)
@@ -15,27 +16,25 @@ def handle_fragments(payload):
 
     FragdictTTL = Global.FragDictTTL
 
-    diagnostic = Global.diagnostic
-    diagnostic2 = Global.diagnostic2
-    diagnostic3 = Global.diagnostic3
-
-    aisfields = payload
-    FragDict = Global.FragDict
+    aisfields = payload.split(",")
+    fragdict = Global.FragDict
     success = False  # used to determine if we return an AISOject or None
     deleteme = []
 
-    logging.debug(" in handle_fragments payload =\r\n", payload)
+    print(" in handle_fragments payload =\r\n", payload)
 
-    # if aisfields[5][0] == '5' and aisfields[2] == '1':
-    # print(aisfields)
+    if aisfields[5][0] == '5' and aisfields[2] == '1':
+        logging.debug(aisfields)
 
     # structure
     """ Get Fragment"""
     """ Stash it away with time stamp"""
-    currenttime = datetime.now()
+    currenttime = "," + str(datetime.now())
 
     # for usage later append currenttime to aisfields
-    aisfields.append(currenttime)
+    # currenttime will be aisfields[7]
+    aisfields.extend([currenttime])
+    print(aisfields)
     try:
         CurrMessage = int(aisfields[3])
     except ValueError:
@@ -46,11 +45,12 @@ def handle_fragments(payload):
     # since we need to define records of the same message id and also clean up
     # the FragDict to keep it small use a tuple key of MessageNumber/FragmentNumber
     ExtractedFrags = {}
-    # print('prior adding FragDicy MessageNo = ', aisfields[3], 'FragmentNo = ', aisfields[2])
-    FragDict[aisfields[3], aisfields[2]] = aisfields
-    for key in FragDict:
-        # print(FragDict[key])
-        pass
+    print('prior adding FragDict MessageNo = ', aisfields[3], 'FragmentNo = ', aisfields[2])
+    fragdict.update({aisfields[3] + aisfields[2]: aisfields[5]} )
+    for key in fragdict:
+        #print(fragdict[key])
+        print(fragdict)
+
     """ Check for others """
     """ If YES Create a list of matching message ids"""
     logging.debug("checking for matches")
@@ -66,8 +66,8 @@ def handle_fragments(payload):
 
             ExtractedFrags[testfrag[2]] = testfrag
         except KeyError:
-                logging.error("key error in checking")
-                # failed because of missing fragment number
+            logging.error("key error in checking")
+            # failed because of missing fragment number
         except Exception as e:
             raise RuntimeError(
                 "in handle fragments error other than keyerror", e
@@ -113,9 +113,9 @@ def handle_fragments(payload):
             lastfrag = ExtractedFrags[str(x - 1)]
             logging.debug("testfrag ", testfrag)
             logging.debug(
-                    "lastfrag ",
-                    lastfrag,
-                )
+                "lastfrag ",
+                lastfrag,
+            )
             # check if fill bits were used in previous fragment
             if lastfrag[6][0] != "0":  # fill bits were used
                 # remove fill bits from myAIS.AIS_Binary_Payload
@@ -130,19 +130,19 @@ def handle_fragments(payload):
             )
             logging.debug(addedbinary)
             logging.debug(
-                    "Before length = ",
-                    len(myAIS.AIS_Binary_Payload),
-                    "\n",
-                    myAIS.AIS_Binary_Payload,
-                )
+                "Before length = ",
+                len(myAIS.AIS_Binary_Payload),
+                "\n",
+                myAIS.AIS_Binary_Payload,
+            )
             logging.debug("addedbinary\n", addedbinary)
             myAIS.AIS_Binary_Payload = myAIS.AIS_Binary_Payload + addedbinary
             logging.debug(
-                    "after length = ",
-                    len(myAIS.AIS_Binary_Payload),
-                    "\n",
-                    myAIS.AIS_Binary_Payload,
-                )
+                "after length = ",
+                len(myAIS.AIS_Binary_Payload),
+                "\n",
+                myAIS.AIS_Binary_Payload,
+            )
             # update fragment identifier for scan
             x += 1
 
@@ -150,26 +150,26 @@ def handle_fragments(payload):
 
     """ Clean out ophan/expired records"""
     # either found not enough or we were successful
-    # clean out the FragDict of expired/orphan fragments
+    # clean out the fragdict of expired/orphan fragments
     # cant do it in one pass - throws a sixze changed error
     # instead create a new temporary dictionary and then overwrite the original
     xyzzy = {}
 
-    # print('prior cleanup length FragDict = ', len(FragDict))
+    # print('prior cleanup length fragdict = ', len(fragdict))
     for key in Global.FragDict:
         try:
-            # print('length of FragDict[key] in cleanup ',len(FragDict[key]))
-            # print(key, ' ',FragDict[key])
+            # print('length of fragdict[key] in cleanup ',len(fragdict[key]))
+            # print(key, ' ',fragdict[key])
             if len(Global.FragDict[key]) == 8:
                 # print('len FCD = 8')
                 rectime = Global.FragDict[key][7]
                 delta = (datetime.now() - rectime).total_seconds()
                 logging.debug(
-                        "Checking received timne in handle3 fragments ",
-                        rectime,
-                        " difference ",
-                        delta,
-                    )
+                    "Checking received timne in handle3 fragments ",
+                    rectime,
+                    " difference ",
+                    delta,
+                )
 
                 if Global.FragDict[key][3] == aisfields[3]:
                     logging.debug(
@@ -188,7 +188,7 @@ def handle_fragments(payload):
 
         except:
             pass
-        # delete the original FragDict\
+        # delete the original fragdict\
 
     if xyzzy:
         del Global.FragDict
