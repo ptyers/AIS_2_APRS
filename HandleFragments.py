@@ -1,28 +1,30 @@
-import GlobalDefinitions
-import MyPreConfigs
+from  GlobalDefinitions import Global
 from datetime import datetime
 import AISData
+import logging
 
 
 def handle_fragments(payload):
-    # payload id the tuple aisfields
+    # payload id the tuple aisfields which is the AIS datastream
+    # aisfields[5] is the actual payload, aisfields[1] is the fragment count
+    # aisfields[2] is the fragment number of the sentence(payload)
+    # aisfields[3] is the sequential message id to tie fragments together
+    # aisfields[4] is the radio channel - not used in this module
     # returns True when all fragments found and merged
     # during processing will also flush out out dictionary entries older than preset amount
 
-    FragdictTTL = GlobalDefinitions.Global.FragDictTTL
+    FragdictTTL = Global.FragDictTTL
 
-    diagnostic = GlobalDefinitions.Global.diagnostic
-    diagnostic2 = GlobalDefinitions.Global.diagnostic2
-    diagnostic3 = GlobalDefinitions.Global.diagnostic3
+    diagnostic = Global.diagnostic
+    diagnostic2 = Global.diagnostic2
+    diagnostic3 = Global.diagnostic3
 
     aisfields = payload
-    FragDict = GlobalDefinitions.Global.FragDict
+    FragDict = Global.FragDict
     success = False  # used to determine if we return an AISOject or None
     deleteme = []
 
-    if diagnostic3:
-        print(" in handle_fragments payload =\r\n", payload)
-        pass
+    logging.debug(" in handle_fragments payload =\r\n", payload)
 
     # if aisfields[5][0] == '5' and aisfields[2] == '1':
     # print(aisfields)
@@ -51,25 +53,20 @@ def handle_fragments(payload):
         pass
     """ Check for others """
     """ If YES Create a list of matching message ids"""
-    if diagnostic3:
-        print("checking for matches")
-        pass
-    for key in FragDict:  # scan through fragment numbers with common message number
-        if diagnostic3:
-            print(FragDict[key], aisfields[1])
+    logging.debug("checking for matches")
+
+    for key in Global.FragDict:  # scan through fragment numbers with common message number
+        logging.debug(Global.FragDict[key], aisfields[1])
         try:
-            testfrag = FragDict[key]
-            if diagnostic3:
-                print(" finding matches testfrag ", testfrag)
+            testfrag = Global.FragDict[key]
+            logging.debug(" finding matches testfrag ", testfrag)
 
             if testfrag[3] == aisfields[3]:  # matching message number
-                if diagnostic3:
-                    print("match found", testfrag)
+                logging.debug("match found", testfrag)
 
-                ExtractedFrags[testfrag[2]] = testfrag
+            ExtractedFrags[testfrag[2]] = testfrag
         except KeyError:
-            if diagnostic:
-                print("key error in checking")
+                logging.error("key error in checking")
                 # failed because of missing fragment number
         except Exception as e:
             raise RuntimeError(
@@ -82,10 +79,9 @@ def handle_fragments(payload):
     ):  # Have we same number of fragments as Fragment Count?
         # YES
 
-        if diagnostic3:
-            print("Have complete set of fragments")
-            for x in ExtractedFrags:
-                print("fragno {} Fragment {} ".format(int(x), ExtractedFrags[x]))
+        logging.debug("Have complete set of fragments")
+        for x in ExtractedFrags:
+            logging.debug("fragno {} Fragment {} ".format(int(x), ExtractedFrags[x]))
 
         """ If YES find fragment 1 and create AISObject"""
 
@@ -95,8 +91,7 @@ def handle_fragments(payload):
             raise RuntimeError(
                 "No fragment 1 in supposed full set of fragment", e
             ) from e
-        if diagnostic3:
-            print("creating AIS record myAIS")
+        logging.debug("creating AIS record myAIS")
         # create an AISObject from Fragment 1
         myAIS = AISData.AIS_Data(
             aisfields[0],
@@ -105,21 +100,19 @@ def handle_fragments(payload):
             aisfields[3],
             aisfields[4],
             aisfields[5],
-            aisfields[6],
+            aisfields[6]
         )
 
         """ Loop through rest of fragments"""
         """     If necessary remove fill bits from fragment(current-1)"""
         """'    append binary list from current fragment"""
-        if diagnostic3:
-            print("about to scan records aisdfields[1] = ", int(aisfields[1]))
+        logging.debug("about to scan records aisdfields[1] = ", int(aisfields[1]))
         x = 2
         while x <= int((aisfields[1])):  # from frag 2 to Fragcount
             testfrag = ExtractedFrags[str(x)]
             lastfrag = ExtractedFrags[str(x - 1)]
-            if diagnostic3:
-                print("testfrag ", testfrag)
-                print(
+            logging.debug("testfrag ", testfrag)
+            logging.debug(
                     "lastfrag ",
                     lastfrag,
                 )
@@ -130,25 +123,21 @@ def handle_fragments(payload):
                 myAIS.AIS_Binary_Payload = myAIS.AIS_Binary_Payload[
                                            0: -(int(lastfrag[6][0]))
                                            ]
-                if diagnostic3:
-                    print("Fill bits removed\n", myAIS.AIS_Binary_Payload)
+                logging.debug("Fill bits removed\n", myAIS.AIS_Binary_Payload)
             # just append the binary string created from testfrag to myAIS.AIS_Binary_Payload
             addedbinary, addedlength = AISData.AIS_Data.create_binary_payload(
                 testfrag[5]
             )
-            if diagnostic3:
-                print(addedbinary)
-            if diagnostic3:
-                print(
+            logging.debug(addedbinary)
+            logging.debug(
                     "Before length = ",
                     len(myAIS.AIS_Binary_Payload),
                     "\n",
                     myAIS.AIS_Binary_Payload,
                 )
-                print("addedbinary\n", addedbinary)
+            logging.debug("addedbinary\n", addedbinary)
             myAIS.AIS_Binary_Payload = myAIS.AIS_Binary_Payload + addedbinary
-            if diagnostic3:
-                print(
+            logging.debug(
                     "after length = ",
                     len(myAIS.AIS_Binary_Payload),
                     "\n",
@@ -167,52 +156,47 @@ def handle_fragments(payload):
     xyzzy = {}
 
     # print('prior cleanup length FragDict = ', len(FragDict))
-    for key in FragDict:
+    for key in Global.FragDict:
         try:
             # print('length of FragDict[key] in cleanup ',len(FragDict[key]))
             # print(key, ' ',FragDict[key])
-            if len(FragDict[key]) == 8:
+            if len(Global.FragDict[key]) == 8:
                 # print('len FCD = 8')
-                rectime = FragDict[key][7]
+                rectime = Global.FragDict[key][7]
                 delta = (datetime.now() - rectime).total_seconds()
-                if diagnostic3:
-                    print(
+                logging.debug(
                         "Checking received timne in handle3 fragments ",
                         rectime,
                         " difference ",
                         delta,
                     )
 
-                if diagnostic3:
-                    if FragDict[key][3] == aisfields[3]:
-                        print(
-                            "message nos match should delete",
-                            FragDict[key][3],
-                            aisfields[3],
-                        )
+                if Global.FragDict[key][3] == aisfields[3]:
+                    logging.debug(
+                        "message nos match should delete",
+                        Global.FragDict[key][3],
+                        aisfields[3],
+                    )
 
                 if (
-                        delta < GlobalDefinitions.Global.FragDictTTL
-                        and FragDict[key][3] != aisfields[3]
+                        delta < Global.FragDictTTL
+                        and Global.FragDict[key][3] != aisfields[3]
                 ):
-                    xyzzy[key] = FragDict[key]
+                    xyzzy[key] = Global.FragDict[key]
                 else:
-                    if diagnostic3:
-                        print("not copying ", FragDict[key])
+                    logging.debug("not copying ", Global.FragDict[key])
 
         except:
             pass
         # delete the original FragDict\
 
     if xyzzy:
-        del FragDict
-        if diagnostic3:
-            for key in xyzzy:
-                print("deleteme now ", xyzzy[key])
-        FragDict = xyzzy
+        del Global.FragDict
+        for key in xyzzy:
+            logging.debug("deleteme now ", xyzzy[key])
+        Global.FragDict = xyzzy
 
-        if diagnostic3:
-            print("post cleanup length FragDict = ", len(FragDict))
+        logging.debug("post cleanup length Global.FragDict = ", len(Global.FragDict))
         xyzzy.clear()
 
     """' return AISObject or NONE"""
@@ -224,7 +208,7 @@ def handle_fragments(payload):
         return None
 
 
-def main(self):
+def main():
     pass
 
 
