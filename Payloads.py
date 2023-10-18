@@ -4,6 +4,10 @@ Group of Classes covering all breeds of payloads
 Base Class is Payload all other classes inherit from this
 
 '''
+from datetime import datetime, timezone
+import logging
+from GlobalDefinitions import Global
+
 
 class Payload:
     # fields
@@ -242,3 +246,89 @@ class Long_range_AIS_broadcast_message(Payload):
 
         pass
 
+
+class Fragments:
+    #
+    # class to allow handling of fragments
+    # input parameter message is the whole AIS string to be split to alllow consolidation of
+    # payloads
+    # as well as the normal payload it uses the fragment_count, fragment_number fields
+
+    # if a stream with fragment count > 1 found pass it to this and hopefully when enough
+    # portions are found a success = True (1) will be returned and a merged payload and payload_length will be valid
+    # using fragment_number can detyect if all fragments are available before merging.
+    # a cleanm up will also be done to flush out stale fragments from Fragment Dictionary.
+    #       Timeout set in Global_Parameters
+    #
+
+    current_time: datetime
+    payload: str
+    mmnsi: str
+    f_no: int
+    f_count: int
+    messid: int
+    ftuple: tuple
+    success: bool
+    new_bin_payload: str
+
+
+
+
+    def __init__(self, binary_payload: str, fragment_count: int, fragment_number: int, message_id: int):
+
+        current_time =  datetime.utcnow()
+        f_count = fragment_count
+        f_no = fragment_number
+        messid = message_id
+        payload = binary_payload
+        ftuple = [f_count, f_no, messid, payload, current_time]
+        inkey: str
+        rtime: datetime
+        success = False
+        new_bin_payload = ''
+
+        pass
+
+    def put_frag_in_dict(self):
+        # create a dictionary key comprising fragment_number and message_id
+        key = str(self.f_no) + '-' + str(self.messid)
+        Global.FragDict.update(key, self.ftuple)
+        logging.debug('In Fragment.put_frag_in_dict dictionary  = ', Global.FragDict)
+
+        pass
+
+    def match_fragments(self, key: str):
+        # pass through Global.Fragdict looking for identical keys
+        inkey = key
+        rtime = datetime.now()
+        fraglist = []
+        for fkey, ftuple in Global.FragDict.items():
+            if fkey == key:
+                fraglist.extend(ftuple)
+            #
+            # now while we are parsing dictionary clean out stale records
+            if (datetime.utcnow() - ftuple[4]).total_seconds() > Global.FragDictTTL:
+                Global.FragDict.pop(fkey)
+
+        # how many records did we find?
+
+        nr_recs = len(fraglist)
+
+        # compare this with the number of fragments expected
+        if nr_recs == self.f_count:
+        # got requisite number of fragments
+        # get fragments in order
+            lump = 1
+            while lump <= nr_recs:
+                for ftuple in fraglist:
+                    if ftuple[1] == 1:
+                        self.new_bin_payload = ftuple[3]
+                    elif  ftuple[1] == lump:
+                        self.new_bin_payload = self.new_bin_payload + ftuple[3]
+                lump += 1
+            self.success = True
+        else:
+            # not got all bits yet
+            pass
+
+        return self.success , self.new_bin_payload

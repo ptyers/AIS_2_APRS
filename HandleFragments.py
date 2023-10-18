@@ -2,6 +2,22 @@ from GlobalDefinitions import Global
 from datetime import datetime
 import AISData
 import logging
+from Payloads import Fragments
+
+def new_handle_fragments(payload: str, frag_count: int, frag_number: int, message_id: int):
+
+    thisfrag = Fragments(payload, frag_count, frag_number, message_id)
+    thisfrag.put_frag_in_dict()
+    key = str(thisfrag.f_no) + '-' + str(thisfrag.messid)
+    success , new_payload = thisfrag.match_fragments(key)
+
+    if success:
+        return success, new_payload
+    else:
+        return False, payload
+
+
+
 
 
 def handle_fragments(payload):
@@ -206,6 +222,14 @@ def handle_fragments(payload):
         return myAIS
     else:
         return None
+
+class Fragments:
+    #
+    # class to allow handling of fragments
+    # input parameter message is the swhole AIS string to be split to alllow
+
+    def __init__(self,message: str):
+        pass
 
 
 def main():
