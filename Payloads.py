@@ -9,15 +9,21 @@ import logging
 from GlobalDefinitions import Global
 
 
+
+
 class Payload:
     # fields
     message_type: int
     repeat_indicator: int
     mmsi: str
-    longitude: int
-    latitude: int
-    raim_flag: int
-    radio_status: int = 0  # Not implemented
+    longitude: float
+    latitude: float
+    fix_quality : bool = False
+    raim_flag: bool = 0     # default not in use
+    radio_status: int = 0   # Not implemented
+    payload: str            # binary payload
+
+
 
 
 
@@ -27,26 +33,283 @@ class Payload:
 
     def __init__(self, p_payload: str):
 
-        pass
+        self.payload = p_payload
+
+        self.message_type = self.binary_item(0, 6)
+        if 1 <= self.message_type <= 27:
+            logging.error("In Payload.__ini__ - Invalid Message Type not in 1-27")
+            raise RuntimeError("Invalid Message Type not in 1-27")
+
+        self.mmsi = self.create_mmsi()
+
+        self.repeat_indicator = self.binary_item(6,2)
+        if not (0 <= self.repeat_indicator <=3):
+            logging.error("In Payload.__ini__ - Invalid Repeat Indicator not in 0-3")
+            raise RuntimeError("Invalid Repeat Indicator not in 0-3")
+
+        self.longitude = 0.0
+        self.latitude = 0.0
+        self.raim_flag = False
+        self.fix_quality = False
+
+
+    def create_mmsi(self) -> str:
+        # extract bits 0-5 from binary_payload, convert to int then to string zero filling (if nesecary)
+        # to create 9 char MMSI zero filled on MSB
+
+        immsi = self.extract_int(8,30 )
+        _mmsi = "{:09d}".format(immsi)
+        return _mmsi
+
+    def extract_string(self, startpos: int, blength: int) -> str:
+        # grab data 6 bit byte by byte checking that the
+        # binary stream is not truncated from standard
+        try:
+            indexer = 0  # used to count number of bits extracted
+            temp = 0
+            cc = ' '
+            buildit = ''
+
+            while indexer < blength:
+                if (startpos + indexer + 6) < len(self.payload):
+
+                    temp = self.binary_item(startpos + indexer, 6)
+                    # print("temp = ", temp)
+                    temp = temp & 0x3F
+                    temp = temp + 0x30
+                    if temp > 0x57:
+                        temp = temp + 0x8
+                    # print('temp again', temp)
+                    cc = chr(temp)
+                    # print("character to be returned ", cc)
+                    #                        Console.WriteLine("temp = " + temp + " cc = " + cc);
+                    buildit = buildit + cc
+                    # print('buildit ',buildit)
+                    indexer = indexer + 6
+                else:
+                    indexer = blength
+            #            Console.WriteLine("string returned = " + buildit);
+
+            return buildit
+        except:
+            print(
+                "Error in ExtractString startpos = " + str(startpos) + " blength = " + str(
+                    blength) + "binary_length = " + str(self._binary_length))
+            print("Exception while ExtractString startpos", sys.exc_info()[0])
+            raise
+
+    def extract_int(self, startpos: int, blength: int) -> int:  # int
+        # extracts an integer from the binary payload
+        # use Binary_Item to get the actual bits
+        return int(self.binary_item(startpos, blength))
+
+    def binary_item(self, startpos: int, blength: int) -> int:
+        # newer version concept only
+        # convert bitarray to a string, use string slicing to get bits
+        # then convert the slice to int using int(string,2)
+
+        #veracity check
+
+        if not (startpos + blength < len(self.payload)):
+            logging.error("In Payload.binary_item() - Request to extract more bits which overrun end of binary payload")
+            raise RuntimeError("Request to extract more bits which overrun end of binary payload")
+
+        reqbits = self.payload[startpos:startpos + blength]
+        logging.debug('in Binary Item type reqbits = ', type(reqbits), ' value reqbits =', reqbits)
+        if len(reqbits) != 0:
+            return int(reqbits, 2)
+        else:
+            return 0
+
+        # endregion
+        # region Private Methods
+
+    def m_to_int2(self, parameter: str) -> int:
+        return int(parameter)
+
+    def m_to_int(self, parameter: str) -> int:
+        # takes in a encoded string of variable length and returns positive integer
+        # print('entering m_to_int parameter = ', parameter)
+        my_int = int(0)
+        my_byte = ord(parameter)
+        # print(len(parameter), ' ', my_byte)
+
+        if len(parameter) == 1:
+            my_int = int(my_byte)
+            # need to mask off the upper 2 bits
+
+            if (my_int - 48) > 40:
+                my_int = my_int - 56
+            else:
+                my_int = my_int - 48
+
+            # print('myint ', my_int, ' binary myint ', bin(my_int))
+        else:
+            print("multiple characters not yet handled in m_to_int\r\n", sys.exc_info()[0])
+            raise RuntimeError('In m_to_int\r\n')
+            # multi character integer values are made up of 6 bit "bytes"
+            # in either signed or unsigned versions
+        return my_int
+
+    def Remove_at(self, p: str) -> str:
+        if (p.find('@') > 0):
+            pp = ''
+            for i in p:
+                if not (i == '@'):
+                    pp = pp + i
+            return pp
+
+        else:
+
+            if (p.find('@') == 0):
+                return p  # equivalent to String.Empty
+            else:
+                return p
+
+    def Remove_space(self, p: str) -> str:
+        if (p.find(' ') > 0):
+            pp = ''
+            for i in p:
+                if not (i == ' '):
+                    pp = pp + i
+            return pp
+
+        else:
+
+            if (p.find(' ') == 0):
+                return p  # equivalent to String.Empty
+            else:
+                return p
+
+
+       def get_longitude(self, startpos: int, length: int  = 28):
+           # longitude is in various positions in differing blocks
+
+            self.longitude = self.signed_binary_item(startpos,length)
+
+    def get_latitude(self, startpos: int, length: int = 28):
+        # longitude is in various positions in differing blocks
+
+        self.latitude = self.signed_binary_item(startpos, length)
+
+    def signed_binary_item(self, startpos: int, blength: int) -> float:
+        # newer version concept only
+        # convert bitarray to a string, use string slicing to get bits
+        # then convert the slice as 2 complement binary
+        # two complement - if negetive invert all bits and add one to RHB
+        # so here if LHB is one then invert all bits and add 1 then return as negertive result
+        #
+
+        #veracity check
+
+        if not (startpos + blength < len(self.payload)):
+            logging.error("In Payload.signed_binary_item() - Request to extract more bits which overrun end of binary payload")
+            raise RuntimeError("Request to extract more bits which overrun end of signedbinary payload")
+
+        reqbits = self.payload[startpos:startpos + blength]
+        logging.debug('in Signed Binary Item type reqbits = ', type(reqbits), ' value reqbits =', reqbits)
+        # check if LHB is one
+        if reqbits[0] != '1':
+            # positive to be scaled to degrees by dividing by 600000
+            return float(int(reqbits, 2)/600000)
+        else:
+            newreqbits = ''
+            for i in range(0,len(reqbits) -1):
+                if reqbits[i] == "1":
+                    newreqbitsreqbits = newreqbits + '0'
+                else:
+                    newreqbitsreqbits = newreqbits + '1'
+
+        return float( - ((  int(newreqbits,2) + 1)/600000))
+
+    def getRAIMflag(self, position) -> bool:
+        # RAIM flag bool False = not in use
+        # location varies in blocks
+        return bool(self.binary_item(position,1))
+
+    def getfix(self, position) -> bool:
+        # Fix Quality flag bool False = not in use
+        # location varies in blocks
+        return bool(self.binary_item(position,1))
 
 class CNB(Payload):
     # additional fields
 
     navigation_status: int
-    rate_of_turn: int
+    rate_of_turn: float
     speed_over_ground: int
-    position_accuracy: int
+    position_accuracy: bool
     course_over_ground: float
     true_heading: int
     time_stamp: int
     maneouver_indicator: int
-    raim_flag: int
+
 
 
     def __init__(self, p_payload: str):
         super().__init__(p_payload)
+        self.get_nav_status()
+        self.get_ROT()
+        self.getSOG()
+        self.get_pos_accuracy()
+        self.get_longitude(61,28)
+        self.get_latitude(89,27)
+        self.get_COG()
+        self.get_tru_head()
+        self.get_timestamp()
+        self.get_man_indic()
+        self.getfix(60)
+
 
         pass
+
+    def get_nav_status(self) -> None:
+        # at bits 38-41
+        # values 0-15
+        self.navigation_status =  self.binary_item(38,4)
+
+    def get_ROT(self) -> None:
+        # ROT - Rate of Turn is scaled by 1000
+        # signed integer scaled to float then calculated as divide by 4.733, retain sign but square it
+
+        irot = self.signed_binary_item(42,8)
+        if irot >= 0:
+            self.rate_of_turn = (float(irot)/4.733)**2
+        else:
+            self.rate_of_turn = - (float(abs(irot))/4.733)**2
+
+    def getSOG(self) -> None:
+        # integer scaled by 10
+        self.speed_over_ground = int(self.binary_item(50,10)/10)
+    def get_COG(self) -> None:
+        # course over ground - scaled by 10
+        self.course_over_ground = float(self.binary_item(116,12)/10)
+
+
+    def get_tru_head(self) -> None:
+        # true heading 0-359 degrees, 511 not available
+        itru = self.binary_item(128,9)
+        if 0<= itru <= 259 or itru == 511:
+            self.true_heading = itru
+        else:
+            logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511', itru)
+            raise RuntimeError('In CNB.get_tru_head - value outside range 0-259 or != 511', itru)
+
+    def get_pos_accuracy(self) -> bool:
+        # position accracy bool in bit 60
+        self.position_accuracy =  bool(self.binary_item(60,1))
+
+    def get_timestamp(self):
+        # timestamp = second of UTC timestamp. 6 bits at 137
+        self.time_stamp = self.binary_item(137,6)
+
+    def get_man_indic(self):
+        # maneouver indicator. 0-2. Bits 143-144
+        self.maneouver_indicator = self.binary_item(143,2)
+
+
+
+
 
 class Basestation(Payload):
     # base station report - Type 4
@@ -63,13 +326,47 @@ class Basestation(Payload):
 
     def __init__(self, p_payload: str):
         super().__init__(p_payload)
+        self.get_year()
+        self.get_month()
+        self.get_day()
+        self.get_hour()
+        self.get_minute()
+        self.get_second()
+        self.get_EPFD()
+        self.getfix(78)
+        self.getRAIMflag(148)
+
+
+    def get_year(self):
+        self.year = self.binary_item(38,14)
+
+    def get_month(self):
+        self.month = self.binary_item(52, 4)
+
+    def get_day(self):
+        self.day = self.binary_item(56, 5)
+
+    def get_hour(self):
+        self.year = self.binary_item(61, 5)
+
+    def get_minute(self):
+        self.minute = self.binary_item(66, 6)
+
+    def get_second(self):
+        self.second = self.binary_item(72, 6)
+
+    def get_EPFD(self):
+        # enumerated 0-8, but other may appear, 15 not uncommen
+        self.EPFD_type = self.binary_item(134,4)
+
+
 
         pass
 
 class Binary_addressed_message(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -78,7 +375,7 @@ class Binary_addressed_message(Payload):
 class Binary_acknowledge(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -87,7 +384,7 @@ class Binary_acknowledge(Payload):
 class Binary_broadcast_message(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -97,7 +394,7 @@ class Binary_broadcast_message(Payload):
 class SAR_aircraft_position_report(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -113,7 +410,7 @@ class UTC_date_enquiry(Payload):
 class UTC_date_response(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -121,7 +418,7 @@ class UTC_date_response(Payload):
 class Addressed_safety_related_message(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -130,7 +427,7 @@ class Addressed_safety_related_message(Payload):
 class Safety_relatyed_acknowledgement(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -138,14 +435,14 @@ class Safety_relatyed_acknowledgement(Payload):
 class Safety_related_broadcast_message(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
 class Interrogation(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -153,7 +450,7 @@ class Interrogation(Payload):
 class DGNS_broadcast_binaty_message(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -162,7 +459,7 @@ class ClassB_position_report(Payload):
     # to be implemented
     # type 18
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -172,7 +469,7 @@ class Extende_ClassB_position_report(Payload):
     # to be implemented
     # type 19
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -180,7 +477,7 @@ class Data_link_management_message(Payload):
     # to be implemented
     # type 20
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -189,7 +486,7 @@ class Aid_to_navigation_report(Payload):
     # to be implemented
     # type 21
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -198,7 +495,7 @@ class Channel_management(Payload):
     # to be implemented
     # type 22
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -207,7 +504,7 @@ class Group_assigment_command(Payload):
     # to be implemented
     # type 23
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -216,7 +513,7 @@ class Static_data_report(Payload):
     # to be implemented
     # type 24
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -225,7 +522,7 @@ class Single_slot_binary_message(Payload):
     # to be implemented
     # type 25
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
@@ -234,14 +531,14 @@ class Multiple_slot_binary_message(Payload):
     # to be implemented
     # type 26
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass
 class Long_range_AIS_broadcast_message(Payload):
     # to be implemented
 
-    def __init__(self, p_payload)
+    def __init__(self, p_payload):
         super().__init__(p_payload)
 
         pass

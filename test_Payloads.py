@@ -109,3 +109,90 @@ class TestFragments(TestCase):
 
     def test_match_fragments(self):
         self.fail()
+
+
+class TestPayload(TestCase):
+    def test_create_mmsi(self):
+        self.fail()
+
+    def test_extract_string(self):
+        self.fail()
+
+    def test_extract_int(self):
+        self.fail()
+
+    def test_binary_item(self):
+        self.fail()
+
+    def test_m_to_int2(self):
+        self.fail()
+
+    def test_m_to_int(self):
+        self.fail()
+
+    def test_remove_at(self):
+        self.fail()
+
+    def test_remove_space(self):
+        self.fail()
+
+    def test_get_longitude(self):
+        self.fail()
+
+    def test_get_latitude(self):
+        self.fail()
+
+    def test_signed_binary_item(self):
+        self.fail()
+
+    def test_get_raimflag(self):
+        self.fail()
+
+
+class TestCNB(TestCase):
+    def test_get_nav_status(self):
+        self.fail()
+
+    def test_get_rot(self):
+        self.fail()
+
+    def test_get_sog(self):
+        self.fail()
+
+    def test_get_cog(self):
+        self.fail()
+
+    def test_get_tru_head(self):
+        self.fail()
+
+    def test_get_pos_accuracy(self):
+        self.fail()
+
+    def test_get_timestamp(self):
+        self.fail()
+
+    def test_get_man_indic(self):
+        self.fail()
+
+
+class TestBasestation(TestCase):
+    def test_get_year(self):
+        self.fail()
+
+    def test_get_month(self):
+        self.fail()
+
+    def test_get_day(self):
+        self.fail()
+
+    def test_get_hour(self):
+        self.fail()
+
+    def test_get_minute(self):
+        self.fail()
+
+    def test_get_second(self):
+        self.fail()
+
+    def test_get_epfd(self):
+        self.fail()
