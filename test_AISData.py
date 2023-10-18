@@ -1,4 +1,6 @@
 from unittest import TestCase
+
+import AISData
 from AISData import AIS_Data
 from AISDictionary import AISDictionaries
 import logging
@@ -22,12 +24,12 @@ class TestAIS_Data(TestCase):
        '!AIVDM,1,1,,A,19NS6o002U:`fMQaqINBiBC20HCp,0*69'
     ]
 
+    # generic initiale to allow testing - I know the stream offered to the initialise is valid
     def initialise(self):
         diction = AISDictionaries()
-        mydata = AIS_Data(
+        mydata = AISData.AIS_Data(
             "!AIVDM", "1", "1", "", "A",
             "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
-        )
         return diction, mydata
 
     def test_binary_item(self):

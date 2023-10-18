@@ -1,4 +1,9 @@
 from unittest import TestCase
+from AISDictionary import AISDictionaries
+import Payloads
+
+
+
 
 
 class TestPayload(TestCase):
@@ -195,4 +200,29 @@ class TestBasestation(TestCase):
         self.fail()
 
     def test_get_epfd(self):
+        self.fail()
+
+
+class TestAISStream(TestCase):
+
+
+    def initialise(self):
+        diction = AISDictionaries()
+        # the stream offered here is valid
+        mystream = Payloads.AISStream('!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05')
+        return diction, mystream
+    def test_split_string(self):
+        diction, mystream = self.initialise()
+        self.assertTrue(mystream.valid_message,"Failed in AISStream.split_stream")
+
+    def test_create_binary_payload(self):
+        self.fail()
+
+    def test_create_bytearray_payload(self):
+        self.fail()
+
+    def test_m_to_int(self):
+        self.fail()
+
+    def test_validate_stream(self):
         self.fail()

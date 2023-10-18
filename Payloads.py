@@ -1,12 +1,16 @@
+from datetime import datetime, timezone
+import logging
+from GlobalDefinitions import Global
+import struct
+
+
 '''
 Group of Classes covering all breeds of payloads
 
 Base Class is Payload all other classes inherit from this
 
 '''
-from datetime import datetime, timezone
-import logging
-from GlobalDefinitions import Global
+
 
 
 
@@ -182,10 +186,10 @@ class Payload:
                 return p
 
 
-       def get_longitude(self, startpos: int, length: int  = 28):
-           # longitude is in various positions in differing blocks
+    def get_longitude(self, startpos: int, length: int  = 28):
+       # longitude is in various positions in differing blocks
 
-            self.longitude = self.signed_binary_item(startpos,length)
+        self.longitude = self.signed_binary_item(startpos,length)
 
     def get_latitude(self, startpos: int, length: int = 28):
         # longitude is in various positions in differing blocks
@@ -629,3 +633,238 @@ class Fragments:
             pass
 
         return self.success , self.new_bin_payload
+
+class AISStream:
+    # comprises the entire AIS message as received
+
+    packet_id: str
+    fragment_count: int
+    fragment_number: int
+    message_id: int # may be null
+    channel: str
+    payload: str
+    binary_payload: str
+    byte_payload: bytearray
+    trailer: str
+    valid_message: bool
+
+    def __init__( self, input: str):
+
+        self.valid_message = True
+        self.split_string(input)
+
+        # only if crude validation passed continue
+        if self.valid_message:
+            # now create the string form binary_payload
+            self.create_binary_payload()   # now create the string form binary_payload
+            self.create_bytearray_payload() # not currently used but for future usage
+            #
+            # before we return the stream will be crudely validated
+
+            self.validate_stream()
+
+
+
+    def split_string(self, stream: str):
+        str_split: list = stream.split(',')
+
+        self.packet_id = str_split[0]
+        try:
+            self.fragment_count = int(str_split[1])
+        except TypeError:
+            logging.error("In AISStream - fragment count not numeric")
+            self.fragment_count = 0
+            self.valid_message = False
+        try:
+            self.fragment_number = int(str_split[2])
+        except TypeError:
+            logging.error("In AISStream - fragment number not numeric")
+            self.fragment_number = 0
+            self.valid_message = False
+        try:
+            if len(str_split[3]) > 0:
+                self.message_id = int(str_split[3])
+            else:
+                # null message_id
+                self.message_id = 0
+        except ValueError:
+            logging.error("In AISStream - message_id not numeric")
+            self.message_id = 0
+            self.valid_message = False
+
+        self.channel = str_split[4]
+        if self.channel not in ['A', 'B', '1', '2']:
+            self.valid_message = False
+
+        self.payload = str_split[5]
+        # validate message type from first six bits of self.payload
+        # this really should live with payload processing but for easy dumping of stream
+        # will also be done here
+
+
+        # grab first six bits - by shifting right the bits related to repeat indicator
+        messbyte: int = self.m_to_int(self.payload[0]) >> 2
+        logging.debug('In AISStream - messbyte = ' + '{:0d}'.format(messbyte))
+        if not (messbyte in range(1,27)):
+            self.valid_message = False
+
+        self.trailer = str_split[6]
+
+
+
+    def create_binary_payload(self)-> None:
+        # based on using a supersized string rather than bytearray
+        #
+        # print("ïnput payload "+ p_payload)
+        #
+        # define a null string
+        _abinary_payload = ''
+        _byte_payload = bytearray()
+        _byte_payload.extend(self.payload.encode())
+        # print('bytearray version of payload\n', _byte_payload,
+        #       '\nhex version\n', _byte_payload.hex(),
+        #       '\nfrom \n',p_payload)
+        for i in range(0, len(self.payload)):
+            # print('in create binary payload ', len(p_payload), i)
+            # iterate through the string payload masking to lower 6 bits
+            xchar = self.payload[i]
+
+            nibble = self.m_to_int(xchar) & 0x3F  # ensures only 6 bits presented
+            # print(xchar, nibble, p_payload[i], i, len(p_payload))
+
+            logging.debug('nibble', bin(nibble))
+
+            # now append the nibble to the stream
+            _abinary_payload = _abinary_payload + format(nibble, '06b')
+
+        _binary_payload = _abinary_payload
+
+        # print(_abinary_payload)
+
+        self.binary_payload = _abinary_payload
+
+
+    def create_bytearray_payload(self) -> None:
+        # based on using a supersized string rather than bytearray
+        #
+        printdiag = False
+        #
+        # define a null bytearray
+        _byte_payload = bytearray()
+        # convert from str to the bytearray
+        _byte_payload.extend(self.payload.encode())
+        # print('bytearray version of payload\n', _byte_payload,
+        #       '\nhex version\n', _byte_payload.hex(),
+        #       '\nfrom \n',p_payload)
+
+        newbytes = bytearray()
+        _binlength = len(self.payload)
+        for i in range(0, len(self.payload)):
+            if printdiag:
+                print('in create binary payload ', len(self.payload), i)
+            # iterate through the string payload masking to lower 6 bits
+            thebyte: int = int(_byte_payload[i])
+            thebyte = thebyte - 48
+            if thebyte > 40:
+                newbytes.extend((thebyte - 8).to_bytes(1, "big"))
+            else:
+                newbytes.extend(thebyte.to_bytes(1, "big"))
+
+        # now repack the bytearray as a string of 6 bit nibbles
+        _byte_payload = bytearray()
+
+        # need to keep track of the 8 bit byte into which we are putting the nibble part
+        #  (splits across bytes generally)
+        # for each 4 nibbles 3 output bytes will be created.
+        #
+        outbyte = 0
+
+        for innibble in range(_binlength):
+            # use modulas to keep track of where we are in sequence
+            ii = innibble % 4
+
+            match ii:
+                case 0:
+                    # mask to 6 bits and shift to MSB of outbyte
+                    _byte = (newbytes[innibble] & 0x3F) << 2
+                    _byte_payload.extend(struct.pack("B", (newbytes[innibble] & 0x3F) << 2))
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+
+                case 1:
+                    # mask to 2 MSB and put them into outbyte
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                    _byte_payload[outbyte] = ((newbytes[innibble] & 0x30) >> 4) + _byte_payload[outbyte]
+                    # now put 4 LSB into MSB of next outbyte
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                    outbyte += 1
+                    _byte = (newbytes[innibble] & 0x0F) << 4
+                    _byte_payload.extend(struct.pack("B", _byte))
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+
+                case 2:
+                    # mask  four MSB, move to lower bits  of outbyte
+                    _byte_payload[outbyte] = ((newbytes[innibble] & 0x3F) >> 2) + _byte_payload[outbyte]
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                    outbyte += 1
+                    # put 2 LSB into MSB of next outbyte
+                    _byte_payload.extend(struct.pack("B", (newbytes[innibble] & 0x03) << 6))
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+
+                case 3:
+                    # put 6 MSBbits into LSB of next outbyte
+                    _byte_payload[outbyte] = ((newbytes[innibble] & 0x3F)) + _byte_payload[outbyte]
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                    outbyte += 1
+
+                case _:
+                    _byte_payload = bytearray()
+                    _binlength = 0
+                    raise RuntimeError("error in selecting bytes in create_bytearray_payload")
+
+        logging.debug(_byte_payload.hex())
+        self.byte_payload = _byte_payload
+
+    def m_to_int(self, parameter: str) -> int:
+        # takes in a encoded string of variable length and returns positive integer
+        # print('entering m_to_int parameter = ', parameter)
+        my_int: int
+        my_byte = ord(parameter)
+        # print(len(parameter), ' ', my_byte)
+
+        if len(parameter) == 1:
+            my_int = int(my_byte)
+            # need to mask off the upper 2 bits
+
+            if (my_int - 48) > 40:
+                my_int = my_int - 56
+            else:
+                my_int = my_int - 48
+
+            # print('myint ', my_int, ' binary myint ', bin(my_int))
+        else:
+            print("multiple characters not yet handled in m_to_int\r\n", sys.exc_info()[0])
+            raise RuntimeError('In m_to_int\r\n')
+            # multi character integer values are made up of 6 bit "bytes"
+            # in either signed or unsigned versions
+        return my_int
+
+    def validate_stream(self) -> bool:
+
+        # first check packet_id
+        if self.packet_id != '!AIVDM' and self.packet_id != '!AIVDO':
+            return False
+
+        # then check self.self.fragment_count
+
+
+
+
+
+
