@@ -1,9 +1,7 @@
 from unittest import TestCase
 from AISDictionary import AISDictionaries
 import Payloads
-
-
-
+import random
 
 
 class TestPayload(TestCase):
@@ -204,25 +202,190 @@ class TestBasestation(TestCase):
 
 
 class TestAISStream(TestCase):
-
+    mytestdata = [
+        '!AIVDM,1,1,,A,404,0*05',
+        '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05',
+        '!AIVDM,2,1,7,A,57Oi`:021ssqHiL6221L4l8U8V2222222222220l1@F476Ik0;QA1C`88888,0*1E',
+        '!AIVDM,2,2,7,A,88888888888,2*2B',
+        '!AIVDM,1,1,,A,404k0WivNUSSNbKvjEag;4W00HB@,0*34',
+        '!AIVDM,1,1,,B,177Q0U04BL:`kKQapd7RpB@v0HBB,0*6D',
+        '!AIVDM,1,1,,A,15Rl8D002I:irnQc>`@hg0Vr08BL,0*65',
+        '!AIVDM,1,1,,B,13loh<01Qm:jL<wcUG5p3nQ004J<,0*60',
+        '!AIVDM,1,1,,B,404kS@P000Htt<tSF0l4Q@100pBr,0*10',
+        '!AIVDM,1,1,,B,17Oosc0q2K:NrnOaf@Mobww200SB,0*28',
+        '!AIVDM,1,1,,A,19NS6o002U:`fMQaqINBiBC20HCp,0*69'
+    ]
 
     def initialise(self):
         diction = AISDictionaries()
         # the stream offered here is valid
         mystream = Payloads.AISStream('!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05')
         return diction, mystream
+
     def test_split_string(self):
         diction, mystream = self.initialise()
-        self.assertTrue(mystream.valid_message,"Failed in AISStream.split_stream")
+        # this one should pass since input stream for the initialise is valid
+        self.assertTrue(mystream.valid_message, "Failed in AISStream.split_stream")
+
+        # now start testing the split varying parameters
+        teststream = '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+
+        mystream.split_string(teststream)
+        self.assertEqual('!AIVDM', mystream.packet_id,
+                         'In AISStreamn.split_string packet_id not correect')
+        self.assertTrue(mystream.valid_message,
+                        'In AISStream.split_string invalid status returned for valid packet_id')
+        teststream = '!AIVDO,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream.split_string(teststream)
+        self.assertEqual('!AIVDO', mystream.packet_id,
+                         'In AISStreamn.split_string packet_id not correect')
+        self.assertTrue(mystream.valid_message,
+                        'In AISStream.split_string invalid status returned for valid packet_id')
+        teststream = '!AIVDX,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream.split_string(teststream)
+        self.assertFalse(mystream.valid_message,
+                         'In AISStream.split_string invalid status returned for invalid packet_id')
+
+        # next fragment count
+        teststream = '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream.split_string(teststream)
+        self.assertEqual(1, mystream.fragment_count,
+                         'In AISStreamn.split_string fragment_count not correect')
+        self.assertTrue(mystream.valid_message,
+                        'In AISStream.split_string invalid status returned for valid fragment_count')
+        teststream = '!AIVDM,A,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream.split_string(teststream)
+        self.assertFalse(mystream.valid_message,
+                         'In AISStream.split_string invalid status returned for valid fragment_count')
+
+        # now fragment_number
+        teststream = '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream.split_string(teststream)
+        self.assertEqual(1, mystream.fragment_number,
+                         'In AISStreamn.split_string fragment_count not correect')
+        self.assertTrue(mystream.valid_message,
+                        'In AISStream.split_string invalid status returned for valid fragment_count')
+        teststream = '!AIVDM,1,B,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream.split_string(teststream)
+        self.assertFalse(mystream.valid_message,
+                         'In AISStream.split_string invalid status returned for valid fragment_count')
+        # now fragment_number
+        # null message_id
+        teststream = '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream.split_string(teststream)
+        self.assertEqual(0, mystream.message_id,
+                         'In AISStreamn.split_string message id not null as expected')
+        # non_null message_id
+        teststream = '!AIVDM,1,1,3,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream.split_string(teststream)
+        self.assertEqual(3, mystream.message_id,
+                         'In AISStreamn.split_string fragment_count not correect')
+        self.assertTrue(mystream.valid_message,
+                        'In AISStream.split_string invalid status returned for valid fragment_count')
+        # non_null message_id alphabetic
+        teststream = '!AIVDM,1,1,C,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream.split_string(teststream)
+        self.assertFalse(mystream.valid_message,
+                         'In AISStream.split_string invalid status returned for valid fragment_count')
+
+        # now the channel
+        teststream = '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream.split_string(teststream)
+        for tchann in ['A', 'B', '1', '2', 'D', '3']:
+            teststream = '!AIVDM,1,1,,' + tchann + ',404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+            mystream.split_string(teststream)
+            if tchann not in ['D', '3']:
+                self.assertEqual(tchann, mystream.channel,
+                                 'In AISStreamn.split_string channel not correect')
+                self.assertTrue(mystream.valid_message,
+                                'In AISStream.split_string invalid status returned for valid channel')
+            else:
+                self.assertFalse(mystream.valid_message,
+                                 'In AISStream.split_string invalid status returned for invalid channel')
+
+        # now message type
+        teststream = '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+
+        for i in range(1, 28):
+            tmess = bytearray.fromhex('{:X}'.format(i + 0x30)).decode()
+            teststream = '!AIVDM,1,1,,A,' + tmess + '04Sk@P000Htt<tSF0l4Q@100pAg,0*05'
+            mystream.split_string(teststream)
+            if i < 28:
+                self.assertEqual(i, mystream.message_type,
+                                 'In AISStreamn.split_string message_type not correct')
+                self.assertTrue(mystream.valid_message,
+                                'In AISStream.split_string invalid status returned for messager type')
+            else:
+                self.assertFalse(mystream.valid_message,
+                                 'In AISStream.split_string invalid status returned for invalid message type')
 
     def test_create_binary_payload(self):
-        self.fail()
+        dict, mystream = self.initialise()
+        print('Testing create_binary_payload')
+        for i in range(len(self.mytestdata) - 1):
+            self.testpay: str = ''
+            mystream.payload = self.mytestdata[i].split(',')[5]
+            mystream.create_binary_payload()
+
+            for char in mystream.payload:
+                self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, char)
+
+            # outstring = mydata.ExtractString(0, self.binlen+6)
+            # print('outstring ', outstring)
+            # print('instring  ', payload[5])
+            #
+            # if len(self.binpay) != len(self.testpay):
+            #     print("lengths differ", len(self.binpay), len(self.testpay))
+            #
+            # for ii in range(len(self.testpay) -1):
+            #     if self.testpay[ii] != self.binpay[ii]:
+            #         print('differ at ', ii, "in string of length ", len(self.testpay),
+            #               len(self.binpay), self.binlen, self.testpay[ii], self.binpay[ii])
+
+            self.assertEqual(self.testpay, mystream.binary_payload, "Create binary payload failure")
 
     def test_create_bytearray_payload(self):
-        self.fail()
+        dict, mystream = self.initialise()
+        binpay: bytearray
+        print('Testing create_bytearray_payload')
+        for i in range(5):
+            self.testpay: str = ''
+            payload = self.mytestdata[i].split(',')[5]
+            mystream.create_bytearray_payload()
+            self.ostring = ''
+            for i in range(len(mystream.byte_payload)):
+                self.ostring = self.ostring + "{:08b}".format(mystream.byte_payload[i])
+
+            testpay = mystream.payload
+            for ij in range(len(mystream.payload)):
+                self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, mystream.payload[ij])
+
+            # the create bytearray by default pads with 0's to byte boundary.
+            # to match the expected string needs to be padded as well
+            while len(self.testpay) % 24 != 0:
+                self.testpay = self.testpay + "0"
+
+            self.assertEqual(self.testpay, self.ostring, "Create bytearray payload failure")
 
     def test_m_to_int(self):
-        self.fail()
+        '''
+        m_to_int takes an encoded (armoyed) string and returns an integer
+        :return:
+        '''
+        print("Testing m_to_int")
+        dict, mystream = self.initialise()
 
-    def test_validate_stream(self):
-        self.fail()
+        for _ in range(20):
+            # create a random length integer
+            testlength: int = random.randint(1, 10)
+            testnumb: int = random.randint(0, 9999999999)
+            numstring: str = "{:010d}".format(testnumb)
+            # extract required length string from the 10 character string
+            numbstring = numstring[10 - testlength:]
+            # #make encoded string using dictionary
+            for ij in range(len(numbstring)):
+                outint = mystream.m_to_int(numbstring[ij])
+                self.assertEqual(int(numbstring[ij]), outint, "Failure in m_to_int")
+
+
+

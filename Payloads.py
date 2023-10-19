@@ -644,9 +644,12 @@ class AISStream:
     channel: str
     payload: str
     binary_payload: str
+    binary_payload_length: int
     byte_payload: bytearray
+    byte_payload_length: int
     trailer: str
     valid_message: bool
+    message_type: int  # only used to validate payload
 
     def __init__( self, input: str):
 
@@ -666,23 +669,29 @@ class AISStream:
 
 
     def split_string(self, stream: str):
+        self.valid_message = True
         str_split: list = stream.split(',')
 
-        self.packet_id = str_split[0]
+        if (str_split[0] == '!AIVDM') or (str_split[0] == '!AIVDO'):
+            self.packet_id = str_split[0]
+        else:
+            self.valid_message = False
+
         try:
             self.fragment_count = int(str_split[1])
-        except TypeError:
+        except ValueError:
             logging.error("In AISStream - fragment count not numeric")
             self.fragment_count = 0
             self.valid_message = False
         try:
             self.fragment_number = int(str_split[2])
-        except TypeError:
+        except ValueError:
             logging.error("In AISStream - fragment number not numeric")
             self.fragment_number = 0
             self.valid_message = False
         try:
             if len(str_split[3]) > 0:
+
                 self.message_id = int(str_split[3])
             else:
                 # null message_id
@@ -703,10 +712,12 @@ class AISStream:
 
 
         # grab first six bits - by shifting right the bits related to repeat indicator
-        messbyte: int = self.m_to_int(self.payload[0]) >> 2
+        messbyte: int = self.m_to_int(self.payload[0])
         logging.debug('In AISStream - messbyte = ' + '{:0d}'.format(messbyte))
-        if not (messbyte in range(1,27)):
+        if not (1 <= messbyte <= 27):
             self.valid_message = False
+        else:
+            self.message_type = messbyte
 
         self.trailer = str_split[6]
 
@@ -724,6 +735,7 @@ class AISStream:
         # print('bytearray version of payload\n', _byte_payload,
         #       '\nhex version\n', _byte_payload.hex(),
         #       '\nfrom \n',p_payload)
+
         for i in range(0, len(self.payload)):
             # print('in create binary payload ', len(p_payload), i)
             # iterate through the string payload masking to lower 6 bits
@@ -744,7 +756,7 @@ class AISStream:
         self.binary_payload = _abinary_payload
 
 
-    def create_bytearray_payload(self) -> None:
+    def create_bytearray_payload(self) -> tuple:
         # based on using a supersized string rather than bytearray
         #
         printdiag = False
@@ -833,7 +845,6 @@ class AISStream:
 
     def m_to_int(self, parameter: str) -> int:
         # takes in a encoded string of variable length and returns positive integer
-        # print('entering m_to_int parameter = ', parameter)
         my_int: int
         my_byte = ord(parameter)
         # print(len(parameter), ' ', my_byte)

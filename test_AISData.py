@@ -29,7 +29,7 @@ class TestAIS_Data(TestCase):
         diction = AISDictionaries()
         mydata = AISData.AIS_Data(
             "!AIVDM", "1", "1", "", "A",
-            "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
+            "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n")
         return diction, mydata
 
     def test_binary_item(self):
