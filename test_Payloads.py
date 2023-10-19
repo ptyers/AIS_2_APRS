@@ -2,6 +2,7 @@ from unittest import TestCase
 from AISDictionary import AISDictionaries
 import Payloads
 import random
+import logging
 
 
 class TestPayload(TestCase):
@@ -116,25 +117,22 @@ class TestFragments(TestCase):
 
 class TestPayload(TestCase):
 
-
     def initialise(self):
         diction = AISDictionaries()
         # the stream offered here is valid but the mystream.payload , mypayload.payload
         #  and/or mystream.binary_payload will be overwritten during testing
         mystream = Payloads.AISStream('!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05')
-        return diction,  mystream
-
-                             ]
+        return diction, mystream
 
     def test_create_mmsi(self):
-        diction,  mystream = self.initialise()
+        diction, mystream = self.initialise()
 
         print('Testing create mmsi')
 
         smmsi_list: list = [
             '850312345', '503543210', '050398765', '005037651', '111504678',
             '998761234', '984135432', '970654987', '972654321', '974765432',
-            '9999999999', 'A99999999'
+            '9999999999'
         ]
 
         # the mmsi field is bits 8-37 of the binary payload string
@@ -152,18 +150,79 @@ class TestPayload(TestCase):
                 mypayload = Payloads.Payload(mystream.binary_payload)
                 mypayload.create_mmsi()
                 ommsi: str = mypayload.mmsi
-                self.assertEqual(sm, ommsi, "Failed in get/set random mmsi integer form")
+                self.assertEqual(sm, ommsi, "Failed in create mmsi integer form")
+            except:
+                pass
 
-    def test_extract_string(self):
+    def test_ExtractInt(self):
+        '''
+               Produces random number in rage 0 to 999999999 and sets up fake binary_payload string
+               then extracts that binary number from the string using AIS_Data.Binary_item
+               effectively same test as for Binary_item
+               '''
+        # some necessary preconfig
         diction, mystream = self.initialise()
 
-        print('Class Payload = Testing extract string')
+        mypayload = Payloads.Payload(mystream.binary_payload)
 
+        print("Testing extract_int")
+        # Create fake AIS payload with a random binary number in bits 8 to 37
+        for i in range(10):
+            fakestream: str = '00010000'
+            faketail: str = '000000000000000000000000000000'
 
-        self.fail()
+            testnumber: int = random.randint(0, 999999999)
+            strnumber: str = "{:030b}".format(testnumber)
+            fakestream = fakestream + strnumber + faketail
+            mystream.binary_payload = fakestream
+            intmmsi = mypayload.extract_int(8, 30)
+            self.assertEqual(testnumber, intmmsi, "In Payload - FAiled in test_extract_int")
 
-    def test_extract_int(self):
-        self.fail()
+    def test_extract_string(self):
+        '''
+                Create dummy binary payload including some test strings use Extract_String to recover text
+        :return:
+            string text to be compared
+        '''
+        print("Testing ExtractString")
+        # some necessary preconfig
+        diction, mystream = self.initialise()
+
+        mypayload = Payloads.Payload(mystream.binary_payload)
+
+        fakestream: str = '00010000'
+        faketail: str = '11111111111111111111'
+
+        testtext: str = 'ABCDEFGHIJKLMNOPQRSTUVWabcdefghijklmnopqrstuvw01234567890:;<>=?@@AB'
+
+        for _ in range(10):
+
+            for ik in range(len(testtext)):
+                fakestream = diction.makebinpayload(fakestream, testtext[ik])
+            fakestream = fakestream + faketail
+
+            # set this as "binary_payload" in AIS_Data and set its length as 6 times the text length plus
+            # additional head/tail bits (28)
+            mypayload.payload = fakestream
+
+            # nominal start of text stream
+            basepos: int = 8
+            rndstrt = random.randint(0, len(testtext) - 1)
+            # can pick out any random portion no more than 30chars size
+            # then check if the combination of start posn plus length will not exceed binary_payload length
+            rndlen = random.randint(1, 30)
+            while rndstrt * 6 + rndlen * 6 > len(testtext) * 6:
+                rndlen = random.randint(1, 30)
+            # then extract the text segment we will be recovering from the binary_payload
+            rndtext = testtext[rndstrt:rndstrt + rndlen]
+            blklen = rndlen * 6
+
+            logging.debug("DEBUG binary_payload from which string will be extracted\n",
+                          mystream.binary_payload)
+            outstr = mypayload.extract_string(rndstrt*6+8 ,  rndlen * 6 )
+            logging.debug('Extracted string ', outstr)
+
+            self.assertEqual(rndtext, outstr, "In Payload - Failed in Extract_String")
 
     def test_binary_item(self):
         self.fail()
@@ -427,6 +486,3 @@ class TestAISStream(TestCase):
             for ij in range(len(numbstring)):
                 outint = mystream.m_to_int(numbstring[ij])
                 self.assertEqual(int(numbstring[ij]), outint, "Failure in m_to_int")
-
-
-

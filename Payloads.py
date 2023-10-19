@@ -40,7 +40,7 @@ class Payload:
         self.payload = p_payload
 
         self.message_type = self.binary_item(0, 6)
-        if 1 <= self.message_type <= 27:
+        if not(1 <= self.message_type <= 27):
             logging.error("In Payload.__ini__ - Invalid Message Type not in 1-27")
             raise RuntimeError("Invalid Message Type not in 1-27")
 
@@ -85,7 +85,6 @@ class Payload:
                         temp = temp + 0x8
                     # print('temp again', temp)
                     cc = chr(temp)
-                    # print("character to be returned ", cc)
                     #                        Console.WriteLine("temp = " + temp + " cc = " + cc);
                     buildit = buildit + cc
                     # print('buildit ',buildit)
