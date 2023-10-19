@@ -36,7 +36,7 @@ class Payload:
 
 
     def __init__(self, p_payload: str):
-
+        # p_payload is binary_payload string
         self.payload = p_payload
 
         self.message_type = self.binary_item(0, 6)

@@ -115,10 +115,51 @@ class TestFragments(TestCase):
 
 
 class TestPayload(TestCase):
+
+
+    def initialise(self):
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        mystream = Payloads.AISStream('!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05')
+        return diction,  mystream
+
+                             ]
+
     def test_create_mmsi(self):
-        self.fail()
+        diction,  mystream = self.initialise()
+
+        print('Testing create mmsi')
+
+        smmsi_list: list = [
+            '850312345', '503543210', '050398765', '005037651', '111504678',
+            '998761234', '984135432', '970654987', '972654321', '974765432',
+            '9999999999', 'A99999999'
+        ]
+
+        # the mmsi field is bits 8-37 of the binary payload string
+        # so split the mystream.binary_payload generated in the initialiastion into three parts
+        # bits 0-7, bits 38-end and substitute the 30 bits that are the mmsi field
+
+        header: str = mystream.binary_payload[0:7]
+        trailer: str = mystream.binary_payload[38:]
+
+        for sm in smmsi_list:
+            mmsibits = '{:09b}'.format(int(sm))
+            mystream.binary_payload = header + mmsibits + trailer
+
+            try:
+                mypayload = Payloads.Payload(mystream.binary_payload)
+                mypayload.create_mmsi()
+                ommsi: str = mypayload.mmsi
+                self.assertEqual(sm, ommsi, "Failed in get/set random mmsi integer form")
 
     def test_extract_string(self):
+        diction, mystream = self.initialise()
+
+        print('Class Payload = Testing extract string')
+
+
         self.fail()
 
     def test_extract_int(self):
