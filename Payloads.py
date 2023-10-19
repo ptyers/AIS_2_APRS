@@ -672,6 +672,7 @@ class AISStream:
         str_split: list = stream.split(',')
 
         if (str_split[0] == '!AIVDM') or (str_split[0] == '!AIVDO'):
+            logging.error("In AISStream - packet_type not in AIVDM or AIVDO\n" + str_split[0])
             self.packet_id = str_split[0]
         else:
             self.valid_message = False
@@ -679,13 +680,13 @@ class AISStream:
         try:
             self.fragment_count = int(str_split[1])
         except ValueError:
-            logging.error("In AISStream - fragment count not numeric")
+            logging.error("In AISStream - fragment count not numeric\n" + str_split[1])
             self.fragment_count = 0
             self.valid_message = False
         try:
             self.fragment_number = int(str_split[2])
         except ValueError:
-            logging.error("In AISStream - fragment number not numeric")
+            logging.error("In AISStream - fragment number not numeric\n" + str_split[2])
             self.fragment_number = 0
             self.valid_message = False
         try:
@@ -696,12 +697,13 @@ class AISStream:
                 # null message_id
                 self.message_id = 0
         except ValueError:
-            logging.error("In AISStream - message_id not numeric")
+            logging.error("In AISStream - message_id not numeric\n" + str_split[3])
             self.message_id = 0
             self.valid_message = False
 
         self.channel = str_split[4]
         if self.channel not in ['A', 'B', '1', '2']:
+            logging.error('In AISStream.split_string - invalid channel\n' + str_split[4])
             self.valid_message = False
 
         self.payload = str_split[5]
@@ -709,14 +711,16 @@ class AISStream:
         # this really should live with payload processing but for easy dumping of stream
         # will also be done here
 
-
-        # grab first six bits - by shifting right the bits related to repeat indicator
-        messbyte: int = self.m_to_int(self.payload[0])
-        logging.debug('In AISStream - messbyte = ' + '{:0d}'.format(messbyte))
-        if not (1 <= messbyte <= 27):
-            self.valid_message = False
-        else:
-            self.message_type = messbyte
+        # only applies for packet where fragment_number = 1, for other packets ignored
+        if self.fragment_number == 1:
+            # grab first six bits - by shifting right the bits related to repeat indicator
+            messbyte: int = self.m_to_int(self.payload[0])
+            logging.debug('In AISStream - messbyte = ' + '{:0d}'.format(messbyte))
+            if not (1 <= messbyte <= 27):
+                logging.error('In AISStream.split_string - invalid message+type\n' + str_split[5])
+                self.valid_message = False
+            else:
+                self.message_type = messbyte
 
         self.trailer = str_split[6]
 
