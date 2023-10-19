@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import logging
 from GlobalDefinitions import Global
 import struct
+import sys
 
 
 '''
@@ -26,14 +27,6 @@ class Payload:
     raim_flag: bool = 0     # default not in use
     radio_status: int = 0   # Not implemented
     payload: str            # binary payload
-
-
-
-
-
-
-
-
 
     def __init__(self, p_payload: str):
         # p_payload is binary_payload string
@@ -118,20 +111,16 @@ class Payload:
             raise RuntimeError("Request to extract more bits which overrun end of binary payload")
 
         reqbits = self.payload[startpos:startpos + blength]
-        logging.debug('in Binary Item type reqbits = ', type(reqbits), ' value reqbits =', reqbits)
+        # print( 'bits extracted from string =', reqbits, '\npayload=            ',
+        #        self.payload, '\nstartpos =', startpos,' length = ', blength,)
+        logging.debug('in Binary Item  reqbits = ', type(reqbits), ' value reqbits =', reqbits)
         if len(reqbits) != 0:
             return int(reqbits, 2)
         else:
             return 0
 
-        # endregion
-        # region Private Methods
-
-    def m_to_int2(self, parameter: str) -> int:
-        return int(parameter)
-
     def m_to_int(self, parameter: str) -> int:
-        # takes in a encoded string of variable length and returns positive integer
+        # takes in a encoded character  and returns positive integer
         # print('entering m_to_int parameter = ', parameter)
         my_int = int(0)
         my_byte = ord(parameter)
@@ -154,35 +143,39 @@ class Payload:
             # in either signed or unsigned versions
         return my_int
 
-    def Remove_at(self, p: str) -> str:
-        if (p.find('@') > 0):
-            pp = ''
-            for i in p:
-                if not (i == '@'):
-                    pp = pp + i
-            return pp
+    def remove_at(self, input_p: str) -> str:
+        '''
+         remove_at strips trailing @ from string values
 
-        else:
+         :return:
+             string without trailing @
+         '''
+        p = input_p
+        str_pos = len(p) - 1
+        print('str_len, loc_@', str_pos, p.find('@'))
+        if p.find('@') > 0:
 
-            if (p.find('@') == 0):
-                return p  # equivalent to String.Empty
-            else:
-                return p
+            while p[str_pos] == '@':
+                print('str_len, loc_@', str_pos, p.find('@'), p[str_pos])
+                p = p[0:str_pos]
+                print('p', p)
+                str_pos = str_pos - 1
+            return p
 
-    def Remove_space(self, p: str) -> str:
-        if (p.find(' ') > 0):
-            pp = ''
-            for i in p:
-                if not (i == ' '):
-                    pp = pp + i
-            return pp
+    def remove_space(self, input_p: str) -> str:
+        '''
+         remove_at strips trailing spaces from string values
 
-        else:
-
-            if (p.find(' ') == 0):
-                return p  # equivalent to String.Empty
-            else:
-                return p
+         :return:
+             string without trailing spaces
+         '''
+        p = input_p
+        str_pos = len(p) - 1
+        if p[str_pos] == ' ':
+            while p[str_pos] == ' ':
+                p = p[:str_pos - 1]
+                str_pos -= 1
+        return p
 
 
     def get_longitude(self, startpos: int, length: int  = 28):

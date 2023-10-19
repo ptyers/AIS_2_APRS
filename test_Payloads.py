@@ -154,7 +154,7 @@ class TestPayload(TestCase):
             except:
                 pass
 
-    def test_ExtractInt(self):
+    def test_extract_int(self):
         '''
                Produces random number in rage 0 to 999999999 and sets up fake binary_payload string
                then extracts that binary number from the string using AIS_Data.Binary_item
@@ -173,10 +173,12 @@ class TestPayload(TestCase):
 
             testnumber: int = random.randint(0, 999999999)
             strnumber: str = "{:030b}".format(testnumber)
+            # print('strnumber =                 ', strnumber)
             fakestream = fakestream + strnumber + faketail
-            mystream.binary_payload = fakestream
+            mypayload.payload = fakestream
+            # print('fakestream          ', fakestream)
             intmmsi = mypayload.extract_int(8, 30)
-            self.assertEqual(testnumber, intmmsi, "In Payload - FAiled in test_extract_int")
+            self.assertEqual(testnumber, intmmsi, "In Payload - Failed in test_extract_int")
 
     def test_extract_string(self):
         '''
@@ -219,25 +221,104 @@ class TestPayload(TestCase):
 
             logging.debug("DEBUG binary_payload from which string will be extracted\n",
                           mystream.binary_payload)
-            outstr = mypayload.extract_string(rndstrt*6+8 ,  rndlen * 6 )
+            outstr = mypayload.extract_string(rndstrt * 6 + 8, rndlen * 6)
             logging.debug('Extracted string ', outstr)
 
             self.assertEqual(rndtext, outstr, "In Payload - Failed in Extract_String")
 
     def test_binary_item(self):
-        self.fail()
+        '''
+        Produces random number in rage 0 to 999999999 and sets up fake binary_payload string
+        then extracts that binary number from the string using AIS_Data.Binary_item
+        '''
+        print("Testing ExtractString")
+        # some necessary preconfig
+        diction, mystream = self.initialise()
 
-    def test_m_to_int2(self):
-        self.fail()
+        mypayload = Payloads.Payload(mystream.binary_payload)
+
+        print("Testing Binary_item")
+        # Create fake binary payload with a random binary number in bits 8 to 37
+        for i in range(10):
+            fakestream: str = '00010000'
+            faketail: str = '000000000000000000000000000000'
+
+            testnumber: int = random.randint(0, 999999999)
+            strnumber: str = "{:030b}".format(testnumber)
+            fakestream = fakestream + strnumber + faketail
+            mypayload.payload = fakestream
+            intmmsi = mypayload.binary_item(8, 30)
+            self.assertEqual(testnumber, intmmsi, "FAiled in test_binary_item")
 
     def test_m_to_int(self):
-        self.fail()
+        '''
+        m_to_int takes in single armoured (encoded) character and returns a binary value
+
+        :return:
+            binary value as per Dictionaries.payload_armour
+        '''
+
+        print("Testing m_to_int")
+
+        # some necessary preconfig
+        diction, mystream = self.initialise()
+
+        mypayload = Payloads.Payload(mystream.binary_payload)
+
+        for char, str_val in diction.payload_armour.items():
+            #print('character, string value', char, str_val )
+            bin_val = int(str_val,2)
+            ret_val = mypayload.m_to_int(char)
+            self.assertEqual(bin_val, ret_val,'In Payload.m_to_int - returned binary does not match encoded char')
 
     def test_remove_at(self):
-        self.fail()
+        '''
+        remove_at strips trailing @ from string values
+
+        :return:
+            string without trailing @
+        '''
+
+
+        print("Testing remove_at")
+
+        # some necessary preconfig
+        diction, mystream = self.initialise()
+
+        mypayload = Payloads.Payload(mystream.binary_payload)
+
+        teststring = 'ABC'
+        for i in range(1,10):
+            out_string = mypayload.remove_at(teststring)
+            self.assertEqual(teststring, out_string,
+              "In Payload.remove_at - the returned string has not had trailing @ removed ")
+            teststring = teststring + '@'
+
+
+
 
     def test_remove_space(self):
-        self.fail()
+        '''
+        remove_at strips trailing spaces from string values
+
+        :return:
+            string without trailing spaces
+        '''
+
+        print("Testing remove_space")
+
+        # some necessary preconfig
+        diction, mystream = self.initialise()
+
+        mypayload = Payloads.Payload(mystream.binary_payload)
+
+        teststring = 'ABC'
+        for i in range(1, 10):
+            out_string = mypayload.remove_space(teststring)
+            self.assertEqual(teststring, out_string,
+                             "In Payload.remove_at - the returned string has not had trailing spaces removed ")
+            teststring = teststring + ' '
+
 
     def test_get_longitude(self):
         self.fail()
@@ -486,3 +567,6 @@ class TestAISStream(TestCase):
             for ij in range(len(numbstring)):
                 outint = mystream.m_to_int(numbstring[ij])
                 self.assertEqual(int(numbstring[ij]), outint, "Failure in m_to_int")
+
+
+
