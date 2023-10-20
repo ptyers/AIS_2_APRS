@@ -224,15 +224,42 @@ class Payload:
 
         return -((int(newreqbits, 2) + 1))
 
-    def getRAIMflag(self, position) -> bool:
+    def getRAIMflag(self, position: int) -> None:
+        '''
+         The RAIM flag indicates whether Receiver Autonomous Integrity Monitoring is being used
+          to check the performance  if the EPFD.
+          0 = RAIM not in use (default),
+          1 = RAIM in use.
+          See [RAIM] for a detailed description of this flag.
+
+          at bit position 148 in CNB, Base Station
+
+         :return:
+             sets Payload.RAIMflag
+         '''
         # RAIM flag bool False = not in use
         # location varies in blocks
-        return bool(self.binary_item(position, 1))
+        if self.binary_item(position,1) == 1:
+            self.raim_flag = True
+        else:
+            self.raim_flag = False
 
-    def getfix(self, position) -> bool:
+
+    def getfix(self, position: int) -> None:
+        '''
+            The position accuracy flag indicates the accuracy of the fix.
+            A value of 1 indicates a DGPS-quality fix with an accuracy of < 10ms.
+              0, the default, indicates an unaugmented GNSS fix with accuracy > 10m.
+
+            :return:
+              sets payload.fixquality
+        '''
         # Fix Quality flag bool False = not in use
         # location varies in blocks
-        return bool(self.binary_item(position, 1))
+        if self.binary_item(position, 1) == 1:
+            self.fix_quality = True
+        else:
+            self.fix_quality = False
 
 
 class CNB(Payload):

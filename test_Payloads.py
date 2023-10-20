@@ -486,7 +486,68 @@ class TestPayload(TestCase):
 
 
     def test_get_raimflag(self):
-        self.fail()
+        '''
+        The RAIM flag indicates whether Receiver Autonomous Integrity Monitoring is being used
+         to check the performance  if the EPFD.
+         0 = RAIM not in use (default),
+         1 = RAIM in use.
+         See [RAIM] for a detailed description of this flag.
+
+         at bit position 148 in CNB, Base Station
+
+        :return:
+            sets Payload.RAIMflag
+        '''
+
+        # some necessary preconfig
+        diction, mystream = self.initialise()
+        mypayload = Payloads.Payload(mystream.binary_payload)
+        print('Testing get_RAIMflag')
+
+        fakestream: str = '00010000'
+        faketail: str = '000000000000000000000000000000'
+
+        teststring = fakestream + '1' + faketail
+        mypayload.payload = teststring
+        mypayload.getRAIMflag(8)
+        self.assertEqual(True,mypayload.raim_flag, "In Payload.RAIMflag looking for True got other")
+
+        teststring = fakestream + '0' + faketail
+        mypayload.payload = teststring
+        mypayload.getRAIMflag(8)
+        self.assertEqual(False, mypayload.raim_flag, "In Payload.RAIMflag looking for False got other")
+
+        mypayload.payload = teststring
+
+    def test_get_fix(self):
+        '''
+        The position accuracy flag indicates the accuracy of the fix.
+        A value of 1 indicates a DGPS-quality fix with an accuracy of < 10ms.
+        0, the default, indicates an unaugmented GNSS fix with accuracy > 10m.
+
+        :return:
+        sets payload.fixquality
+        '''
+
+        # some necessary preconfig
+        diction, mystream = self.initialise()
+        mypayload = Payloads.Payload(mystream.binary_payload)
+        print('Testing get_fixquality')
+
+        fakestream: str = '00010000'
+        faketail: str = '000000000000000000000000000000'
+
+        teststring = fakestream + '1' + faketail
+        mypayload.payload = teststring
+        mypayload.getfix(8)
+        self.assertEqual(True, mypayload.fix_quality, "In Payload.fixquality looking for True got other")
+
+        teststring = fakestream + '0' + faketail
+        mypayload.payload = teststring
+        mypayload.getfix(8)
+        self.assertEqual(False, mypayload.fix_quality, "In Payload.fixquality looking for False got other")
+
+        mypayload.payload = teststring
 
 
 class TestCNB(TestCase):
