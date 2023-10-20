@@ -46,7 +46,8 @@ class AISDictionaries:
     }
 
     Navigation_Status: dict = {
-        0: 'Under way using engin', 1: 'At anchor',
+        0: 'Under way using engin',
+        1: 'At anchor',
         2: 'Not under command',
         3: 'Restricted manoeuverability',
         4: 'Constrained by er draught',

@@ -23,6 +23,7 @@ class Payload:
     raim_flag: bool = 0  # default not in use
     radio_status: int = 0  # Not implemented
     payload: str  # binary payload
+    valid_item: bool
 
     def __init__(self, p_payload: str):
         # p_payload is binary_payload string
@@ -44,6 +45,7 @@ class Payload:
         self.latitude = 0.0
         self.raim_flag = False
         self.fix_quality = False
+        self.valid_item = True
 
     def create_mmsi(self) -> str:
         # extract bits 8 to 37 from binary_payload, convert to int then to string zero filling (if nesecary)
@@ -103,7 +105,6 @@ class Payload:
         return self.binary_item(startpos, blength)
 
     def binary_item(self, startpos: int, blength: int) -> int:
-        # newer version concept only
         # convert bitarray to a string, use string slicing to get bits
         # then convert the slice to int using int(string,2)
 
@@ -224,6 +225,22 @@ class Payload:
 
         return -((int(newreqbits, 2) + 1))
 
+    def get_flag_bit(self, position: int) -> bool:
+        ''''
+        Generic extract a boolean flag bit from given position
+        :parameter:
+            position - bit position in stream from which toextract the flag bit
+
+        :return:
+            returns boolean value of flag
+        '''
+
+        if self.binary_item(position, 1) == 1:
+            self.raim_flag = True
+        else:
+            self.raim_flag = False
+
+
     def getRAIMflag(self, position: int) -> None:
         '''
          The RAIM flag indicates whether Receiver Autonomous Integrity Monitoring is being used
@@ -239,10 +256,9 @@ class Payload:
          '''
         # RAIM flag bool False = not in use
         # location varies in blocks
-        if self.binary_item(position,1) == 1:
-            self.raim_flag = True
-        else:
-            self.raim_flag = False
+
+        self.raim_flag = self.get_flag_bit(position)
+
 
 
     def getfix(self, position: int) -> None:
@@ -256,10 +272,7 @@ class Payload:
         '''
         # Fix Quality flag bool False = not in use
         # location varies in blocks
-        if self.binary_item(position, 1) == 1:
-            self.fix_quality = True
-        else:
-            self.fix_quality = False
+        self.fix_quality = self.get_flag_bit(position)
 
 
 class CNB(Payload):
@@ -267,7 +280,7 @@ class CNB(Payload):
 
     navigation_status: int
     rate_of_turn: float
-    speed_over_ground: int
+    speed_over_ground: float
     position_accuracy: bool
     course_over_ground: float
     true_heading: int
@@ -291,11 +304,49 @@ class CNB(Payload):
         pass
 
     def get_nav_status(self) -> None:
+        '''
+        Navigation Status is described in AISDictionary
+
+        :input:
+            bits 38-41 in self.payload
+
+        :values:
+            valid values 0-15, only four bits so cannot exceed  this range
+        :return:
+            sets self.navigation_status
+        '''
+
         # at bits 38-41
-        # values 0-15
+        #
         self.navigation_status = self.binary_item(38, 4)
 
     def get_ROT(self) -> None:
+        '''
+        # ROT - Rate of Turn is scaled by 1000 returns float
+        # signed integer scaled to float then calculated as divide by 4.733, retain sign but square it
+        Turn rate is encoded as follows:
+
+        0 = not turning
+
+        1…126 = turning right at up to 708 degrees per minute or higher
+
+        1…-126 = turning left at up to 708 degrees per minute or higher
+
+        127 = turning right at more than 5deg/30s (No TI available)
+
+        -127 = turning left at more than 5deg/30s (No TI available)
+
+        128 (80 hex) indicates no turn information available (default)
+
+        Values between 0 and 708 degrees/min coded by ROTAIS=4.733 * SQRT(ROTsensor) degrees/min
+        where ROTsensor is the Rate of Turn as input by an external Rate of Turn Indicator.
+        ROTAIS is rounded to the nearest integer value. Thus, to decode the field value, divide by 4.733
+        and then square it. Sign of the field value should be preserved when squaring it,
+        otherwise the left/right indication will be lost.
+
+        :return:
+            sets mycnb.rate_of_turn (float)
+        '''
         # ROT - Rate of Turn is scaled by 1000
         # signed integer scaled to float then calculated as divide by 4.733, retain sign but square it
 
@@ -306,33 +357,133 @@ class CNB(Payload):
             self.rate_of_turn = - (float(abs(irot)) / 4.733) ** 2
 
     def getSOG(self) -> None:
-        # integer scaled by 10
-        self.speed_over_ground = int(self.binary_item(50, 10) / 10)
+        '''
+
+        Speed over ground is in 0.1-knot resolution from 0 to 102 knots.
+        Value 1023 indicates speed is not available,
+         value 1022 indicates 102.2 knots or higher.
+        :return:
+            set mycnb.speed_over_ground (float)
+        '''
+
+        intval = self.binary_item(50, 10)
+        if 0 <= intval <= 1023:
+            self.speed_over_ground = float(intval) / 10.0
+        else:
+            # should not happen max value 1023
+            self.valid_item = False
+            logging.error('In CNB.get_SOG - value outside range 0-102.3' , intval)
+            raise RuntimeError('In CNB.get_SOG - value outside range 0-102.3' , intval)
+
+
+
+
 
     def get_COG(self) -> None:
+        '''
+        stored as inter value scaled up by 10
+        Course over ground will be 3600 (0xE10) if that data is not available.
+
+        :return:
+            sets mycnb.course over_ground (float)
+        '''
         # course over ground - scaled by 10
-        self.course_over_ground = float(self.binary_item(116, 12) / 10)
+        intval = self.binary_item(116, 12)
+        if 0 <= intval <= 3600:
+            self.course_over_ground = round(float(intval) / 10.0, 1)
+        else:
+            self.valid_item = False
+            logging.error('In CNB.get_COG - value outside range 0-360' , intval)
+            raise RuntimeError('In CNB.get_COG - value outside range 0-360' , intval)
+
 
     def get_tru_head(self) -> None:
-        # true heading 0-359 degrees, 511 not available
+        '''
+            true heading is integer value
+            0-359 degrees
+            511 not avaiulable
+
+            routine checks validity sets to False if outside 0-259 and/or 511
+
+        :return:
+            sets mycnb.true_heading (integer)
+        '''
+
         itru = self.binary_item(128, 9)
         if 0 <= itru <= 259 or itru == 511:
             self.true_heading = itru
         else:
+            self.valid_item = False
             logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511', itru)
             raise RuntimeError('In CNB.get_tru_head - value outside range 0-259 or != 511', itru)
 
     def get_pos_accuracy(self) -> bool:
-        # position accracy bool in bit 60
-        self.position_accuracy = bool(self.binary_item(60, 1))
+        '''
 
-    def get_timestamp(self):
+        The position accuracy flag indicates the accuracy of the fix.
+        A value of 1 indicates a DGPS-quality fix with an accuracy of < 10ms. 0,
+        the default, indicates an unaugmented GNSS fix with accuracy > 10m.
+
+        in bit 60 of binary payload
+        :return:
+            sets mycnb.position_accuracy (bool)
+        '''
+
+        self.position_accuracy = self.get_flag_bit(60)
+
+    def get_timestamp(self) -> None:
+        '''
+        Seconds in UTC timestamp should be 0-59, except for these special values:
+
+        60 if time stamp is not available (default)
+
+        61 if positioning system is in manual input mode
+
+        62 if Electronic Position Fixing System operates in estimated (dead reckoning) mode,
+
+        63 if the positioning system is inoperative.
+
+        bits 137-142 in binary_payload
+
+        :return:
+            sets mycnb.time_stamp (integer)
+        '''
         # timestamp = second of UTC timestamp. 6 bits at 137
-        self.time_stamp = self.binary_item(137, 6)
+        intval = self.binary_item(137, 6)
+
+        # validate
+        if 0 <= intval <= 63:
+            self.time_stamp = self.binary_item(137, 6)
+        else:
+            self.valid_item = False
+            logging.error('In CNB.get_timestamp - value outside range 0-63', intval)
+            raise RuntimeError('In CNB.get_timestamp - value outside range 0-63', intval)
+
 
     def get_man_indic(self):
+        '''
+            The Maneuver Indicator (143-144) may have these values:
+
+            Table 8. Maneuver Indicator
+            0  Not available (default)
+            1  No special maneuver
+            2  Special maneuver (such as regional passing arrangement)
+
+            range 0-2. Bits 143-144 in binary_payload
+
+        :return:
+            sets mycnb.maneouver_indicator (integer)
+            validates that values are in 0-2, invalidates mycnb.success for value == 3
+        '''
         # maneouver indicator. 0-2. Bits 143-144
-        self.maneouver_indicator = self.binary_item(143, 2)
+
+        intval = self.binary_item(143, 2)
+        if 0<= intval <= 2:
+            self.maneouver_indicator = intval
+        else:
+            self.valid_item = False
+            logging.error('In CNB.get_man indicator - value outside range 0-2', intval)
+            raise RuntimeError('In CNB.get_man indicator - value outside range 0-2', intval)
 
 
 class Basestation(Payload):

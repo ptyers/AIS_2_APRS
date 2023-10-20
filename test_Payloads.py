@@ -551,28 +551,93 @@ class TestPayload(TestCase):
 
 
 class TestCNB(TestCase):
+
+    # a couple of 'constants'
+    fakehead: str = '00010000'
+    faketail: str = '000000000000000000000000000000'
+
+    def initialise(self):
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        mystream = Payloads.AISStream('!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05')
+        mycnb = Payloads.CNB(mystream.binary_payload)
+        return diction, mystream, mycnb
+
+    def make_stream(self, testbits: str):
+        # creates a fake binary payload to allow testing
+
+        return self.fake_head + testbits + self.faketail
+
+
     def test_get_nav_status(self):
+        diction , mystream , mycnb = self.initialise()
+        print("Testing get_nav_status")
+        mycnb = Payloads.CNB(mystream.binary_payload)
+
+        for i in range(0,15):
+            testbits = '{:04b}'.format(i)
+            self.make_stream(testbits)
+
+            self.test_get_nav_status()
+            self.assertEqual(i, mycnb.navigation_status, "In CNB.get_nav_status - value expected not returned")
+
+
         self.fail()
 
     def test_get_rot(self):
+        diction , mystream , mycnb = self.initialise()
+        print("Testing get_ROT")
+        mycnb = Payloads.CNB(mystream.binary_payload)
         self.fail()
 
     def test_get_sog(self):
+        diction , mystream , mycnb = self.initialise()
+        print("Testing get_SOG")
+        mycnb = Payloads.CNB(mystream.binary_payload)
         self.fail()
 
     def test_get_cog(self):
+        diction , mystream , mycnb = self.initialise()
+        print("Testing get_COG")
+        mycnb = Payloads.CNB(mystream.binary_payload)
+
+
         self.fail()
 
     def test_get_tru_head(self):
+        diction , mystream , mycnb = self.initialise()
+        print("Testing get_truheads")
+
         self.fail()
 
     def test_get_pos_accuracy(self):
-        self.fail()
+        diction , mystream , mycnb = self.initialise()
+        print("Testing get_pos_accuracy")
+        mycnb = Payloads.CNB(mystream.binary_payload)
+
+        teststring = self.make_stream('1')
+        mycnb.payload = teststring
+        mycnb.get_pos_accuracy(8)
+        self.assertEqual(True, mycnb.position_accuracy,
+                         "In CNB.get_pos_accuracy looking for True got other")
+
+        teststring = self.make_stream('0')
+        mycnb.payload = teststring
+        mycnb.get_pos_accuracy(8)
+        self.assertEqual(False, mycnb.position_accuracy,
+                         "In CNB.get_pos_accuracy looking for False got other")
+
 
     def test_get_timestamp(self):
+        diction , mystream , mycnb = self.initialise()
+        print("Testing get_timestamp")
         self.fail()
 
     def test_get_man_indic(self):
+        diction , mystream , mycnb = self.initialise()
+        print("Testing get_nan_indic")
+
         self.fail()
 
 
