@@ -4,16 +4,12 @@ from GlobalDefinitions import Global
 import struct
 import sys
 
-
 '''
 Group of Classes covering all breeds of payloads
 
 Base Class is Payload all other classes inherit from this
 
 '''
-
-
-
 
 
 class Payload:
@@ -23,24 +19,24 @@ class Payload:
     mmsi: str
     longitude: float
     latitude: float
-    fix_quality : bool = False
-    raim_flag: bool = 0     # default not in use
-    radio_status: int = 0   # Not implemented
-    payload: str            # binary payload
+    fix_quality: bool = False
+    raim_flag: bool = 0  # default not in use
+    radio_status: int = 0  # Not implemented
+    payload: str  # binary payload
 
     def __init__(self, p_payload: str):
         # p_payload is binary_payload string
         self.payload = p_payload
 
         self.message_type = self.binary_item(0, 6)
-        if not(1 <= self.message_type <= 27):
+        if not (1 <= self.message_type <= 27):
             logging.error("In Payload.__ini__ - Invalid Message Type not in 1-27")
             raise RuntimeError("Invalid Message Type not in 1-27")
 
         self.mmsi = self.create_mmsi()
 
-        self.repeat_indicator = self.binary_item(6,2)
-        if not (0 <= self.repeat_indicator <=3):
+        self.repeat_indicator = self.binary_item(6, 2)
+        if not (0 <= self.repeat_indicator <= 3):
             logging.error("In Payload.__ini__ - Invalid Repeat Indicator not in 0-3")
             raise RuntimeError("Invalid Repeat Indicator not in 0-3")
 
@@ -49,18 +45,17 @@ class Payload:
         self.raim_flag = False
         self.fix_quality = False
 
-
     def create_mmsi(self) -> str:
         # extract bits 8 to 37 from binary_payload, convert to int then to string zero filling (if nesecary)
         # to create 9 char MMSI zero filled on MSB
 
-        #print('calling extract_int')
-        #print('payload?', self.payload)
+        # print('calling extract_int')
+        # print('payload?', self.payload)
 
-        immsi = self.extract_int(8,30 )
-        #print(' after call ímmsi', immsi)
+        immsi = self.extract_int(8, 30)
+        # print(' after call ímmsi', immsi)
         _mmsi = "{:09d}".format(immsi)
-        #print(' 0 filled  formatted version_mmsi', _mmsi)
+        # print(' 0 filled  formatted version_mmsi', _mmsi)
         return _mmsi
 
     def extract_string(self, startpos: int, blength: int) -> str:
@@ -77,34 +72,34 @@ class Payload:
                 if (startpos + indexer + 6) < len(self.payload):
 
                     temp = self.binary_item(startpos + indexer, 6)
-                    #print("temp = ", temp)
+                    # print("temp = ", temp)
                     temp = temp & 0x3F
                     temp = temp + 0x30
                     if temp > 0x57:
                         temp = temp + 0x8
-                    #print('temp again', temp)
+                    # print('temp again', temp)
                     cc = chr(temp)
                     #                        Console.WriteLine("temp = " + temp + " cc = " + cc);
                     buildit = buildit + cc
-                    #print('buildit ',buildit)
+                    # print('buildit ',buildit)
                     indexer = indexer + 6
                 else:
                     indexer = blength
 
-            #print("string returned = " + buildit);
+            # print("string returned = " + buildit);
 
             return buildit
         except:
             logging.error(
                 "Error in ExtractString startpos = " + str(startpos) + " blength = " + str(
-                    blength) + "binary_length = " )
+                    blength) + "binary_length = ")
             logging.error("Exception while ExtractString startpos", sys.exc_info()[0])
             raise
 
     def extract_int(self, startpos: int, blength: int) -> int:  # int
         # extracts an integer from the binary payload
         # use Binary_Item to get the actual bits
-        #print('extract int', startpos, blength)
+        # print('extract int', startpos, blength)
         return self.binary_item(startpos, blength)
 
     def binary_item(self, startpos: int, blength: int) -> int:
@@ -112,7 +107,7 @@ class Payload:
         # convert bitarray to a string, use string slicing to get bits
         # then convert the slice to int using int(string,2)
 
-        #veracity check
+        # veracity check
 
         if not (startpos + blength < len(self.payload)):
             logging.error("In Payload.binary_item() - Request to extract more bits which overrun end of binary payload")
@@ -182,16 +177,14 @@ class Payload:
                     str_pos -= 1
         return p
 
-
-    def get_longitude(self, startpos: int, length: int  = 28):
-       # longitude is in various positions in differing blocks
-
-        self.longitude = float(self.signed_binary_item(startpos,length)/600000)
-
-    def get_latitude(self, startpos: int, length: int = 28):
+    def get_longitude(self, startpos: int, length: int = 28):
         # longitude is in various positions in differing blocks
+        self.longitude = float(self.signed_binary_item(startpos, length))/600000
 
-        self.longitude = float(self.signed_binary_item(startpos,length)/600000)
+    def get_latitude(self, startpos: int, length: int = 27):
+        # longitude is in various positions in differing blocks
+        x = self.signed_binary_item(startpos, length)
+        self.latitude = float(self.signed_binary_item(startpos, length)) / 600000
 
     def signed_binary_item(self, startpos: int, blength: int) -> int:
         '''
@@ -209,40 +202,38 @@ class Payload:
                     signed integer value which will need scaling if necessary
             '''
 
-
-
-        #veracity check
+        # veracity check
 
         if not (startpos + blength < len(self.payload)):
             logging.error("In Payload.signed_binary_item() - "
-                       +   "Request to extract more bits which overrun end of binary payload")
+                          + "Request to extract more bits which overrun end of binary payload")
             raise RuntimeError("Request to extract more bits which overrun end of binary payload")
 
         reqbits = self.payload[startpos:startpos + blength]
-        logging.debug('in Signed Binary Item type reqbits = ', type(reqbits), ' value reqbits =', reqbits)
         # check if LHB is one
 
         if reqbits[0] != '1':
             return int(reqbits, 2)
         else:
             newreqbits = ''
-            for i in range(0,len(reqbits) ):
+            for i in range(0, len(reqbits)):
                 if reqbits[i] == "1":
                     newreqbits = newreqbits + '0'
                 else:
                     newreqbits = newreqbits + '1'
 
-        return -((int(newreqbits,2) + 1))
+        return -((int(newreqbits, 2) + 1))
 
     def getRAIMflag(self, position) -> bool:
         # RAIM flag bool False = not in use
         # location varies in blocks
-        return bool(self.binary_item(position,1))
+        return bool(self.binary_item(position, 1))
 
     def getfix(self, position) -> bool:
         # Fix Quality flag bool False = not in use
         # location varies in blocks
-        return bool(self.binary_item(position,1))
+        return bool(self.binary_item(position, 1))
+
 
 class CNB(Payload):
     # additional fields
@@ -256,52 +247,49 @@ class CNB(Payload):
     time_stamp: int
     maneouver_indicator: int
 
-
-
     def __init__(self, p_payload: str):
         super().__init__(p_payload)
         self.get_nav_status()
         self.get_ROT()
         self.getSOG()
         self.get_pos_accuracy()
-        self.get_longitude(61,28)
-        self.get_latitude(89,27)
+        self.get_longitude(61, 28)
+        self.get_latitude(89, 27)
         self.get_COG()
         self.get_tru_head()
         self.get_timestamp()
         self.get_man_indic()
         self.getfix(60)
 
-
         pass
 
     def get_nav_status(self) -> None:
         # at bits 38-41
         # values 0-15
-        self.navigation_status =  self.binary_item(38,4)
+        self.navigation_status = self.binary_item(38, 4)
 
     def get_ROT(self) -> None:
         # ROT - Rate of Turn is scaled by 1000
         # signed integer scaled to float then calculated as divide by 4.733, retain sign but square it
 
-        irot = self.signed_binary_item(42,8)
+        irot = self.signed_binary_item(42, 8)
         if irot >= 0:
-            self.rate_of_turn = (float(irot)/4.733)**2
+            self.rate_of_turn = (float(irot) / 4.733) ** 2
         else:
-            self.rate_of_turn = - (float(abs(irot))/4.733)**2
+            self.rate_of_turn = - (float(abs(irot)) / 4.733) ** 2
 
     def getSOG(self) -> None:
         # integer scaled by 10
-        self.speed_over_ground = int(self.binary_item(50,10)/10)
+        self.speed_over_ground = int(self.binary_item(50, 10) / 10)
+
     def get_COG(self) -> None:
         # course over ground - scaled by 10
-        self.course_over_ground = float(self.binary_item(116,12)/10)
-
+        self.course_over_ground = float(self.binary_item(116, 12) / 10)
 
     def get_tru_head(self) -> None:
         # true heading 0-359 degrees, 511 not available
-        itru = self.binary_item(128,9)
-        if 0<= itru <= 259 or itru == 511:
+        itru = self.binary_item(128, 9)
+        if 0 <= itru <= 259 or itru == 511:
             self.true_heading = itru
         else:
             logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511', itru)
@@ -309,18 +297,15 @@ class CNB(Payload):
 
     def get_pos_accuracy(self) -> bool:
         # position accracy bool in bit 60
-        self.position_accuracy =  bool(self.binary_item(60,1))
+        self.position_accuracy = bool(self.binary_item(60, 1))
 
     def get_timestamp(self):
         # timestamp = second of UTC timestamp. 6 bits at 137
-        self.time_stamp = self.binary_item(137,6)
+        self.time_stamp = self.binary_item(137, 6)
 
     def get_man_indic(self):
         # maneouver indicator. 0-2. Bits 143-144
-        self.maneouver_indicator = self.binary_item(143,2)
-
-
-
+        self.maneouver_indicator = self.binary_item(143, 2)
 
 
 class Basestation(Payload):
@@ -335,7 +320,6 @@ class Basestation(Payload):
     second: int
     EPFD_type: int
 
-
     def __init__(self, p_payload: str):
         super().__init__(p_payload)
         self.get_year()
@@ -348,9 +332,8 @@ class Basestation(Payload):
         self.getfix(78)
         self.getRAIMflag(148)
 
-
     def get_year(self):
-        self.year = self.binary_item(38,14)
+        self.year = self.binary_item(38, 14)
 
     def get_month(self):
         self.month = self.binary_item(52, 4)
@@ -369,11 +352,10 @@ class Basestation(Payload):
 
     def get_EPFD(self):
         # enumerated 0-8, but other may appear, 15 not uncommen
-        self.EPFD_type = self.binary_item(134,4)
-
-
+        self.EPFD_type = self.binary_item(134, 4)
 
         pass
+
 
 class Binary_addressed_message(Payload):
     # to be implemented
@@ -402,7 +384,6 @@ class Binary_broadcast_message(Payload):
         pass
 
 
-
 class SAR_aircraft_position_report(Payload):
     # to be implemented
 
@@ -427,6 +408,7 @@ class UTC_date_response(Payload):
 
         pass
 
+
 class Addressed_safety_related_message(Payload):
     # to be implemented
 
@@ -444,6 +426,7 @@ class Safety_relatyed_acknowledgement(Payload):
 
         pass
 
+
 class Safety_related_broadcast_message(Payload):
     # to be implemented
 
@@ -451,6 +434,8 @@ class Safety_related_broadcast_message(Payload):
         super().__init__(p_payload)
 
         pass
+
+
 class Interrogation(Payload):
     # to be implemented
 
@@ -459,6 +444,7 @@ class Interrogation(Payload):
 
         pass
 
+
 class DGNS_broadcast_binaty_message(Payload):
     # to be implemented
 
@@ -466,6 +452,7 @@ class DGNS_broadcast_binaty_message(Payload):
         super().__init__(p_payload)
 
         pass
+
 
 class ClassB_position_report(Payload):
     # to be implemented
@@ -485,6 +472,8 @@ class Extende_ClassB_position_report(Payload):
         super().__init__(p_payload)
 
         pass
+
+
 class Data_link_management_message(Payload):
     # to be implemented
     # type 20
@@ -493,6 +482,7 @@ class Data_link_management_message(Payload):
         super().__init__(p_payload)
 
         pass
+
 
 class Aid_to_navigation_report(Payload):
     # to be implemented
@@ -503,6 +493,7 @@ class Aid_to_navigation_report(Payload):
 
         pass
 
+
 class Channel_management(Payload):
     # to be implemented
     # type 22
@@ -511,6 +502,7 @@ class Channel_management(Payload):
         super().__init__(p_payload)
 
         pass
+
 
 class Group_assigment_command(Payload):
     # to be implemented
@@ -521,6 +513,7 @@ class Group_assigment_command(Payload):
 
         pass
 
+
 class Static_data_report(Payload):
     # to be implemented
     # type 24
@@ -529,6 +522,7 @@ class Static_data_report(Payload):
         super().__init__(p_payload)
 
         pass
+
 
 class Single_slot_binary_message(Payload):
     # to be implemented
@@ -539,6 +533,7 @@ class Single_slot_binary_message(Payload):
 
         pass
 
+
 class Multiple_slot_binary_message(Payload):
     # to be implemented
     # type 26
@@ -547,6 +542,8 @@ class Multiple_slot_binary_message(Payload):
         super().__init__(p_payload)
 
         pass
+
+
 class Long_range_AIS_broadcast_message(Payload):
     # to be implemented
 
@@ -580,12 +577,9 @@ class Fragments:
     success: bool
     new_bin_payload: str
 
-
-
-
     def __init__(self, binary_payload: str, fragment_count: int, fragment_number: int, message_id: int):
 
-        current_time =  datetime.utcnow()
+        current_time = datetime.utcnow()
         f_count = fragment_count
         f_no = fragment_number
         messid = message_id
@@ -625,14 +619,14 @@ class Fragments:
 
         # compare this with the number of fragments expected
         if nr_recs == self.f_count:
-        # got requisite number of fragments
-        # get fragments in order
+            # got requisite number of fragments
+            # get fragments in order
             lump = 1
             while lump <= nr_recs:
                 for ftuple in fraglist:
                     if ftuple[1] == 1:
                         self.new_bin_payload = ftuple[3]
-                    elif  ftuple[1] == lump:
+                    elif ftuple[1] == lump:
                         self.new_bin_payload = self.new_bin_payload + ftuple[3]
                 lump += 1
             self.success = True
@@ -640,7 +634,8 @@ class Fragments:
             # not got all bits yet
             pass
 
-        return self.success , self.new_bin_payload
+        return self.success, self.new_bin_payload
+
 
 class AISStream:
     # comprises the entire AIS message as received
@@ -648,7 +643,7 @@ class AISStream:
     packet_id: str
     fragment_count: int
     fragment_number: int
-    message_id: int # may be null
+    message_id: int  # may be null
     channel: str
     payload: str
     binary_payload: str
@@ -659,7 +654,7 @@ class AISStream:
     valid_message: bool
     message_type: int  # only used to validate payload
 
-    def __init__( self, input: str):
+    def __init__(self, input: str):
 
         self.valid_message = True
         self.split_string(input)
@@ -667,14 +662,12 @@ class AISStream:
         # only if crude validation passed continue
         if self.valid_message:
             # now create the string form binary_payload
-            self.create_binary_payload()   # now create the string form binary_payload
-            self.create_bytearray_payload() # not currently used but for future usage
+            self.create_binary_payload()  # now create the string form binary_payload
+            self.create_bytearray_payload()  # not currently used but for future usage
             #
             # before we return the stream will be crudely validated
 
             self.validate_stream()
-
-
 
     def split_string(self, stream: str):
         self.valid_message = True
@@ -733,9 +726,7 @@ class AISStream:
 
         self.trailer = str_split[6]
 
-
-
-    def create_binary_payload(self)-> None:
+    def create_binary_payload(self) -> None:
         # based on using a supersized string rather than bytearray
         #
         # print("ïnput payload "+ p_payload)
@@ -766,7 +757,6 @@ class AISStream:
         # print(_abinary_payload)
 
         self.binary_payload = _abinary_payload
-
 
     def create_bytearray_payload(self) -> tuple:
         # based on using a supersized string rather than bytearray
@@ -885,9 +875,3 @@ class AISStream:
             return False
 
         # then check self.self.fragment_count
-
-
-
-
-
-
