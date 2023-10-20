@@ -132,24 +132,26 @@ class TestPayload(TestCase):
         smmsi_list: list = [
             '850312345', '503543210', '050398765', '005037651', '111504678',
             '998761234', '984135432', '970654987', '972654321', '974765432',
-            '9999999999'
+            '999999999'
         ]
 
         # the mmsi field is bits 8-37 of the binary payload string
         # so split the mystream.binary_payload generated in the initialiastion into three parts
         # bits 0-7, bits 38-end and substitute the 30 bits that are the mmsi field
 
-        header: str = mystream.binary_payload[0:7]
+        header: str = '00010000'
         trailer: str = mystream.binary_payload[38:]
 
-        for sm in smmsi_list:
-            mmsibits = '{:09b}'.format(int(sm))
-            mystream.binary_payload = header + mmsibits + trailer
+        for ssm in smmsi_list:
+            sm: str = ssm
+            mmsibits = '{:030b}'.format(int(sm))
+            mypayload = Payloads.Payload(header + mmsibits + trailer)
 
             try:
-                mypayload = Payloads.Payload(mystream.binary_payload)
+                mypayload.payload = header + mmsibits + trailer
                 mypayload.create_mmsi()
-                ommsi: str = mypayload.mmsi
+                ommsi: str = mypayload.create_mmsi()
+
                 self.assertEqual(sm, ommsi, "Failed in create mmsi integer form")
             except:
                 pass
@@ -318,14 +320,7 @@ class TestPayload(TestCase):
                              "In Payload.remove_at - the returned string has not had trailing spaces removed ")
             teststring = teststring + ' '
 
-
-    def test_get_longitude(self):
-        self.fail()
-
-    def test_get_latitude(self):
-        self.fail()
-
-    def test_signed_binary_item(self):
+    def test_signd_bin_last_long(self):
         '''
            signed_binary_item takes in a set of parameters start position, number of bits (blength)
            and extracts string of bits from the binary_payload.
@@ -340,7 +335,7 @@ class TestPayload(TestCase):
         # some necessary preconfig
         diction, mystream = self.initialise()
         mypayload = Payloads.Payload(mystream.binary_payload)
-
+        # zero degrees
         fakestream: str = '00010000'
         faketail: str = '000000000000000000000000000000'
         #testnumber: int = random.randint(0, 999999999)
@@ -349,31 +344,119 @@ class TestPayload(TestCase):
         mypayload.payload = fakestream
         intmmsi = mypayload.signed_binary_item(8, 28)
         self.assertEqual(0, intmmsi,"In Payload.signed_binary_int - Offered 0 but got non zero")
+        # longitude
+        mypayload.payload = fakestream
+        mypayload.get_longitude(8,28)
+        self.assertEqual(0.0, mypayload.longitude, "In Payload testing signed int, longitude\n" +
+                         'Entered for zero degrees got non zero back')
+        #latitude
+        strnumber: str = "{:027b}".format(0)
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        mypayload.get_latitude(8, 27)
+        self.assertEqual(0.0, mypayload.latitude, "In Payload testing signed int, latitude\n" +
+                         'Entered for zero degrees got non zero back')
+
+        # 1 degree
         strnumber: str = "{:028b}".format(1)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
         intmmsi = mypayload.signed_binary_item(8, 28)
         self.assertEqual(1, intmmsi, "In Payload.signed_binary_int - Offered 1 but got not 1")
+        # longitude
+        mypayload.payload = fakestream
+        mypayload.get_longitude(8,28)
+        self.assertEqual(1.0, mypayload.longitude, "In Payload testing signed int, longitude\n" +
+                         'Entered for one degrees one did not return')
+        #latitude
+        strnumber: str = "{:027b}".format(1)
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        mypayload.get_latitude(8, 27)
+        self.assertEqual(1.0, mypayload.latitude, "In Payload testing signed int, latitude\n" +
+                         'Entered for zero degrees one did not return')
+
+        # minus 1 degree
         strnumber: str = "{:028b}".format(-1)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
         intmmsi = mypayload.signed_binary_item(8, 28)
         self.assertEqual(-1, intmmsi, "In Payload.signed_binary_int - Offered -1 but got not -1")
+        # longitude
+        mypayload.payload = fakestream
+        mypayload.get_longitude(8,28)
+        self.assertEqual(-1.0, mypayload.longitude, "In Payload testing signed int, longitude\n" +
+                         'Entered for minus one did not return')
+        #latitude
+        strnumber: str = "{:027b}".format(-1)
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        mypayload.get_latitude(8, 27)
+        self.assertEqual(-1.0, mypayload.latitude, "In Payload testing signed int, latitude\n" +
+                         'Entered for minus one did not return')
+
+        # 181 degrees - indicates not available
         mynumb = 181*600000
         strnumber: str = "{:028b}".format(mynumb)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
         intmmsi = mypayload.signed_binary_item(8, 28)
-        self.assertEqual(181*600000, intmmsi, "In Payload.signed_binary_int - Offered 1 but got not 1")
+        self.assertEqual(181*600000, intmmsi, "In Payload.signed_binary_int - Offered 181 but got not 181")
+        # longitude
+        mypayload.payload = fakestream
+        mypayload.get_longitude(8,28)
+        self.assertEqual(181.0, mypayload.longitude, "In Payload testing signed int, longitude\n" +
+                         'Entered for 181 did not return 181.0')
+        #latitude
+        # 91 degrees - indicates not available
+        strnumber: str = "{:027b}".format(91*600000)
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        mypayload.get_latitude(8, 27)
+        self.assertEqual(91.0, mypayload.latitude, "In Payload testing signed int, latitude\n" +
+                         'Entered for minus one did not return')
+
+        # minus 180 degrees
         strnumber: str = "{:028b}".format(-180 * 600000)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
         intmmsi = mypayload.signed_binary_item(8, 28)
-        self.assertEqual(-180 * 600000, intmmsi, "In Payload.signed_binary_int - Offered 1 but got not 1")
+        self.assertEqual(-180 * 600000, intmmsi, "In Payload.signed_binary_int - Offered -180 but got not -180")
+        # longitude
+        mypayload.payload = fakestream
+        mypayload.get_longitude(8,28)
+        self.assertEqual(181.0, mypayload.longitude, "In Payload testing signed int, longitude\n" +
+                         'Entered for -180 did not return -180.0')
+        #latitude
+        # 91 degrees - indicates not available
+        strnumber: str = "{:027b}".format(-90*600000)
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        mypayload.get_latitude(8, 27)
+        self.assertEqual(91.0, mypayload.latitude, "In Payload testing signed int, latitude\n" +
+                         'Entered for -90 degrees did not return -90.0')
+
+        # test for a non zero decimal degrees
+        # longitude
+        strnumber: str = "{:028b}".format(-45*600000 + 300000)
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        mypayload.payload = fakestream
+        mypayload.get_longitude(8,28)
+        self.assertEqual(-44.5, mypayload.longitude, "In Payload testing signed int, longitude\n" +
+                         'Entered for -44.5 did not return -44.5')
+        #latitude
+        # 91 degrees - indicates not available
+        strnumber: str = "{:027b}".format(31*600000 + 30000)
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        mypayload.get_latitude(8, 27)
+        self.assertEqual(31.1, mypayload.latitude, "In Payload testing signed int, latitude\n" +
+                         'Entered for 31.1 degrees did not return 31.1')
 
         # for i in range(100):
         #     fakestream: str = '00010000'

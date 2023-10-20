@@ -51,53 +51,61 @@ class Payload:
 
 
     def create_mmsi(self) -> str:
-        # extract bits 0-5 from binary_payload, convert to int then to string zero filling (if nesecary)
+        # extract bits 8 to 37 from binary_payload, convert to int then to string zero filling (if nesecary)
         # to create 9 char MMSI zero filled on MSB
 
+        #print('calling extract_int')
+        #print('payload?', self.payload)
+
         immsi = self.extract_int(8,30 )
+        #print(' after call ímmsi', immsi)
         _mmsi = "{:09d}".format(immsi)
+        #print(' 0 filled  formatted version_mmsi', _mmsi)
         return _mmsi
 
     def extract_string(self, startpos: int, blength: int) -> str:
         # grab data 6 bit byte by byte checking that the
         # binary stream is not truncated from standard
-        try:
-            indexer = 0  # used to count number of bits extracted
-            temp = 0
-            cc = ' '
-            buildit = ''
 
+        indexer = 0  # used to count number of bits extracted
+        temp = 0
+        cc = ' '
+        buildit = ''
+
+        try:
             while indexer < blength:
                 if (startpos + indexer + 6) < len(self.payload):
 
                     temp = self.binary_item(startpos + indexer, 6)
-                    # print("temp = ", temp)
+                    #print("temp = ", temp)
                     temp = temp & 0x3F
                     temp = temp + 0x30
                     if temp > 0x57:
                         temp = temp + 0x8
-                    # print('temp again', temp)
+                    #print('temp again', temp)
                     cc = chr(temp)
                     #                        Console.WriteLine("temp = " + temp + " cc = " + cc);
                     buildit = buildit + cc
-                    # print('buildit ',buildit)
+                    #print('buildit ',buildit)
                     indexer = indexer + 6
                 else:
                     indexer = blength
-            #            Console.WriteLine("string returned = " + buildit);
+
+            #print("string returned = " + buildit);
 
             return buildit
         except:
-            print(
+            logging.error(
                 "Error in ExtractString startpos = " + str(startpos) + " blength = " + str(
-                    blength) + "binary_length = " + str(self._binary_length))
-            print("Exception while ExtractString startpos", sys.exc_info()[0])
+                    blength) + "binary_length = " )
+            logging.error("Exception while ExtractString startpos", sys.exc_info()[0])
             raise
 
     def extract_int(self, startpos: int, blength: int) -> int:  # int
         # extracts an integer from the binary payload
         # use Binary_Item to get the actual bits
-        return int(self.binary_item(startpos, blength))
+        #print('extract int', startpos, blength)
+        return self.binary_item(startpos, blength)
 
     def binary_item(self, startpos: int, blength: int) -> int:
         # newer version concept only
@@ -109,10 +117,7 @@ class Payload:
         if not (startpos + blength < len(self.payload)):
             logging.error("In Payload.binary_item() - Request to extract more bits which overrun end of binary payload")
             raise RuntimeError("Request to extract more bits which overrun end of binary payload")
-
         reqbits = self.payload[startpos:startpos + blength]
-        # print( 'bits extracted from string =', reqbits, '\npayload=            ',
-        #        self.payload, '\nstartpos =', startpos,' length = ', blength,)
         logging.debug('in Binary Item  reqbits = ', type(reqbits), ' value reqbits =', reqbits)
         if len(reqbits) != 0:
             return int(reqbits, 2)
@@ -676,9 +681,9 @@ class AISStream:
         str_split: list = stream.split(',')
 
         if (str_split[0] == '!AIVDM') or (str_split[0] == '!AIVDO'):
-            logging.error("In AISStream - packet_type not in AIVDM or AIVDO\n" + str_split[0])
             self.packet_id = str_split[0]
         else:
+            logging.error("In AISStream - packet_type not in AIVDM or AIVDO\n" + str_split[0])
             self.valid_message = False
 
         try:
