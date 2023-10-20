@@ -152,15 +152,14 @@ class Payload:
          '''
         p = input_p
         str_pos = len(p) - 1
-        print('str_len, loc_@', str_pos, p.find('@'))
-        if p.find('@') > 0:
-
+        p = input_p
+        str_pos = len(p) - 1
+        if p[str_pos] == '@':
             while p[str_pos] == '@':
-                print('str_len, loc_@', str_pos, p.find('@'), p[str_pos])
                 p = p[0:str_pos]
-                print('p', p)
-                str_pos = str_pos - 1
-            return p
+                if str_pos != 0:
+                    str_pos -= 1
+        return p
 
     def remove_space(self, input_p: str) -> str:
         '''
@@ -173,50 +172,62 @@ class Payload:
         str_pos = len(p) - 1
         if p[str_pos] == ' ':
             while p[str_pos] == ' ':
-                p = p[:str_pos - 1]
-                str_pos -= 1
+                p = p[0:str_pos]
+                if str_pos != 0:
+                    str_pos -= 1
         return p
 
 
     def get_longitude(self, startpos: int, length: int  = 28):
        # longitude is in various positions in differing blocks
 
-        self.longitude = self.signed_binary_item(startpos,length)
+        self.longitude = float(self.signed_binary_item(startpos,length)/600000)
 
     def get_latitude(self, startpos: int, length: int = 28):
         # longitude is in various positions in differing blocks
 
-        self.latitude = self.signed_binary_item(startpos, length)
+        self.longitude = float(self.signed_binary_item(startpos,length)/600000)
 
-    def signed_binary_item(self, startpos: int, blength: int) -> float:
-        # newer version concept only
-        # convert bitarray to a string, use string slicing to get bits
-        # then convert the slice as 2 complement binary
-        # two complement - if negetive invert all bits and add one to RHB
-        # so here if LHB is one then invert all bits and add 1 then return as negertive result
-        #
+    def signed_binary_item(self, startpos: int, blength: int) -> int:
+        '''
+               signed_binary_item takes in a set of parameters start position, number of bits (blength)
+               and extracts string of bits from the binary_payload.
+               if MSBit is 1 the negetive. Do twos complement arithmetic to return a signed integer
+
+                convert bitarray to a string, use string slicing to get bits
+                then convert the slice as 2 complement binary
+                two complement - if negetive invert all bits and add one to RHB
+                so here if LHB is one then invert all bits and add 1 then return as negertive result
+
+
+                :return:
+                    signed integer value which will need scaling if necessary
+            '''
+
+
 
         #veracity check
 
         if not (startpos + blength < len(self.payload)):
-            logging.error("In Payload.signed_binary_item() - Request to extract more bits which overrun end of binary payload")
-            raise RuntimeError("Request to extract more bits which overrun end of signedbinary payload")
+            logging.error("In Payload.signed_binary_item() - "
+                       +   "Request to extract more bits which overrun end of binary payload")
+            raise RuntimeError("Request to extract more bits which overrun end of binary payload")
 
         reqbits = self.payload[startpos:startpos + blength]
         logging.debug('in Signed Binary Item type reqbits = ', type(reqbits), ' value reqbits =', reqbits)
         # check if LHB is one
+
         if reqbits[0] != '1':
-            # positive to be scaled to degrees by dividing by 600000
-            return float(int(reqbits, 2)/600000)
+            return int(reqbits, 2)
         else:
             newreqbits = ''
-            for i in range(0,len(reqbits) -1):
+            for i in range(0,len(reqbits) ):
                 if reqbits[i] == "1":
-                    newreqbitsreqbits = newreqbits + '0'
+                    newreqbits = newreqbits + '0'
                 else:
-                    newreqbitsreqbits = newreqbits + '1'
+                    newreqbits = newreqbits + '1'
 
-        return float( - ((  int(newreqbits,2) + 1)/600000))
+        return -((int(newreqbits,2) + 1))
 
     def getRAIMflag(self, position) -> bool:
         # RAIM flag bool False = not in use

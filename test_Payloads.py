@@ -290,7 +290,7 @@ class TestPayload(TestCase):
         teststring = 'ABC'
         for i in range(1,10):
             out_string = mypayload.remove_at(teststring)
-            self.assertEqual(teststring, out_string,
+            self.assertEqual('ABC', out_string,
               "In Payload.remove_at - the returned string has not had trailing @ removed ")
             teststring = teststring + '@'
 
@@ -309,13 +309,12 @@ class TestPayload(TestCase):
 
         # some necessary preconfig
         diction, mystream = self.initialise()
-
         mypayload = Payloads.Payload(mystream.binary_payload)
 
         teststring = 'ABC'
         for i in range(1, 10):
             out_string = mypayload.remove_space(teststring)
-            self.assertEqual(teststring, out_string,
+            self.assertEqual('ABC', out_string,
                              "In Payload.remove_at - the returned string has not had trailing spaces removed ")
             teststring = teststring + ' '
 
@@ -327,7 +326,67 @@ class TestPayload(TestCase):
         self.fail()
 
     def test_signed_binary_item(self):
-        self.fail()
+        '''
+           signed_binary_item takes in a set of parameters start position, number of bits (blength)
+           and extracts string of bits from the binary_payload.
+           if MSBit is 1 the negetive. Do twos complement arithmetic to return a signed integer
+
+            :return:
+                signed integer value which will need scaling if necessary
+            '''
+
+        print("Testing signed binary item")
+
+        # some necessary preconfig
+        diction, mystream = self.initialise()
+        mypayload = Payloads.Payload(mystream.binary_payload)
+
+        fakestream: str = '00010000'
+        faketail: str = '000000000000000000000000000000'
+        #testnumber: int = random.randint(0, 999999999)
+        strnumber: str = "{:028b}".format(0)
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        intmmsi = mypayload.signed_binary_item(8, 28)
+        self.assertEqual(0, intmmsi,"In Payload.signed_binary_int - Offered 0 but got non zero")
+        strnumber: str = "{:028b}".format(1)
+        fakestream: str = '00010000'
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        intmmsi = mypayload.signed_binary_item(8, 28)
+        self.assertEqual(1, intmmsi, "In Payload.signed_binary_int - Offered 1 but got not 1")
+        strnumber: str = "{:028b}".format(-1)
+        fakestream: str = '00010000'
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        intmmsi = mypayload.signed_binary_item(8, 28)
+        self.assertEqual(-1, intmmsi, "In Payload.signed_binary_int - Offered -1 but got not -1")
+        mynumb = 181*600000
+        strnumber: str = "{:028b}".format(mynumb)
+        fakestream: str = '00010000'
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        intmmsi = mypayload.signed_binary_item(8, 28)
+        self.assertEqual(181*600000, intmmsi, "In Payload.signed_binary_int - Offered 1 but got not 1")
+        strnumber: str = "{:028b}".format(-180 * 600000)
+        fakestream: str = '00010000'
+        fakestream = fakestream + strnumber + faketail
+        mypayload.payload = fakestream
+        intmmsi = mypayload.signed_binary_item(8, 28)
+        self.assertEqual(-180 * 600000, intmmsi, "In Payload.signed_binary_int - Offered 1 but got not 1")
+
+        # for i in range(100):
+        #     fakestream: str = '00010000'
+        #     faketail: str = '000000000000000000000000000000'
+        #
+        #     #testnumber: int = random.randint(0, 999999999)
+        #     strnumber: str = "{:030b}".format(testnumber)
+        #     fakestream = fakestream + strnumber + faketail
+        #     mypayload.payload = fakestream
+        #     intmmsi = mypayload.binary_item(8, 30)
+
+
+
 
     def test_get_raimflag(self):
         self.fail()
