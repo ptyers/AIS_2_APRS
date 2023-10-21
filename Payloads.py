@@ -233,11 +233,13 @@ class Payload:
         :return:
             returns boolean value of flag
         '''
-        #print('in get_flag_bit position, value ', position, self.binary_item(position, 1), self.payload[60])
+
         if self.binary_item(position, 1) == 1:
             self.raim_flag = True
         else:
             self.raim_flag = False
+
+        return self.raim_flag
 
 
     def getRAIMflag(self, position: int) -> None:
@@ -366,13 +368,8 @@ class CNB(Payload):
         '''
 
         intval = self.binary_item(50, 10)
-        if 0 <= intval <= 1023:
-            self.speed_over_ground = float(intval) / 10.0
-        else:
-            # should not happen max value 1023
-            self.valid_item = False
-            logging.error('In CNB.get_SOG - value outside range 0-102.3' , intval)
-            raise RuntimeError('In CNB.get_SOG - value outside range 0-102.3' , intval)
+
+        self.speed_over_ground = float(intval) / 10.0
 
 
 
@@ -413,8 +410,8 @@ class CNB(Payload):
             self.true_heading = itru
         else:
             self.valid_item = False
-            logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511', itru)
-            raise ValueError('In CNB.get_tru_head - value outside range 0-259 or != 511', itru)
+            logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511' + '{:d}'.format( itru))
+            raise ValueError('In CNB.get_tru_head - value outside range 0-259 or != 511' + '{:d}'.format( itru))
 
     def get_pos_accuracy(self) -> bool:
         '''

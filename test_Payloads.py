@@ -595,24 +595,26 @@ class TestCNB(TestCase):
         diction, mystream, mycnb = self.initialise()
         print("Testing get_SOG")
 
-        # initially check for values 0, 0.5 1,102, 103 and value outside valid range
+        # initially check for values 0, 0.5 1,102
 
-        for i in [0, 0.5, 1, 102, 103, 104]:
-            i = i * 10
+        for i in [0, 0.5, 1, 102, 102.2]:
+            i = int(i * 10)
         testbits = '{:010b}'.format(i)
         mycnb.payload = self.make_stream(50, testbits)
-        try:
-            self.assertEqual(float(0) / 10.0, mycnb.getSOG(),
-                             "In get SOG value returned does not offered value " + '{:d}'.format(i))
-        except ValueError:
-            self.assertFalse(mycnb.valid_item, "In get_SOG module did not detect invalid parameter")
+
+
+        mycnb.getSOG()
+        self.assertEqual(float(i) / 10.0, mycnb.speed_over_ground,
+                                 "In getSOG value returned does not match value offered")
+
 
         for _ in range(100):
-            i = random.randint(0, 3600)
+            i = random.randint(0, 1022)
             testbits = '{:010b}'.format(i)
             mycnb.payload = self.make_stream(50, testbits)
-            self.assertEqual(i, mycnb.getSOG(),
-                             "In getSOG value returned does not match value offered")
+            mycnb.getSOG()
+            self.assertEqual(float(i) / 10.0, mycnb.speed_over_ground,
+                                     "In getSOG value returned does not match value offered")
 
     def test_get_cog(self):
         diction, mystream, mycnb = self.initialise()
@@ -623,8 +625,9 @@ class TestCNB(TestCase):
             i = i * 10
         testbits = '{:012b}'.format(i)
         mycnb.payload = self.make_stream(116, testbits)
+        mycnb.get_COG()
         try:
-            self.assertEqual(float(i) / 10.0, mycnb.get_COG(),
+            self.assertEqual(float(i) / 10.0, mycnb.course_over_ground,
                              "In get_COG value returned does not offered value " + '{:d}'.format(i))
         except ValueError:
             self.assertFalse(mycnb.valid_item, "In get_COG module did not detect invalid parameter")
@@ -634,8 +637,11 @@ class TestCNB(TestCase):
             i = random.randint(0, 3600)
             testbits = '{:012b}'.format(i)
             mycnb.payload = self.make_stream(116, testbits)
-            self.assertEqual(float(i) / 10.0, mycnb.get_COG(),
-                             "In get_COG value returned does not match value offered")
+            try:
+                self.assertEqual(float(i) / 10.0, mycnb.course_over_ground,
+                                 "In get_COG value returned does not offered value " + '{:d}'.format(i))
+            except ValueError:
+                self.assertFalse(mycnb.valid_item, "In get_COG module did not detect invalid parameter")
 
     def test_get_tru_head(self):
         diction, mystream, mycnb = self.initialise()
@@ -648,10 +654,9 @@ class TestCNB(TestCase):
             testbits = '{:09b}'.format(i)
             mycnb.payload = self.make_stream(128, testbits)
             try:
-                self.assertEqual(i, mycnb.get_tru_head(),
+                mycnb.get_tru_head()
+                self.assertEqual(i, mycnb.true_heading,
                                  "In get_tru_head value returned does not match value offered")
-                if i == 360:
-                    raise ValueError
             except ValueError:
                 self.assertFalse(mycnb.valid_item, "In get_tru_head module did not detect invalid parameter")
 
@@ -660,7 +665,8 @@ class TestCNB(TestCase):
             i = random.randint(0, 3600)
             testbits = '{:09b}'.format(i)
             mycnb.payload = self.make_stream(128, testbits)
-            self.assertEqual(i, mycnb.get_COG(),
+            mycnb.get_tru_head()
+            self.assertEqual(i, mycnb.true_heading,
                              "In get_COG value returned does not match value offered")
 
     def test_get_pos_accuracy(self):
@@ -670,7 +676,6 @@ class TestCNB(TestCase):
 
         teststring = self.make_stream(60,'1')
         mycnb.payload = teststring
-        print('in test get poc acc ', mycnb.payload[60])
         mycnb.get_pos_accuracy()
         self.assertEqual(True, mycnb.position_accuracy,
                          "In CNB.get_pos_accuracy looking for True got other")
@@ -689,7 +694,8 @@ class TestCNB(TestCase):
         for i in [0, 1, 30, 59, 60, 61, 62, 63]:
             testbits = '{:06b}'.format(i)
             mycnb.payload = self.make_stream(137, testbits)
-            self.assertEqual(i, mycnb.get_tru_head(),
+            mycnb.get_timestamp()
+            self.assertEqual(i, mycnb.time_stamp,
                              "In get_timestamp value returned does not match value offered" + '{:d}'.format(i))
 
     def test_get_man_indic(self):
