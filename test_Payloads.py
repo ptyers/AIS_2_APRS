@@ -268,10 +268,10 @@ class TestPayload(TestCase):
         mypayload = Payloads.Payload(mystream.binary_payload)
 
         for char, str_val in diction.payload_armour.items():
-            #print('character, string value', char, str_val )
-            bin_val = int(str_val,2)
+            # print('character, string value', char, str_val )
+            bin_val = int(str_val, 2)
             ret_val = mypayload.m_to_int(char)
-            self.assertEqual(bin_val, ret_val,'In Payload.m_to_int - returned binary does not match encoded char')
+            self.assertEqual(bin_val, ret_val, 'In Payload.m_to_int - returned binary does not match encoded char')
 
     def test_remove_at(self):
         '''
@@ -281,7 +281,6 @@ class TestPayload(TestCase):
             string without trailing @
         '''
 
-
         print("Testing remove_at")
 
         # some necessary preconfig
@@ -290,14 +289,11 @@ class TestPayload(TestCase):
         mypayload = Payloads.Payload(mystream.binary_payload)
 
         teststring = 'ABC'
-        for i in range(1,10):
+        for i in range(1, 10):
             out_string = mypayload.remove_at(teststring)
             self.assertEqual('ABC', out_string,
-              "In Payload.remove_at - the returned string has not had trailing @ removed ")
+                             "In Payload.remove_at - the returned string has not had trailing @ removed ")
             teststring = teststring + '@'
-
-
-
 
     def test_remove_space(self):
         '''
@@ -338,18 +334,18 @@ class TestPayload(TestCase):
         # zero degrees
         fakestream: str = '00010000'
         faketail: str = '000000000000000000000000000000'
-        #testnumber: int = random.randint(0, 999999999)
+        # testnumber: int = random.randint(0, 999999999)
         strnumber: str = "{:028b}".format(0)
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
         intmmsi = mypayload.signed_binary_item(8, 28)
-        self.assertEqual(0, intmmsi,"In Payload.signed_binary_int - Offered 0 but got non zero")
+        self.assertEqual(0, intmmsi, "In Payload.signed_binary_int - Offered 0 but got non zero")
         # longitude
         mypayload.payload = fakestream
-        mypayload.get_longitude(8,28)
+        mypayload.get_longitude(8, 28)
         self.assertEqual(0.0, mypayload.longitude, "In Payload testing signed int, longitude\n" +
                          'Entered for zero degrees got non zero back')
-        #latitude
+        # latitude
         strnumber: str = "{:027b}".format(0)
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
@@ -365,16 +361,16 @@ class TestPayload(TestCase):
         intmmsi = mypayload.signed_binary_item(8, 28)
         self.assertEqual(1, intmmsi, "In Payload.signed_binary_int - Offered 1 but got not 1")
         # longitude
-        strnumber: str = "{:028b}".format(1*600000)
+        strnumber: str = "{:028b}".format(1 * 600000)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
         mypayload.payload = fakestream
-        mypayload.get_longitude(8,28)
+        mypayload.get_longitude(8, 28)
         self.assertEqual(1.0, mypayload.longitude, "In Payload testing signed int, longitude\n" +
                          'Entered for one degrees one did not return')
-        #latitude
-        strnumber: str = "{:027b}".format(1*600000)
+        # latitude
+        strnumber: str = "{:027b}".format(1 * 600000)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
@@ -390,16 +386,16 @@ class TestPayload(TestCase):
         intmmsi = mypayload.signed_binary_item(8, 28)
         self.assertEqual(-1, intmmsi, "In Payload.signed_binary_int - Offered -1 but got not -1")
         # longitude
-        strnumber: str = "{:028b}".format(-1*600000)
+        strnumber: str = "{:028b}".format(-1 * 600000)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
         mypayload.payload = fakestream
-        mypayload.get_longitude(8,28)
+        mypayload.get_longitude(8, 28)
         self.assertEqual(-1.0, mypayload.longitude, "In Payload testing signed int, longitude\n" +
                          'Entered for minus one did not return')
-        #latitude
-        strnumber: str = "{:027b}".format(-1*600000)
+        # latitude
+        strnumber: str = "{:027b}".format(-1 * 600000)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
@@ -408,21 +404,21 @@ class TestPayload(TestCase):
                          'Entered for minus one did not return')
 
         # 181 degrees - indicates not available
-        mynumb = 181*600000
+        mynumb = 181 * 600000
         strnumber: str = "{:028b}".format(mynumb)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
         intmmsi = mypayload.signed_binary_item(8, 28)
-        self.assertEqual(181*600000, intmmsi, "In Payload.signed_binary_int - Offered 181 but got not 181")
+        self.assertEqual(181 * 600000, intmmsi, "In Payload.signed_binary_int - Offered 181 but got not 181")
         # longitude
         mypayload.payload = fakestream
-        mypayload.get_longitude(8,28)
+        mypayload.get_longitude(8, 28)
         self.assertEqual(181.0, mypayload.longitude, "In Payload testing signed int, longitude\n" +
                          'Entered for 181 did not return 181.0')
-        #latitude
+        # latitude
         # 91 degrees - indicates not available
-        strnumber: str = "{:027b}".format(91*600000)
+        strnumber: str = "{:027b}".format(91 * 600000)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
@@ -439,12 +435,12 @@ class TestPayload(TestCase):
         self.assertEqual(-180 * 600000, intmmsi, "In Payload.signed_binary_int - Offered -180 but got not -180")
         # longitude
         mypayload.payload = fakestream
-        mypayload.get_longitude(8,28)
+        mypayload.get_longitude(8, 28)
         self.assertEqual(-180.0, mypayload.longitude, "In Payload testing signed int, longitude\n" +
                          'Entered for -180 did not return -180.0')
-        #latitude
+        # latitude
         # 91 degrees - indicates not available
-        strnumber: str = "{:027b}".format(91*600000)
+        strnumber: str = "{:027b}".format(91 * 600000)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
@@ -454,17 +450,17 @@ class TestPayload(TestCase):
 
         # test for a non zero decimal degrees
         # longitude
-        strnumber: str = "{:028b}".format(-45*600000 + 300000)
+        strnumber: str = "{:028b}".format(-45 * 600000 + 300000)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
         mypayload.payload = fakestream
-        mypayload.get_longitude(8,28)
+        mypayload.get_longitude(8, 28)
         self.assertEqual(-44.5, mypayload.longitude, "In Payload testing signed int, longitude\n" +
                          'Entered for -44.5 did not return -44.5')
-        #latitude
+        # latitude
         # 31.1 - indicates not available
-        strnumber: str = "{:027b}".format(31*600000 + 60000)
+        strnumber: str = "{:027b}".format(31 * 600000 + 60000)
         fakestream: str = '00010000'
         fakestream = fakestream + strnumber + faketail
         mypayload.payload = fakestream
@@ -481,9 +477,6 @@ class TestPayload(TestCase):
         #     fakestream = fakestream + strnumber + faketail
         #     mypayload.payload = fakestream
         #     intmmsi = mypayload.binary_item(8, 30)
-
-
-
 
     def test_get_raimflag(self):
         '''
@@ -510,7 +503,7 @@ class TestPayload(TestCase):
         teststring = fakestream + '1' + faketail
         mypayload.payload = teststring
         mypayload.getRAIMflag(8)
-        self.assertEqual(True,mypayload.raim_flag, "In Payload.RAIMflag looking for True got other")
+        self.assertEqual(True, mypayload.raim_flag, "In Payload.RAIMflag looking for True got other")
 
         teststring = fakestream + '0' + faketail
         mypayload.payload = teststring
@@ -552,10 +545,6 @@ class TestPayload(TestCase):
 
 class TestCNB(TestCase):
 
-    # a couple of 'constants'
-    fakehead: str = '00010000'
-    faketail: str = '000000000000000000000000000000'
-
     def initialise(self):
         diction = AISDictionaries()
         # the stream offered here is valid but the mystream.payload , mypayload.payload
@@ -564,81 +553,161 @@ class TestCNB(TestCase):
         mycnb = Payloads.CNB(mystream.binary_payload)
         return diction, mystream, mycnb
 
-    def make_stream(self, testbits: str):
+    def make_stream(self, preamlen: int, testbits: str):
         # creates a fake binary payload to allow testing
+        # preamble is number number of bits needed to fill up to beginning of testbits
+        # testbits is the binary stream representing the area of thge domain under test
+        # a couple of 'constants'
+        fakehead: str = '00010000'
+        faketail: str = '000000000000000000000000000000'
+        # prefill the preamble with message type 4
+        preamble: str = fakehead
+        # fillcount is number of required prefill with allowance for the 8 bit header
+        fillcount = preamlen - 8
 
-        return self.fake_head + testbits + self.faketail
+        while fillcount > 0:
+            preamble = preamble + '1'
+            fillcount -= 1
 
+        #print('in make_stream nr bits needed, nr bits offered', preamlen, len(preamble))
+        return preamble + testbits + faketail
 
     def test_get_nav_status(self):
-        diction , mystream , mycnb = self.initialise()
+        diction, mystream, mycnb = self.initialise()
         print("Testing get_nav_status")
-        mycnb = Payloads.CNB(mystream.binary_payload)
 
-        for i in range(0,15):
+        for i in range(0, 15):
             testbits = '{:04b}'.format(i)
-            self.make_stream(testbits)
 
-            self.test_get_nav_status()
+            self.make_stream(38, testbits)
+            mycnb.payload = self.make_stream(38, testbits)
+
+            mycnb.get_nav_status()
             self.assertEqual(i, mycnb.navigation_status, "In CNB.get_nav_status - value expected not returned")
 
-
-        self.fail()
-
     def test_get_rot(self):
-        diction , mystream , mycnb = self.initialise()
+        diction, mystream, mycnb = self.initialise()
         print("Testing get_ROT")
-        mycnb = Payloads.CNB(mystream.binary_payload)
+
         self.fail()
 
     def test_get_sog(self):
-        diction , mystream , mycnb = self.initialise()
+        diction, mystream, mycnb = self.initialise()
         print("Testing get_SOG")
-        mycnb = Payloads.CNB(mystream.binary_payload)
-        self.fail()
+
+        # initially check for values 0, 0.5 1,102, 103 and value outside valid range
+
+        for i in [0, 0.5, 1, 102, 103, 104]:
+            i = i * 10
+        testbits = '{:010b}'.format(i)
+        mycnb.payload = self.make_stream(50, testbits)
+        try:
+            self.assertEqual(float(0) / 10.0, mycnb.getSOG(),
+                             "In get SOG value returned does not offered value " + '{:d}'.format(i))
+        except ValueError:
+            self.assertFalse(mycnb.valid_item, "In get_SOG module did not detect invalid parameter")
+
+        for _ in range(100):
+            i = random.randint(0, 3600)
+            testbits = '{:010b}'.format(i)
+            mycnb.payload = self.make_stream(50, testbits)
+            self.assertEqual(i, mycnb.getSOG(),
+                             "In getSOG value returned does not match value offered")
 
     def test_get_cog(self):
-        diction , mystream , mycnb = self.initialise()
+        diction, mystream, mycnb = self.initialise()
         print("Testing get_COG")
-        mycnb = Payloads.CNB(mystream.binary_payload)
 
+        # initially check for values 0, 0.5 1,359, 360 and value outside valid range
+        for i in [0, 0.5, 1, 90, 359, 360, 361]:
+            i = i * 10
+        testbits = '{:012b}'.format(i)
+        mycnb.payload = self.make_stream(116, testbits)
+        try:
+            self.assertEqual(float(i) / 10.0, mycnb.get_COG(),
+                             "In get_COG value returned does not offered value " + '{:d}'.format(i))
+        except ValueError:
+            self.assertFalse(mycnb.valid_item, "In get_COG module did not detect invalid parameter")
 
-        self.fail()
+            # and for completeness a random set of values
+        for _ in range(100):
+            i = random.randint(0, 3600)
+            testbits = '{:012b}'.format(i)
+            mycnb.payload = self.make_stream(116, testbits)
+            self.assertEqual(float(i) / 10.0, mycnb.get_COG(),
+                             "In get_COG value returned does not match value offered")
 
     def test_get_tru_head(self):
-        diction , mystream , mycnb = self.initialise()
-        print("Testing get_truheads")
+        diction, mystream, mycnb = self.initialise()
+        print("Testing get_truhead")
 
-        self.fail()
+        # initially check for values 0, 1,359, 360 and value outside valid range
+
+        for i in [0, 1, 90, 359, 511, 360]:
+
+            testbits = '{:09b}'.format(i)
+            mycnb.payload = self.make_stream(128, testbits)
+            try:
+                self.assertEqual(i, mycnb.get_tru_head(),
+                                 "In get_tru_head value returned does not match value offered")
+                if i == 360:
+                    raise ValueError
+            except ValueError:
+                self.assertFalse(mycnb.valid_item, "In get_tru_head module did not detect invalid parameter")
+
+        # and again a random selection
+        for _ in range(100):
+            i = random.randint(0, 3600)
+            testbits = '{:09b}'.format(i)
+            mycnb.payload = self.make_stream(128, testbits)
+            self.assertEqual(i, mycnb.get_COG(),
+                             "In get_COG value returned does not match value offered")
 
     def test_get_pos_accuracy(self):
-        diction , mystream , mycnb = self.initialise()
+        diction, mystream, mycnb = self.initialise()
         print("Testing get_pos_accuracy")
         mycnb = Payloads.CNB(mystream.binary_payload)
 
-        teststring = self.make_stream('1')
+        teststring = self.make_stream(60,'1')
         mycnb.payload = teststring
-        mycnb.get_pos_accuracy(8)
+        print('in test get poc acc ', mycnb.payload[60])
+        mycnb.get_pos_accuracy()
         self.assertEqual(True, mycnb.position_accuracy,
                          "In CNB.get_pos_accuracy looking for True got other")
 
-        teststring = self.make_stream('0')
+        teststring = self.make_stream(60,'0')
         mycnb.payload = teststring
-        mycnb.get_pos_accuracy(8)
+        mycnb.get_pos_accuracy()
         self.assertEqual(False, mycnb.position_accuracy,
                          "In CNB.get_pos_accuracy looking for False got other")
 
-
     def test_get_timestamp(self):
-        diction , mystream , mycnb = self.initialise()
+        diction, mystream, mycnb = self.initialise()
         print("Testing get_timestamp")
-        self.fail()
+        # valid entries are 0-63, by virtue of only 6 bits cannot go outside range
+
+        for i in [0, 1, 30, 59, 60, 61, 62, 63]:
+            testbits = '{:06b}'.format(i)
+            mycnb.payload = self.make_stream(137, testbits)
+            self.assertEqual(i, mycnb.get_tru_head(),
+                             "In get_timestamp value returned does not match value offered" + '{:d}'.format(i))
 
     def test_get_man_indic(self):
-        diction , mystream , mycnb = self.initialise()
-        print("Testing get_nan_indic")
+        diction, mystream, mycnb = self.initialise()
+        print("Testing get_man_indic")
+        # valid entries are 0-2 but can have an invalid 3 appear
 
-        self.fail()
+        for i in [0, 1, 2, 3]:
+            testbits = '{:02b}'.format(i)
+            mycnb.payload = self.make_stream(143, testbits)
+            try:
+                mycnb.get_man_indic()
+                self.assertEqual(i, mycnb.maneouver_indicator,
+                                 "In get_man_indic value returned does not offered value " + '{:d}'.format(i))
+            except ValueError:
+                self.assertFalse(mycnb.valid_item, "In get_man_indic module did not detect invalid parameter")
+
+
 
 
 class TestBasestation(TestCase):
@@ -849,6 +918,3 @@ class TestAISStream(TestCase):
             for ij in range(len(numbstring)):
                 outint = mystream.m_to_int(numbstring[ij])
                 self.assertEqual(int(numbstring[ij]), outint, "Failure in m_to_int")
-
-
-

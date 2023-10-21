@@ -109,7 +109,6 @@ class Payload:
         # then convert the slice to int using int(string,2)
 
         # veracity check
-
         if not (startpos + blength < len(self.payload)):
             logging.error("In Payload.binary_item() - Request to extract more bits which overrun end of binary payload")
             raise RuntimeError("Request to extract more bits which overrun end of binary payload")
@@ -234,7 +233,7 @@ class Payload:
         :return:
             returns boolean value of flag
         '''
-
+        #print('in get_flag_bit position, value ', position, self.binary_item(position, 1), self.payload[60])
         if self.binary_item(position, 1) == 1:
             self.raim_flag = True
         else:
@@ -393,8 +392,8 @@ class CNB(Payload):
             self.course_over_ground = round(float(intval) / 10.0, 1)
         else:
             self.valid_item = False
-            logging.error('In CNB.get_COG - value outside range 0-360' , intval)
-            raise RuntimeError('In CNB.get_COG - value outside range 0-360' , intval)
+            logging.error('In CNB.get_COG - value outside range 0-360'+ '{:d}'.format(intval))
+            raise ValueError('In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval))
 
 
     def get_tru_head(self) -> None:
@@ -415,7 +414,7 @@ class CNB(Payload):
         else:
             self.valid_item = False
             logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511', itru)
-            raise RuntimeError('In CNB.get_tru_head - value outside range 0-259 or != 511', itru)
+            raise ValueError('In CNB.get_tru_head - value outside range 0-259 or != 511', itru)
 
     def get_pos_accuracy(self) -> bool:
         '''
@@ -478,12 +477,12 @@ class CNB(Payload):
         # maneouver indicator. 0-2. Bits 143-144
 
         intval = self.binary_item(143, 2)
-        if 0<= intval <= 2:
+        if 0 <= intval <= 2:
             self.maneouver_indicator = intval
         else:
             self.valid_item = False
-            logging.error('In CNB.get_man indicator - value outside range 0-2', intval)
-            raise RuntimeError('In CNB.get_man indicator - value outside range 0-2', intval)
+            logging.error('In CNB.get_man indicator - value outside range 0-2' +'{:d}'.format(intval))
+            raise ValueError('In CNB.get_man indicator - value outside range 0-2' +'{:d}'.format(intval))
 
 
 class Basestation(Payload):
