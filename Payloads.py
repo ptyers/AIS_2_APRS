@@ -540,6 +540,9 @@ class Basestation(Payload):
             sets Base.year
         '''
         self.year = self.binary_item(38, 14)
+        if not (0 <= self.year <= 9999):
+            logging.error("Base.year outside range 0-9999 " + '{:d}'.format(self.year))
+            raise ValueError("Base.year outside range 0-9999")
 
     def get_month(self) -> None:
         '''
@@ -547,17 +550,40 @@ class Basestation(Payload):
         :return:
             sets Base.month
         '''
+
         self.month = self.binary_item(52, 4)
+        if not (1 <= self.month <= 12):
+            logging.error("Base.month outside range 0-12 " + '{:d}'.format(self.month))
+            raise ValueError("Base.month outside range 0-12")
 
     def get_day(self) -> None:
         '''
         Bits 56-60  length 5  Day (UTC) day  1-31; 0 = N/A (default)
         :return:
-            sets Basde.day
+            sets Base.day
         '''
 
-
         self.day = self.binary_item(56, 5)
+        if not (1 <= self.day <= 31):
+            logging.error("Base.day outside range 0-31 " + '{:d}'.format(self.day))
+            raise ValueError("Base.day outside range 0-31")
+
+        # now look for the strange cases
+        if self.year % 4 != 0 and self.month == 2:
+            if self.day > 28:
+                logging.error("Base.day value returned for February non_leap year invalid" + '{:d}'.format(self.day))
+                raise ValueError("Base.day invalid for February non_leap year")
+            elif self.year % 4 == 0 and self.month == 2:
+                if self.day > 29:
+                    logging.error(
+                        "Base.day value returned for February leap year invalid" + '{:d}'.format(self.day))
+                    raise ValueError("Base.day invalid for February leap year")
+
+        if self.month in [4,6, 9, 11]:
+            if self.day > 30:
+                logging.error(
+                    "Base.day value returned for 30 day months  invalid" + '{:d}'.format(self.day))
+                raise ValueError("Base.day invalid for 30 day months")
 
     def get_hour(self):
         '''
@@ -565,7 +591,11 @@ class Basestation(Payload):
         :return:
             sets Base.hour
         '''
-        self.year = self.binary_item(61, 5)
+        self.hour = self.binary_item(61, 5)
+        print('in get_hour self.hour = ', self.hour, "binary string [61:65] = ", self.payload[60:65])
+        if not (0 <= self.hour <= 24):
+            logging.error("Base.hour outside range 0-24 " + '{:d}'.format(self.hour))
+            raise ValueError("Base.hour outside range 0-24 " + '{:d}'.format(self.hour))
 
     def get_minute(self) -> None:
         '''
@@ -574,6 +604,10 @@ class Basestation(Payload):
             sets Base.minute
         '''
         self.minute = self.binary_item(66, 6)
+        if not (0 <= self.minute <= 60):
+            logging.error("Base.minute outside range 0-60 " + '{:d}'.format(self.minute))
+            raise ValueError("Base.minute outside range 0-60 " + '{:d}'.format(self.minute))
+
 
     def get_second(self) -> None:
         '''
@@ -582,19 +616,23 @@ class Basestation(Payload):
             sets Base.second
         '''
         self.second = self.binary_item(72, 6)
+        if not (0 <= self.second <= 60):
+            logging.error("Base.second outside range 0-60 " + '{:d}'.format(self.second))
+            raise ValueError("Base.second outside range 0-60 " + '{:d}'.format(self.second))
 
     def get_EPFD(self) -> None:
         '''
         The standard uses "EPFD" to designate any Electronic Position Fixing Device.
         Bits 134-137  length 4  Type of EPFD epfd  See "EPFD Fix Types" in Dictionary
+        Valid 0-8 15 not uncommen
         :return:
-            sets Base.EPFD
+            sets Base.EPFD_type for 9-14 logs error returns 0 but does not invalidate object
         '''
-        # enumerated 0-8, but other may appear, 15 not uncommen
+
         self.EPFD_type = self.binary_item(134, 4)
-
-        pass
-
+        if 9 <= self.EPFD_type <= 14:
+            self.EPFD_type = 0
+            logging.error("In Base.get_EPFD_type found value between 9 and 14")
 
 class Binary_addressed_message(Payload):
     # to be implemented

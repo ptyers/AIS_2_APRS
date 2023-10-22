@@ -536,7 +536,7 @@ class TestCNB(TestCase):
 
     def initialise(self):
 
-        logging.basicConfig(Level = logging.CRITICAL)
+        logging.basicConfig(level = logging.CRITICAL)
         diction = AISDictionaries()
         # the stream offered here is valid but the mystream.payload , mypayload.payload
         #  and/or mystream.binary_payload will be overwritten during testing
@@ -742,13 +742,17 @@ class TestBasestation(TestCase):
 
     def initialise(self):
 
-        logging.basicConfig(Level = logging.CRITICAL)
+        logging.basicConfig(level = logging.CRITICAL)
         diction = AISDictionaries()
         # the stream offered here is valid but the mystream.payload , mypayload.payload
         #  and/or mystream.binary_payload will be overwritten during testing
-        mystream = Payloads.AISStream('!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05')
-        mycnb = Payloads.CNB(mystream.binary_payload)
-        return diction, mystream, mycnb
+        psuedo_AIS = '!AIVDM,2,1,7,A,' + '57Oi`:021ssqHiL6221L4l8U8V2222222222220l1@F476Ik0;QA1C`8888888888888888,0*1E'
+        psuedo_AIS = psuedo_AIS[0:37] + '{:014b}'.format(2023) + '{:04b}'.format(1) + '{:04b}'.format(1) + \
+            '{:05b}'.format(13) + '{:06b}'.format(0) + '{:06b}'.format(0) + psuedo_AIS[78:]
+        mystream = Payloads.AISStream(psuedo_AIS)
+        mystream = mystream
+        mybase = Payloads.Basestation(mystream.binary_payload)
+        return diction, mystream, mybase
 
 
 
@@ -772,25 +776,152 @@ class TestBasestation(TestCase):
         return preamble + testbits + faketail
 
     def test_get_year(self):
-        self.fail()
+        print('Testing Base.get_year')
+        # Bits 38-51  length 14  Year (UTC)  year  UTC, 1-9999, 0 = N/A (default)
+        diction, mystream, mybase =self.initialise()
+        # first check for edge conditions, some normal values and a non=-valid
+        for yval in [0, 9999, 1, 2023, 11000]:
+            mybase.payload = self.make_stream(38, '{:014b'.format(yval))
+            mybase.get_year()
+            try:
+                self.assertEqual(yval, mybase.year, "In Base.get_year - value returned does match value set")
+            except ValueError:
+                self.assertFalse(mybase.valid_item, "In Base.get_year - module does not flag invalid value")
+
 
     def test_get_month(self):
-        self.fail()
+        print('Testing Base.get_month')
+        # Bits 52-55 length 4  Month (UTC) month  1-12; 0 = N/A (default)
+        diction, mystream, mybase =self.initialise()
+        # first check for edge conditions, some normal values and a non=-valid
+        for yval in [0, 12, 1,  13]:
+            mybase.payload = self.make_stream(52, '{:04b'.format(yval))
+            mybase.get_month()
+            try:
+                self.assertEqual(yval, mybase.month, "In Base.get_month - value returned does match value set")
+            except ValueError:
+                self.assertFalse(mybase.valid_item, "In Base.get_month - module does not flag invalid value")
+
 
     def test_get_day(self):
-        self.fail()
+        print('Testing Base.get_day')
+        # Bits 56-60  length 5  Day (UTC) day  1-31; 0 = N/A (default)
+        diction, mystream, mybase =self.initialise()
+        # first check for edge conditions, some normal values and a non=-valid
+        for yval in [0, 31, 1,  32]:
+            mybase.payload = self.make_stream(56, '{:05b'.format(yval))
+            try:
+                mybase.get_day()
+                self.assertEqual(yval, mybase.day, "In Base.get_day - value returned does match value set")
+            except ValueError:
+                self.assertFalse(mybase.valid_item, "In Base.get_day - module does not flag invalid value")
+
+        # now setup some weird invalid conditions
+        leap = self.make_stream(38, '{:014b'.format('2004'))
+        month = self.make_stream(52, '{:04b'.format('2'))
+        day = self.make_stream(56, '{:05b'.format('30'))
+        leap_year_stream = leap[0:51] + month[52:55] + day[56:]
+        mybase.payload = leap_year_stream
+        try:
+            mybase.get_day()
+            self.fail("In Base.day - module does not flag invalid day for leap_year")
+        except ValueError():
+            self.assertFalse(mybase.valid_item,
+                             "In Base.day - module does not flag invalid day for leap_year")
+
+        nonleap = self.make_stream(38, '{:014b'.format('2023'))
+        month = self.make_stream(52, '{:04b'.format('2'))
+        day = self.make_stream(56, '{:05b'.format('29'))
+        nonleap_year_stream = nonleap[0:51] + month[52:55] + day[56:]
+        mybase.payload = nonleap_year_stream
+        try:
+            mybase.get_day()
+            self.fail("In Base.day - module does not flag invalid day for nonleap_year")
+        except ValueError():
+            self.assertFalse(mybase.valid_item,
+                             "In Base.day - module does not flag invalid day for nonleap_year")
+
+
+
+        for imonth in [4,6, 9, 11]:
+            nonleap = self.make_stream(38, '{:014b'.format('2023'))
+            month = self.make_stream(52, '{:04b'.format(imonth))
+            day = self.make_stream(56, '{:05b'.format('31'))
+            nonleap_year_stream = nonleap[0:51] + month[52:55] + day[56:]
+            mybase.payload = nonleap_year_stream
+            try:
+                mybase.get_day()
+                self.fail("In Base.day - module does not flag invalid day for 30 day months")
+            except ValueError():
+                self.assertFalse(mybase.valid_item,
+                                 "In Base.day - module does not flag invalid day for 30 day months")
 
     def test_get_hour(self):
-        self.fail()
+        print('Testing Base.get_hour')
+        # Bits 61-65 length 5  Hour (UTC) hour  0-23; 24 = N/A (default)
+
+        diction, mystream, mybase =self.initialise()
+        # first check for edge conditions, some normal values and a non=-valid
+        for yval in [0, 23, 1, 24, 25]:
+            mybase.payload = self.make_stream(56, '{:05b'.format(yval))
+            try:
+                mybase.get_day()
+                self.assertEqual(yval, mybase.hour, "In Base.get_hour - value returned does match value set")
+            except ValueError:
+                self.assertFalse(mybase.valid_item, "In Base.get_hour - module does not flag invalid value")
+
+
+
 
     def test_get_minute(self):
-        self.fail()
+        print('Testing Base.get_minute')
+        # Bits 66-71 length 6  Minute (UTC) minute  0-59; 60 = N/A (default)
+        diction, mystream, mybase = self.initialise()
+        # first check for edge conditions, some normal values and a non=-valid
+        for yval in [0, 59, 60, 61]:
+            mybase.payload = self.make_stream(66, '{:06b'.format(yval))
+            mybase.get_minute()
+            try:
+                self.assertEqual(yval, mybase.minute, "In Base.get_minute - value returned does match value set")
+            except ValueError:
+                self.assertFalse(mybase.valid_item, "In Base.get_minute - module does not flag invalid value")
 
     def test_get_second(self):
-        self.fail()
+        print('Testing Base.get_second')
+        # Bits 72-77 length 6  Second (UTC) second  0-59; 60 = N/A (default)
+        diction, mystream, mybase = self.initialise()
+        # first check for edge conditions, some normal values and a non=-valid
+        for yval in [0, 59, 60, 61]:
+            mybase.payload = self.make_stream(72, '{:06b'.format(yval))
+            mybase.get_second()
+            try:
+                self.assertEqual(yval, mybase.second, "In Base.get_second - value returned does match value set")
+            except ValueError:
+                self.assertFalse(mybase.valid_item, "In Base.get_second - module does not flag invalid value")
+
 
     def test_get_epfd(self):
-        self.fail()
+        print('Testing Base.get_EPFD')
+        # Bits 134-137  length 4  Type of EPFD epfd  See "EPFD Fix Types" in Dictionary
+        # valid 0-8 15 not uncommen, values 9-14 returned as 0 and object still validated
+
+        diction, mystream, mybase = self.initialise()
+        # first check for edge conditions, some normal values and a non=-valid
+        for yval in [0, 8, 1, 15, 10]:
+            mybase.payload = self.make_stream(134, '{:04b'.format(yval))
+            mybase.get_EPFD()
+            try:
+                if 0 <= yval <= 8 or yval == 15:
+                    self.assertEqual(yval, mybase.EPFD_type,
+                                     "In Base.get_EPFD - value returned does match value set")
+                else:
+                    yval = 0
+                    self.assertEqual(yval, mybase.EPFD_type,
+                                     "In Base.get_EPFD - value returned does match default substitution 9-14")
+            except :
+                self.assertFalse(mybase.valid_item,
+                                 "In Base.get_EPFD - somethings very wrong should not get here")
+
 
 
 class TestAISStream(TestCase):
