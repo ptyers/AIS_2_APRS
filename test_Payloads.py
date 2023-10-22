@@ -3,6 +3,7 @@ from AISDictionary import AISDictionaries
 import Payloads
 import random
 import logging
+import math
 
 
 class TestPayload(TestCase):
@@ -546,12 +547,16 @@ class TestPayload(TestCase):
 class TestCNB(TestCase):
 
     def initialise(self):
+
+        logging.basicConfig(Level = logging.CRITICAL)
         diction = AISDictionaries()
         # the stream offered here is valid but the mystream.payload , mypayload.payload
         #  and/or mystream.binary_payload will be overwritten during testing
         mystream = Payloads.AISStream('!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05')
         mycnb = Payloads.CNB(mystream.binary_payload)
         return diction, mystream, mycnb
+
+
 
     def make_stream(self, preamlen: int, testbits: str):
         # creates a fake binary payload to allow testing
@@ -589,7 +594,33 @@ class TestCNB(TestCase):
         diction, mystream, mycnb = self.initialise()
         print("Testing get_ROT")
 
-        self.fail()
+        #int(round(4.733 * math.sqrt(708), 0)) gives 126
+        # valid entries are -127 to 128
+        fvalue: float = 0.0
+        for fvalue in [0, 1.0, -1.0, 90.0, -90.0, 708.0, -708.0]:
+            print
+            testbits = '{:08b}'.format(int(round(4.733 * math.sqrt(fvalue), 0)))
+            mycnb.payload = self.make_stream(42, testbits)
+            mycnb.get_ROT()
+            self.assertEqual(fvalue, mycnb.rate_of_turn,
+                             "In CNB.get_SOG value returned does not match value set " + '{:f}'.format(fvalue))
+
+        # special cases
+        testbits = "{:08b".format(127)
+        mycnb.payload = self.make_stream(42, testbits)
+        mycnb.get_ROT()
+        self.assertEqual(1005.0, mycnb.rate_of_turn,
+                         "In CNB.get_SOG value returned does not match value set " + '{:f}'.format(1005.0))
+        testbits = "{:08b".format(-127)
+        mycnb.payload = self.make_stream(42, testbits)
+        mycnb.get_ROT()
+        self.assertEqual(-1005.0, mycnb.rate_of_turn,
+                         "In CNB.get_SOG value returned does not match value set " + '{:f}'.format(-1005.0))
+        testbits = "{:08b".format(128)
+        mycnb.payload = self.make_stream(42, testbits)
+        mycnb.get_ROT()
+        self.assertEqual(1000, mycnb.rate_of_turn,
+                         "In CNB.get_SOG value returned does not match value set " + '{:f}'.format(100.0))
 
     def test_get_sog(self):
         diction, mystream, mycnb = self.initialise()

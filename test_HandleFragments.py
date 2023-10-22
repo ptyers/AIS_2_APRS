@@ -7,7 +7,7 @@ import HandleFragments
 
 class Test(TestCase):
 
-    logging.basicConfig(filename='myapp.log', level=logging.DEBUG)
+    logging.basicConfig(filename='myapp.log', level=logging.CRITICAL)
 
     # two AIS streams which are a fragmented message
     mytestdata = [

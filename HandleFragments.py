@@ -21,7 +21,7 @@ def new_handle_fragments(payload: str, frag_count: int, frag_number: int, messag
 
 
 def handle_fragments(payload):
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.CRITICAL)
     # payload id the tuple aisfields which is the AIS datastream
     # aisfields[5] is the actual payload, aisfields[1] is the fragment count
     # aisfields[2] is the fragment number of the sentence(payload)

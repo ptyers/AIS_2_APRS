@@ -281,6 +281,12 @@ class CNB(Payload):
 
     navigation_status: int
     rate_of_turn: float
+    # rate of turn has 3 special values
+    # 1000.0 - No turn Indication available
+    # 1005 turning right at more than 5 degrees/ 30 seconds
+    # -1005.0 turning leftat more than 5 degrees/ 30 seconds
+    # otherwise range is -708.0 t0 708.0 degrees per minute - negetive left, positivew right
+    raw_rate_of_turn: int
     speed_over_ground: float
     position_accuracy: bool
     course_over_ground: float
@@ -301,6 +307,8 @@ class CNB(Payload):
         self.get_timestamp()
         self.get_man_indic()
         self.getfix(60)
+
+        logging.basicConfig(level=logging.CRITICAL)
 
         pass
 
@@ -345,6 +353,8 @@ class CNB(Payload):
         and then square it. Sign of the field value should be preserved when squaring it,
         otherwise the left/right indication will be lost.
 
+        With 8 bits there cannot be any values out of range
+
         :return:
             sets mycnb.rate_of_turn (float)
         '''
@@ -353,9 +363,22 @@ class CNB(Payload):
 
         irot = self.signed_binary_item(42, 8)
         if irot >= 0:
-            self.rate_of_turn = (float(irot) / 4.733) ** 2
+            if 0 <= irot <= 126:
+                self.rate_of_turn = float(round((float(irot) / 4.733) ** 2))
+            elif irot == 128:
+                self.rate_of_turn = 1000.0 # indicates No Turn Indication available - DEFAULT
+            elif irot == 127:
+                self.rate_of_turn = 1005.0 # indicates ROT of > 5 degres/30sec right (No Turn Indic available)
+            self.raw_rate_of_turn = irot
+
         else:
-            self.rate_of_turn = - (float(abs(irot)) / 4.733) ** 2
+
+            if irot < 0:
+                if -126 <= irot <= -1:
+                    self.rate_of_turn = - float(round((float(irot) / 4.733) ** 2))
+                elif irot == -127:
+                    self.rate_of_turn = -1005.0  # indicates ROT of > 5 degres/30sec left (No Turn Indic available)
+            self.raw_rate_of_turn = irot
 
     def getSOG(self) -> None:
         '''
@@ -410,8 +433,8 @@ class CNB(Payload):
             self.true_heading = itru
         else:
             self.valid_item = False
-            logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511' + '{:d}'.format( itru))
-            raise ValueError('In CNB.get_tru_head - value outside range 0-259 or != 511' + '{:d}'.format( itru))
+            logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + '{:d}'.format( itru))
+            raise ValueError('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + '{:d}'.format(itru))
 
     def get_pos_accuracy(self) -> bool:
         '''
