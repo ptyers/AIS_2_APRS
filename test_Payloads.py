@@ -6,18 +6,6 @@ import logging
 import math
 
 
-class TestPayload(TestCase):
-    pass
-
-
-class TestCNB(TestCase):
-    pass
-
-
-class TestBasestation(TestCase):
-    pass
-
-
 class TestBinary_addressed_message(TestCase):
     pass
 
@@ -599,7 +587,10 @@ class TestCNB(TestCase):
         fvalue: float = 0.0
         for fvalue in [0, 1.0, -1.0, 90.0, -90.0, 708.0, -708.0]:
             print
-            testbits = '{:08b}'.format(int(round(4.733 * math.sqrt(fvalue), 0)))
+            if fvalue >= 0:
+                testbits = '{:08b}'.format(int(round(4.733 * math.sqrt(fvalue), 0)))
+            else:
+                testbits = '{:08b}'.format(-int(round(4.733 * math.sqrt(abs(fvalue)), 0)))
             mycnb.payload = self.make_stream(42, testbits)
             mycnb.get_ROT()
             self.assertEqual(fvalue, mycnb.rate_of_turn,
@@ -748,6 +739,38 @@ class TestCNB(TestCase):
 
 
 class TestBasestation(TestCase):
+
+    def initialise(self):
+
+        logging.basicConfig(Level = logging.CRITICAL)
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        mystream = Payloads.AISStream('!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05')
+        mycnb = Payloads.CNB(mystream.binary_payload)
+        return diction, mystream, mycnb
+
+
+
+    def make_stream(self, preamlen: int, testbits: str):
+        # creates a fake binary payload to allow testing
+        # preamble is number number of bits needed to fill up to beginning of testbits
+        # testbits is the binary stream representing the area of thge domain under test
+        # a couple of 'constants'
+        fakehead: str = '00010000'
+        faketail: str = '000000000000000000000000000000'
+        # prefill the preamble with message type 4
+        preamble: str = fakehead
+        # fillcount is number of required prefill with allowance for the 8 bit header
+        fillcount = preamlen - 8
+
+        while fillcount > 0:
+            preamble = preamble + '1'
+            fillcount -= 1
+
+        #print('in make_stream nr bits needed, nr bits offered', preamlen, len(preamble))
+        return preamble + testbits + faketail
+
     def test_get_year(self):
         self.fail()
 

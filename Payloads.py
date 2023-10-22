@@ -412,8 +412,9 @@ class CNB(Payload):
             self.course_over_ground = round(float(intval) / 10.0, 1)
         else:
             self.valid_item = False
-            logging.error('In CNB.get_COG - value outside range 0-360'+ '{:d}'.format(intval))
-            raise ValueError('In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval))
+            errstr: str = 'In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval)
+            logging.error( errstr)
+            raise ValueError(errstr)
 
 
     def get_tru_head(self) -> None:
@@ -433,8 +434,9 @@ class CNB(Payload):
             self.true_heading = itru
         else:
             self.valid_item = False
-            logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + '{:d}'.format( itru))
-            raise ValueError('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + '{:d}'.format(itru))
+            errstr: str = '{:d}'.format( itru)
+            logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + errstr)
+            raise ValueError('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + errstr)
 
     def get_pos_accuracy(self) -> bool:
         '''
@@ -475,8 +477,8 @@ class CNB(Payload):
             self.time_stamp = self.binary_item(137, 6)
         else:
             self.valid_item = False
-            logging.error('In CNB.get_timestamp - value outside range 0-63', intval)
-            raise RuntimeError('In CNB.get_timestamp - value outside range 0-63', intval)
+            logging.error('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
+            raise ValueError('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
 
 
     def get_man_indic(self):
@@ -501,8 +503,9 @@ class CNB(Payload):
             self.maneouver_indicator = intval
         else:
             self.valid_item = False
-            logging.error('In CNB.get_man indicator - value outside range 0-2' +'{:d}'.format(intval))
-            raise ValueError('In CNB.get_man indicator - value outside range 0-2' +'{:d}'.format(intval))
+            errstr: str = '{:d}'.format(intval)
+            logging.error('In CNB.get_man indicator - value outside range 0-2' + errstr)
+            raise ValueError('In CNB.get_man indicator - value outside range 0-2' + errstr)
 
 
 class Basestation(Payload):
@@ -529,25 +532,64 @@ class Basestation(Payload):
         self.getfix(78)
         self.getRAIMflag(148)
 
-    def get_year(self):
+    def get_year(self) -> None:
+        '''
+        Bits 38-51  length 14  Year (UTC)  year  UTC, 1-9999, 0 = N/A (default)
+
+        :return:
+            sets Base.year
+        '''
         self.year = self.binary_item(38, 14)
 
-    def get_month(self):
+    def get_month(self) -> None:
+        '''
+        Bits 52-55 length 4  Month (UTC) month  1-12; 0 = N/A (default)
+        :return:
+            sets Base.month
+        '''
         self.month = self.binary_item(52, 4)
 
-    def get_day(self):
+    def get_day(self) -> None:
+        '''
+        Bits 56-60  length 5  Day (UTC) day  1-31; 0 = N/A (default)
+        :return:
+            sets Basde.day
+        '''
+
+
         self.day = self.binary_item(56, 5)
 
     def get_hour(self):
+        '''
+            Bits 61-65 length 5  Hour (UTC) hour  0-23; 24 = N/A (default)
+        :return:
+            sets Base.hour
+        '''
         self.year = self.binary_item(61, 5)
 
-    def get_minute(self):
+    def get_minute(self) -> None:
+        '''
+            Bits 66-71 length 6  Minute (UTC) minute  0-59; 60 = N/A (default)
+        :return:
+            sets Base.minute
+        '''
         self.minute = self.binary_item(66, 6)
 
-    def get_second(self):
+    def get_second(self) -> None:
+        '''
+            Bits 72-77 length 6  Second (UTC) second  0-59; 60 = N/A (default)
+        :return:
+            sets Base.second
+        '''
         self.second = self.binary_item(72, 6)
 
-    def get_EPFD(self):
+    def get_EPFD(self) -> None:
+        '''
+        The standard uses "EPFD" to designate any Electronic Position Fixing Device.
+        Bits 134-137  length 4  Type of EPFD epfd  See "EPFD Fix Types" in Dictionary
+        :return:
+            sets Base.EPFD
+        '''
         # enumerated 0-8, but other may appear, 15 not uncommen
         self.EPFD_type = self.binary_item(134, 4)
 
@@ -873,19 +915,19 @@ class AISStream:
         if (str_split[0] == '!AIVDM') or (str_split[0] == '!AIVDO'):
             self.packet_id = str_split[0]
         else:
-            logging.error("In AISStream - packet_type not in AIVDM or AIVDO\n" + str_split[0])
+            logging.error("In AISStream - packet_type not in AIVDM or AIVDO " + str_split[0])
             self.valid_message = False
 
         try:
             self.fragment_count = int(str_split[1])
         except ValueError:
-            logging.error("In AISStream - fragment count not numeric\n" + str_split[1])
+            logging.error("In AISStream - fragment count not numeric " + str_split[1])
             self.fragment_count = 0
             self.valid_message = False
         try:
             self.fragment_number = int(str_split[2])
         except ValueError:
-            logging.error("In AISStream - fragment number not numeric\n" + str_split[2])
+            logging.error("In AISStream - fragment number not numeric " + str_split[2])
             self.fragment_number = 0
             self.valid_message = False
         try:
@@ -896,13 +938,13 @@ class AISStream:
                 # null message_id
                 self.message_id = 0
         except ValueError:
-            logging.error("In AISStream - message_id not numeric\n" + str_split[3])
+            logging.error("In AISStream - message_id not numeric " + str_split[3])
             self.message_id = 0
             self.valid_message = False
 
         self.channel = str_split[4]
         if self.channel not in ['A', 'B', '1', '2']:
-            logging.error('In AISStream.split_string - invalid channel\n' + str_split[4])
+            logging.error('In AISStream.split_string - invalid channel ' + str_split[4])
             self.valid_message = False
 
         self.payload = str_split[5]
@@ -916,7 +958,7 @@ class AISStream:
             messbyte: int = self.m_to_int(self.payload[0])
             logging.debug('In AISStream - messbyte = ' + '{:0d}'.format(messbyte))
             if not (1 <= messbyte <= 27):
-                logging.error('In AISStream.split_string - invalid message+type\n' + str_split[5])
+                logging.error('In AISStream.split_string - invalid message+type ' + str_split[5])
                 self.valid_message = False
             else:
                 self.message_type = messbyte
