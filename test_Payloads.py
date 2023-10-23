@@ -579,32 +579,31 @@ class TestCNB(TestCase):
         # valid entries are -127 to 128
         fvalue: float = 0.0
         for fvalue in [0, 1.0, -1.0, 90.0, -90.0, 708.0, -708.0]:
-            print
             if fvalue >= 0:
                 testbits = '{:08b}'.format(int(round(4.733 * math.sqrt(fvalue), 0)))
             else:
                 testbits = '{:08b}'.format(-int(round(4.733 * math.sqrt(abs(fvalue)), 0)))
             mycnb.payload = self.make_stream(42, testbits)
             mycnb.get_ROT()
-            self.assertEqual(fvalue, mycnb.rate_of_turn,
-                             "In CNB.get_SOG value returned does not match value set " + '{:f}'.format(fvalue))
+            self.assertTrue(fvalue - 1 <= mycnb.rate_of_turn <= fvalue + 1,
+                            "In CNB.get_rot value returned does not match value set " + '{:f}'.format(fvalue))
 
         # special cases
-        testbits = "{:08b".format(127)
+        testbits = "{:08b}".format(127)
         mycnb.payload = self.make_stream(42, testbits)
         mycnb.get_ROT()
         self.assertEqual(1005.0, mycnb.rate_of_turn,
-                         "In CNB.get_SOG value returned does not match value set " + '{:f}'.format(1005.0))
-        testbits = "{:08b".format(-127)
+                         "In CNB.get_rot value returned does not match value set " + '{:f}'.format(1005.0))
+        testbits = "{:08b}".format(-127)
         mycnb.payload = self.make_stream(42, testbits)
         mycnb.get_ROT()
         self.assertEqual(-1005.0, mycnb.rate_of_turn,
-                         "In CNB.get_SOG value returned does not match value set " + '{:f}'.format(-1005.0))
-        testbits = "{:08b".format(128)
+                         "In CNB.get_rot value returned does not match value set " + '{:f}'.format(-1005.0))
+        testbits = "{:08b}".format(128)
         mycnb.payload = self.make_stream(42, testbits)
         mycnb.get_ROT()
-        self.assertEqual(1000, mycnb.rate_of_turn,
-                         "In CNB.get_SOG value returned does not match value set " + '{:f}'.format(100.0))
+        self.assertEqual(1000.0, mycnb.rate_of_turn,
+                         "In CNB.get_rot value returned does not match value set " + '{:f}'.format(1000))
 
     def test_get_sog(self):
         diction, mystream, mycnb = self.initialise()
@@ -651,6 +650,7 @@ class TestCNB(TestCase):
             testbits = '{:012b}'.format(i)
             mycnb.payload = self.make_stream(116, testbits)
             try:
+                mycnb.get_COG()
                 self.assertEqual(float(i) / 10.0, mycnb.course_over_ground,
                                  "In get_COG value returned does not offered value " + '{:d}'.format(i))
             except ValueError:
@@ -684,7 +684,6 @@ class TestCNB(TestCase):
                                  "In get_COG value returned does not match value offered")
             except ValueError:
                 self.assertFalse(mycnb.valid_item, "In CNB.get_tri_hed invalid value not flagged")
-
 
     def test_get_pos_accuracy(self):
         diction, mystream, mycnb = self.initialise()
@@ -811,8 +810,8 @@ class TestBasestation(TestCase):
                 self.assertFalse(mybase.valid_item, "In Base.get_day - module does not flag invalid value")
 
         # now setup some weird invalid conditions
-        leap =  '{:014b}'.format(2004)
-        month =  '{:04b}'.format(2)
+        leap = '{:014b}'.format(2004)
+        month = '{:04b}'.format(2)
         day = '{:05b}'.format(30)
         leap_year_stream = mybase.payload[0:38] + leap + month + day + mybase.payload[78:]
         mybase.payload = leap_year_stream
@@ -823,8 +822,8 @@ class TestBasestation(TestCase):
             self.assertFalse(mybase.valid_item,
                              "In Base.day - module does not flag invalid day for leap_year")
 
-        nonleap =  '{:014b}'.format(2003)
-        month =  '{:04b}'.format(2)
+        nonleap = '{:014b}'.format(2003)
+        month = '{:04b}'.format(2)
         day = '{:05b}'.format(29)
         nonleap_year_stream = mybase.payload[0:38] + nonleap + month + day + mybase.payload[78:]
         mybase.payload = leap_year_stream

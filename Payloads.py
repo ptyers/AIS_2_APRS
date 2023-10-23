@@ -362,14 +362,14 @@ class CNB(Payload):
         # signed integer scaled to float then calculated as divide by 4.733, retain sign but square it
 
         irot = self.signed_binary_item(42, 8)
-        if irot >= 0:
+        if irot >= 0 or irot == -128:
             if 0 <= irot <= 126:
                 self.rate_of_turn = float(round((float(irot) / 4.733) ** 2))
-            elif irot == 128:
-                self.rate_of_turn = 1000.0 # indicates No Turn Indication available - DEFAULT
             elif irot == 127:
                 self.rate_of_turn = 1005.0 # indicates ROT of > 5 degres/30sec right (No Turn Indic available)
-            self.raw_rate_of_turn = irot
+            elif irot == -128:
+                self.rate_of_turn = 1000.0  # indicates No Turn Indication available - DEFAULT
+
 
         else:
 
