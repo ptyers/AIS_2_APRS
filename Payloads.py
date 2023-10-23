@@ -414,7 +414,7 @@ class CNB(Payload):
             self.valid_item = False
             errstr: str = 'In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval)
             logging.error( errstr)
-            raise ValueError(errstr)
+            raise ValueError
 
 
     def get_tru_head(self) -> None:
@@ -436,7 +436,7 @@ class CNB(Payload):
             self.valid_item = False
             errstr: str = '{:d}'.format( itru)
             logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + errstr)
-            raise ValueError('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + errstr)
+            raise ValueError
 
     def get_pos_accuracy(self) -> bool:
         '''
@@ -478,7 +478,7 @@ class CNB(Payload):
         else:
             self.valid_item = False
             logging.error('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
-            raise ValueError('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
+            raise ValueError
 
 
     def get_man_indic(self):
@@ -505,7 +505,7 @@ class CNB(Payload):
             self.valid_item = False
             errstr: str = '{:d}'.format(intval)
             logging.error('In CNB.get_man indicator - value outside range 0-2' + errstr)
-            raise ValueError('In CNB.get_man indicator - value outside range 0-2' + errstr)
+            raise ValueError
 
 
 class Basestation(Payload):
@@ -541,8 +541,9 @@ class Basestation(Payload):
         '''
         self.year = self.binary_item(38, 14)
         if not (0 <= self.year <= 9999):
+            self.valid_item = False
             logging.error("Base.year outside range 0-9999 " + '{:d}'.format(self.year))
-            raise ValueError("Base.year outside range 0-9999")
+            raise ValueError
 
     def get_month(self) -> None:
         '''
@@ -552,9 +553,10 @@ class Basestation(Payload):
         '''
 
         self.month = self.binary_item(52, 4)
-        if not (1 <= self.month <= 12):
+        if not (0 <= self.month <= 12):
+            self.valid_item = False
             logging.error("Base.month outside range 0-12 " + '{:d}'.format(self.month))
-            raise ValueError("Base.month outside range 0-12")
+            raise ValueError
 
     def get_day(self) -> None:
         '''
@@ -564,26 +566,34 @@ class Basestation(Payload):
         '''
 
         self.day = self.binary_item(56, 5)
-        if not (1 <= self.day <= 31):
+        if not (0 <= self.day <= 31):
             logging.error("Base.day outside range 0-31 " + '{:d}'.format(self.day))
-            raise ValueError("Base.day outside range 0-31")
+            self.valid_item = False
+            raise ValueError
 
         # now look for the strange cases
-        if self.year % 4 != 0 and self.month == 2:
-            if self.day > 28:
-                logging.error("Base.day value returned for February non_leap year invalid" + '{:d}'.format(self.day))
-                raise ValueError("Base.day invalid for February non_leap year")
-            elif self.year % 4 == 0 and self.month == 2:
-                if self.day > 29:
-                    logging.error(
-                        "Base.day value returned for February leap year invalid" + '{:d}'.format(self.day))
-                    raise ValueError("Base.day invalid for February leap year")
+        self.get_year()
+        self.get_month()
+        #print(self.year, '  modulo', self.year % 4, ' ', self.month, ' ', self.day)
+        if self.year % 4 == 0 and self.month == 2 and self.day > 29:
+            #print(self.year, '  modulo', self.year % 4, ' ', self.month, ' ', self.day)
+            #print('day greater 29')
+            self.valid_item = False
+            logging.error("Base.day value returned for February leap year invalid " + '{:d}'.format(self.day))
+            raise ValueError
+
+        if self.year % 4 != 0 and self.month == 2 and self.day > 28:
+            logging.error(
+                "Base.day value returned for February nonleap year invalid " + '{:d}'.format(self.day))
+            self.valid_item = False
+            raise ValueError
 
         if self.month in [4,6, 9, 11]:
             if self.day > 30:
                 logging.error(
                     "Base.day value returned for 30 day months  invalid" + '{:d}'.format(self.day))
-                raise ValueError("Base.day invalid for 30 day months")
+                self.valid_item = False
+                raise ValueError
 
     def get_hour(self):
         '''
@@ -592,10 +602,10 @@ class Basestation(Payload):
             sets Base.hour
         '''
         self.hour = self.binary_item(61, 5)
-        print('in get_hour self.hour = ', self.hour, "binary string [61:65] = ", self.payload[60:65])
         if not (0 <= self.hour <= 24):
+            self.valid_item = False
             logging.error("Base.hour outside range 0-24 " + '{:d}'.format(self.hour))
-            raise ValueError("Base.hour outside range 0-24 " + '{:d}'.format(self.hour))
+            raise ValueError
 
     def get_minute(self) -> None:
         '''
@@ -605,20 +615,22 @@ class Basestation(Payload):
         '''
         self.minute = self.binary_item(66, 6)
         if not (0 <= self.minute <= 60):
+            self.valid_item = False
             logging.error("Base.minute outside range 0-60 " + '{:d}'.format(self.minute))
-            raise ValueError("Base.minute outside range 0-60 " + '{:d}'.format(self.minute))
+            raise ValueError
 
 
     def get_second(self) -> None:
-        '''
-            Bits 72-77 length 6  Second (UTC) second  0-59; 60 = N/A (default)
-        :return:
-            sets Base.second
-        '''
-        self.second = self.binary_item(72, 6)
-        if not (0 <= self.second <= 60):
-            logging.error("Base.second outside range 0-60 " + '{:d}'.format(self.second))
-            raise ValueError("Base.second outside range 0-60 " + '{:d}'.format(self.second))
+            '''
+                Bits 72-77 length 6  Second (UTC) second  0-59; 60 = N/A (default)
+            :return:
+                sets Base.second
+            '''
+            self.second = self.binary_item(72, 6)
+            if not (0 <= self.second <= 60):
+                self.valid_item = False
+                logging.error("Base.second outside range 0-60 " + '{:d}'.format(self.second))
+                raise ValueError
 
     def get_EPFD(self) -> None:
         '''
