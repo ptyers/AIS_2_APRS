@@ -646,6 +646,228 @@ class Basestation(Payload):
             self.EPFD_type = 0
             logging.error("In Base.get_EPFD_type found value between 9 and 14")
 
+class StaticData(Payload):
+    # type 5
+    '''
+    Message has a total of 424 bits, occupying two AIVDM sentences.
+    In practice, the information in these fields (especially ETA and destination) is not reliable,
+    as it has to be hand-updated by humans rather than gathered automatically from sensors.
+    Also note that it is fairly common in the wild for this message to have a wrong bit length (420 or 422).
+    Robust decoders should ignore trailing garbage and deal gracefully with a slightly truncated destination field.
+    '''
+
+    ais_version: int = 0      # enumerated normally 0, 1-3 future editions
+    imo_number: int
+    callsign: str
+    vessel_name: str
+    ship_type: int          # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
+    dim_to_bow: int
+    dim_to_stern: int
+    dim_to_port: int
+    dim_to_stbd: int
+    # fix type derived from super class
+    eta_month: int
+    eta_day: int
+    eta_hour: int
+    eta_min: int
+    draught: float
+    destination: str    # as above destination field may be truncated due to wrong bit length being supplied
+    payload: str        # holds the "binary payload supplied as part of instatiation
+
+
+
+
+    def __init__(self, p_payload):
+        super().__init__(p_payload)
+        # first check actual payload length
+        payload = p_payload
+        maxpayloadlen = len(p_payload)      # will be used when attempting to get destination to avoid bit overrun
+
+        self.create_mmsi()
+        self.get_ais_version()
+        self.get_imo_number()
+        self.get_callsign()
+        self.get_ship_type()
+        self.get_eta_month()
+        self.get_eta_day()
+        self.get_eta_hour()
+        self.get_eta_minute()
+        self.get_draught()
+        self.get_destination()
+
+
+
+
+        pass
+
+    def get_ais_version(self) -> None:
+        '''
+        0=[ITU1371], 1-3 = future editions
+        :return:
+            sets StaticData.ais_version
+        '''
+        self.ais_version = 0
+
+    def get_imo_number(self) -> None:
+        '''
+        IMO number is a unique identifier for ships, registered ship owners and management companies1.
+        It consists of the three letters "IMO" followed by a seven-digit number assigned to all ships
+         by IHS Fairplay123. The IMO number was introduced to improve maritime safety and security and
+         to reduce maritime fraud1.
+
+        [INLAND] specifies the following:
+
+        the IMO Number field should be zeroed for inland vessels.
+        ATIS code should be used for inland vessels
+        ship dimensions should be set to the maximum rectangle size of the convoy
+        draught information should be rounded up to nearest decimeter
+        For the destination, UN/LOCODE and ERI terminal codes should be used
+
+        :return:
+            sets StaticData.imo_number
+        '''
+        self.imo_number = self.binary_item(46,30)
+
+    def get_callsign(self) -> None:
+        '''
+        fairly obvious - get ships callsign 7 characters free text encoded as 6 bit chars
+        :return:
+            sets StaticData.callsign
+        '''
+        self.callsign = self.extract_string(70,42)
+
+    def get_vessel_name(self) -> None:
+        '''
+        also obvioous - get ships name
+        20 six bit free text characters
+        :return:
+            sets StaticData.ships_)name
+        '''
+        self.vessel_name = self.extract_string(112,120)
+    def get_ship_type(self) -> None:
+        '''
+        dfecribed in AISDictionary
+        range 0-99
+        Note that garbage values greater than 99 are supposed to be unused,
+        but are not uncommon in the wild; AIS transmitters seem prone to put junk in this field
+        when it’s not explicitly set. Decoders should treat these like value 0 rather than throwing an exception
+         until and unless the controlled vocabulary is extended to include the unknown values.
+         :retur:
+            sets StatcData.ship_type
+        '''
+        self.ship_type = self.binary_item(232, 8)
+
+    def get_dim_to_bow(self)-> None:
+        '''
+                Ship dimensions will be 0 if not available.
+                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
+                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+                :return:
+                    sets StaticData.dim_to_bow
+
+                '''
+        self.dim_to_bow = self.binary_item(240,9)
+
+    def get_dim_to_stern(self) -> None:
+        '''
+                Ship dimensions will be 0 if not available.
+                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
+                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+                :return:
+                    sets StaticData.dim_to_stern
+
+                '''
+        self.dim_to_stern = self.binary_item(249,9)
+
+    def get_dim_to_port(self) -> None:
+        '''
+                Ship dimensions will be 0 if not available.
+                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
+                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+                :return:
+                    sets StaticData.dim_to_port
+
+                '''
+        self.dim_to_port = self.binary_item(258,6)
+
+    def get_dim_to_stbd(self) -> None:
+        '''
+                Ship dimensions will be 0 if not available.
+                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
+                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+                :return:
+                    sets StaticData.dim_to_stbd
+
+                '''
+        self.dim_to_stbd = self.binary_item(264, 6)
+
+    def get_eta_month(self) -> None:
+        '''
+        In practice, the information in these fields (especially ETA and destination) is not reliable,
+        as it has to be hand-updated by humans rather than gathered automatically from sensors.
+        1-12, 0=N/A (default)
+        :return:
+            sets StaticData.eta_month
+        '''
+        self.eta_month = self.binary_item(274, 4)
+
+    def get_eta_day(self) -> None:
+        '''
+                In practice, the information in these fields (especially ETA and destination) is not reliable,
+                as it has to be hand-updated by humans rather than gathered automatically from sensors.
+                1-31, 0=N/A (default)
+                :return:
+                    sets StaticData.eta_day
+                '''
+        self.eta_day = self.binary_item(278, 5)
+
+    def get_eta_hour(self) -> None:
+        '''
+                In practice, the information in these fields (especially ETA and destination) is not reliable,
+                as it has to be hand-updated by humans rather than gathered automatically from sensors.
+                0-23, 24=N/A (default)
+                :return:
+                    sets StaticData.eta_hour
+                '''
+        self.eta_hour = self.binary_item(283, 5)
+
+    def get_eta_minute(self) -> None:
+        '''
+                In practice, the information in these fields (especially ETA and destination) is not reliable,
+                as it has to be hand-updated by humans rather than gathered automatically from sensors.
+
+                0-59, 60=N/A (default)
+                :return:
+                    sets StaticData.eta_minute
+                '''
+        self.eta_minute = self.binary_item(288, 6)
+
+    def get_draught(self) -> None:
+        '''
+        Meters/10
+        :return:
+        '''
+
+        self.draught = round(float(self.binary_item(294,8))/10.0, 1)
+
+    def get_destination(self) -> None:
+        '''
+        In practice, the information in these fields (especially ETA and destination) is not reliable,
+        as it has to be hand-updated by humans rather than gathered automatically from sensors.
+
+        As noted this field may be truncated due to incorrect payload bit counts being given.
+        Use  self.maxpayloadlen to avoid bit overrun
+        :return:
+            sets StaticData.eta_minute
+        '''
+        if 421 > self.maxpayloadlen:
+            # will need to truncate the call to Extract Text
+            self.destination = self.extract_string(302, self.maxpayloadlen -302)
+        else:
+            self.destination = self.extract_string(302,120)
+
+
+
 class Binary_addressed_message(Payload):
     # to be implemented
 

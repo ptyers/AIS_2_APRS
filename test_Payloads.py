@@ -1097,3 +1097,50 @@ class TestAISStream(TestCase):
             for ij in range(len(numbstring)):
                 outint = mystream.m_to_int(numbstring[ij])
                 self.assertEqual(int(numbstring[ij]), outint, "Failure in m_to_int")
+
+
+class TestStaticData(TestCase):
+    def test_get_ais_version(self):
+        self.fail()
+
+    def test_get_imo_number(self):
+        self.fail()
+
+    def test_get_callsign(self):
+        self.fail()
+
+    def test_get_vessel_name(self):
+        self.fail()
+
+    def test_get_ship_type(self):
+        self.fail()
+
+    def test_get_dim_to_bow(self):
+        self.fail()
+
+    def test_get_dim_to_stern(self):
+        self.fail()
+
+    def test_get_dim_to_port(self):
+        self.fail()
+
+    def test_get_dim_to_stbd(self):
+        self.fail()
+
+    def test_get_eta_month(self):
+        self.fail()
+
+    def test_get_eta_day(self):
+        self.fail()
+
+    def test_get_eta_hour(self):
+        self.fail()
+
+    def test_get_eta_minute(self):
+        self.fail()
+
+    def test_get_draught(self):
+        self.fail()
+
+    def test_get_destination(self):
+        self.fail()
