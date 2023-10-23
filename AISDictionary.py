@@ -66,7 +66,7 @@ class AISDictionaries:
 
     Ship_Type: dict = {
         0: ' Not available(default)',
-        '1 - 19 ': ' Reservedfor future use',
+        2: ' Reservedfor future use',
         2: ' Reservedfor future use',
         3: ' Reservedfor future use',
         4: ' Reservedfor future use',

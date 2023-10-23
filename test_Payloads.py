@@ -1100,20 +1100,141 @@ class TestAISStream(TestCase):
 
 
 class TestStaticData(TestCase):
+
+    def initialise(self):
+
+        logging.basicConfig(level=logging.CRITICAL)
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        psuedo_AIS = '!AIVDM,2,1,5,A,577Q0U82<A0II9ACR20pT<th4V0l4E9<f222221?Bhh??6`A0EAR`4mE`88888888888880,0*3E'
+        mystream = Payloads.AISStream(psuedo_AIS)
+        mystatic = Payloads.StaticData(mystream.binary_payload)
+        return diction, mystream, mystatic
+
+    def make_stream(self, preamlen: int, testbits: str):
+        # creates a fake binary payload to allow testing
+        # preamble is number number of bits needed to fill up to beginning of testbits
+        # testbits is the binary stream representing the area of thge domain under test
+        # a couple of 'constants'
+        fakehead: str = '00010000'
+        faketail: str = '00000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+        # prefill the preamble with message type 4
+        preamble: str = fakehead
+        # fillcount is number of required prefill with allowance for the 8 bit header
+        fillcount = preamlen - 8
+
+        while fillcount > 0:
+            preamble = preamble + '1'
+            fillcount -= 1
+
+        # print('in make_stream nr bits needed, nr bits offered', preamlen, len(preamble))
+        return preamble + testbits + faketail
+
+    def make_binary_stream(self, prteamleng: int, testval: int, bitcount: int):
+            # returns a string of binary payload
+            #incorporating a string of bit count length equivalent to integer value value presented
+            #
+        intstring: str = '{:0' + '{:d}'.format(bitcount) + 'b'.format(testval)
+        return self.make_stream(preamlen=prteamleng, testbits=intstring)
+
+
     def test_get_ais_version(self):
-        self.fail()
+        # given current specification little can be tested here
+        # valid value is 0 per [ITU1371] but allow for 1-3 from future editions
+        diction, mystream, mystatic = self.initialise()
+        print("Testing Statc.get_ais_version")
+
+        teststream = self.make_binary_stream(38, 0, 2)
+        mystatic.payload = teststream
+        try:
+            self.assertEqual(1,mystatic.ais_version, "In Static.get_ais_version - value returned not equal 0")
+        except RuntimeError:
+            self.assertFalse(True, "Runtime Error in Static.get_ais_version")
+
+
 
     def test_get_imo_number(self):
-        self.fail()
+        diction, mystream, mystatic = self.initialise()
+        print("Testing Static.get_imo_number")
+
+        # little can be tested here its only a 7 digit identifier and effectively free text
+        # 30 bit field can returm greater than 7 digits check for this
+
+        for i in [0 , 11, 123, 1234, 12345, 123456, 1234567, 9999999, 12345678]:
+            testbits = self.make_binary_stream(40, i, 30)
+            mystatic.payload = testbits
+            try:
+                mystatic.get_imo_number()
+                self.assertEqual(i, mystatic.imo_number,
+                    "In Static.get_imo_number value returned " + mystatic.imo_number +
+                        ' does not match value offered {:d}'.format(i))
+            except RuntimeError:
+                self.assertFalse(True, "Runtime Error in Static.get_imo_number")
+            except ValueError:
+                self.assertFalse(mystatic.valid_item, "In Static.get_imo_number invalid > 9999999' + "
+                                                      " found and not flagged")
 
     def test_get_callsign(self):
-        self.fail()
+        diction, mystream, mystatic = self.initialise()
+        print("Testing Static.get_callsign")
+
+        # again effectively free text
+
+        for a in ['VH12345', 'ABVCDEF']:
+            test_bits = ''
+            for x in a:
+                test_bits = diction.makebinpayload(test_bits, a)
+            mystatic.payload = test_bits
+            try:
+                mystatic.get_callsign()
+                self.assertEqual(a, mystatic.callsign, "In Static.get_callsign, value returned "
+                                 + mystatic.callsign + " not equal to value offered " + a)
+            except RuntimeError:
+                self.assertFalse(True, "Runtime Error in Static.get_callsign")
+
+
+
 
     def test_get_vessel_name(self):
-        self.fail()
+        diction, mystream, mystatic = self.initialise()
+        print("Testing Static.get_vessel_name")
+
+        # again effectively free text
+
+        try:
+            mystatic.get_vessel_name()
+        except RuntimeError:
+            self.assertFalse(True, "Runtime Error in Static.get_vessel_name")
 
     def test_get_ship_type(self):
-        self.fail()
+        diction, mystream, mystatic = self.initialise()
+        print("Testing Static.get_vessel_name")
+
+        # little can be checked here rubbish values are converted to 0
+
+
+
+
+        for a in ['Spirit of Paynesville',
+                  'Australian Explorer',
+                  '123456789012345678901234567890',
+                  'ABCDEFGHIJKLMNOPQRSTUV',
+                  'abcdefghijklmnopqrstuv'
+                  ]:
+            test_bits = ''
+            for x in a:
+                test_bits = diction.makebinpayload(test_bits, a)
+            mystatic.payload = test_bits
+            try:
+                mystatic.get_destination()
+                self.assertEqual(a, mystatic.destination, "In Static.get_destination, value returned "
+                             + mystatic.destination + " not equal to value offered " + a)
+            except RuntimeError:
+                self.assertFalse(True, "Runtime Error in Static.get_destination")
+
+
+
 
     def test_get_dim_to_bow(self):
         self.fail()

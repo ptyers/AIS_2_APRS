@@ -3,6 +3,7 @@ import logging
 from GlobalDefinitions import Global
 import struct
 import sys
+from AISDictionary import AISDictionaries
 
 '''
 Group of Classes covering all breeds of payloads
@@ -657,7 +658,7 @@ class StaticData(Payload):
     '''
 
     ais_version: int = 0      # enumerated normally 0, 1-3 future editions
-    imo_number: int
+    imo_number: str
     callsign: str
     vessel_name: str
     ship_type: int          # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
@@ -673,6 +674,7 @@ class StaticData(Payload):
     draught: float
     destination: str    # as above destination field may be truncated due to wrong bit length being supplied
     payload: str        # holds the "binary payload supplied as part of instatiation
+    maxpayloadlen: int  # used to check for packet truncation
 
 
 
@@ -680,8 +682,8 @@ class StaticData(Payload):
     def __init__(self, p_payload):
         super().__init__(p_payload)
         # first check actual payload length
-        payload = p_payload
-        maxpayloadlen = len(p_payload)      # will be used when attempting to get destination to avoid bit overrun
+        self.payload = p_payload
+        self.maxpayloadlen = len(p_payload)      # will be used when attempting to get destination to avoid bit overrun
 
         self.create_mmsi()
         self.get_ais_version()
@@ -704,9 +706,15 @@ class StaticData(Payload):
         '''
         0=[ITU1371], 1-3 = future editions
         :return:
-            sets StaticData.ais_version
+            sets StaticData.ais_version - returns zero currently until new edition specifies 1-3
         '''
-        self.ais_version = 0
+        self.ais_version = self.binary_item(38,2)
+        if self.ais_version != 0:
+            if self.ais_version in [1, 2, 3]:
+                self.ais_version = 0
+                logging.error("In Static.get_ais_version found" + '{:d}'.format(self.ais_version) + " rather than 1")
+
+            # dont invalidate object but flag error
 
     def get_imo_number(self) -> None:
         '''
@@ -719,14 +727,26 @@ class StaticData(Payload):
 
         the IMO Number field should be zeroed for inland vessels.
         ATIS code should be used for inland vessels
-        ship dimensions should be set to the maximum rectangle size of the convoy
-        draught information should be rounded up to nearest decimeter
-        For the destination, UN/LOCODE and ERI terminal codes should be used
 
         :return:
             sets StaticData.imo_number
         '''
-        self.imo_number = self.binary_item(46,30)
+        try:
+            intimo =  self.binary_item(46,30)
+        except RuntimeError:
+            self.imo_number = '0000000'
+            logging.error("In Static.get_imo_number got RunTime Error")
+
+        # little validation can be done here other than that number less equal 9999999
+
+        if intimo <= 9999999:
+            self.imo_number = '{:07d}'.format(intimo)
+            self.valid_item = False
+            logging.error("In Static.get_imo_number found value greater than 99999999 - {:d}".format(intimo))
+            self.imo_number = '0000000'
+            raise ValueError
+
+
 
     def get_callsign(self) -> None:
         '''
@@ -734,16 +754,28 @@ class StaticData(Payload):
         :return:
             sets StaticData.callsign
         '''
-        self.callsign = self.extract_string(70,42)
+
+        try:
+            self.callsign = self.extract_string(70,42)
+        except RuntimeError:
+            self.callsign = 'NoCall '
+            logging.error("In Static.get_callsign Runtime error")
 
     def get_vessel_name(self) -> None:
         '''
         also obvioous - get ships name
         20 six bit free text characters
         :return:
-            sets StaticData.ships_)name
+            sets StaticData.ships_name
         '''
-        self.vessel_name = self.extract_string(112,120)
+
+        try:
+            self.vessel_name = self.extract_string(112,120)
+        except RuntimeError:
+            self.vessel_name = 'VesselName Unknown'
+            logging.error("In Static.get_vessel_name Runtime error")
+
+
     def get_ship_type(self) -> None:
         '''
         dfecribed in AISDictionary
@@ -755,29 +787,52 @@ class StaticData(Payload):
          :retur:
             sets StatcData.ship_type
         '''
-        self.ship_type = self.binary_item(232, 8)
+        try:
+            self.ship_type = self.binary_item(232, 8)
+        except RuntimeError:
+            logging.error("In Static.get_ship_type Runtime error")
+            self.ship_type = 0
+
+        if self.ship_type not in AISDictionaries.Ship_Type:
+            self.ship_type = 0
+
+
+
+
 
     def get_dim_to_bow(self)-> None:
         '''
                 Ship dimensions will be 0 if not available.
                 For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
                 for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+
+                ship dimensions should be set to the maximum rectangle size of the convoy
+
                 :return:
                     sets StaticData.dim_to_bow
 
                 '''
-        self.dim_to_bow = self.binary_item(240,9)
+
+        try:
+            self.dim_to_bow = self.binary_item(240,9)
+        except RuntimeError:
+            logging.error("In Static.get_dim_to_bow got run time error")
+            self.dim_to_stern = 0
 
     def get_dim_to_stern(self) -> None:
         '''
-                Ship dimensions will be 0 if not available.
-                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
-                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
-                :return:
-                    sets StaticData.dim_to_stern
+        Ship dimensions will be 0 if not available.
+        For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
+        for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+        :return:
+            sets StaticData.dim_to_stern
 
-                '''
-        self.dim_to_stern = self.binary_item(249,9)
+        '''
+        try:
+            self.dim_to_stern = self.binary_item(249,9)
+        except RuntimeError:
+            logging.error("In Static.get_dim_to_stern got run time error")
+            self.dim_to_stern = 0
 
     def get_dim_to_port(self) -> None:
         '''
@@ -788,7 +843,12 @@ class StaticData(Payload):
                     sets StaticData.dim_to_port
 
                 '''
-        self.dim_to_port = self.binary_item(258,6)
+
+        try:
+            self.dim_to_port = self.binary_item(258,6)
+        except RuntimeError:
+            logging.error("In Static.get_dim_to_port got run time error")
+            self.dim_to_stern = 0
 
     def get_dim_to_stbd(self) -> None:
         '''
@@ -799,7 +859,12 @@ class StaticData(Payload):
                     sets StaticData.dim_to_stbd
 
                 '''
-        self.dim_to_stbd = self.binary_item(264, 6)
+
+        try:
+            self.dim_to_stbd = self.binary_item(264, 6)
+        except RuntimeError:
+            logging.error("In Static.get_dim_to_stbd got run time error")
+            self.dim_to_stern = 0
 
     def get_eta_month(self) -> None:
         '''
@@ -810,6 +875,10 @@ class StaticData(Payload):
             sets StaticData.eta_month
         '''
         self.eta_month = self.binary_item(274, 4)
+        # can possibly return > 12 - if so set to 0 default
+        if self.eta_month > 12:
+            logging.error("In Static.get_eta>month value returned greater than 12")
+            self.eta_month = 0
 
     def get_eta_day(self) -> None:
         '''
@@ -821,6 +890,23 @@ class StaticData(Payload):
                 '''
         self.eta_day = self.binary_item(278, 5)
 
+        # cant return > 31 in 5 bits soi no need to check for this
+        # check if self.eta_month = 2 and if self.eta_day > 29
+        # and that for 30 day months day < 31
+
+
+        if self.eta_month == 2 and self.eta_day > 29:
+            logging.error("In Static.get_eta_day february day set > 29")
+            self.valid_item = False
+            raise ValueError
+
+        if self.eta_month in [4,6, 9, 11] and self.eta_day > 30:
+            logging.error("In Static.get_eta_day 30 day month day set > 30")
+            self.valid_item = False
+            self.eta_day = 0
+            raise ValueError
+
+
     def get_eta_hour(self) -> None:
         '''
                 In practice, the information in these fields (especially ETA and destination) is not reliable,
@@ -829,7 +915,18 @@ class StaticData(Payload):
                 :return:
                     sets StaticData.eta_hour
                 '''
-        self.eta_hour = self.binary_item(283, 5)
+        try:
+            self.eta_hour = self.binary_item(283, 5)
+        except RuntimeError:
+            logging.error("In Static.get_eta_hour got run time error")
+            self.eta_hour = 24
+
+        # 5 bits can get values above 24 will be flagged and reset to 24 the default
+
+        if not( 0 <= self.eta_hour <= 24):
+            self.eta_hour = 24
+            logging.error("In Static.get_eta_hour value outside range 0-24")
+            raise ValueError
 
     def get_eta_minute(self) -> None:
         '''
@@ -840,23 +937,43 @@ class StaticData(Payload):
                 :return:
                     sets StaticData.eta_minute
                 '''
-        self.eta_minute = self.binary_item(288, 6)
+        try:
+            self.eta_minute = self.binary_item(288, 6)
+        except RuntimeError:
+            logging.error("In Static.get_eta_minute got run time error")
+            self.eta_hour = 60
+
+
+        # 5 bits can get values above 24 will be flagged and reset to 24 the default
+
+        if not (0 <= self.eta_minute <= 60):
+            self.eta_hour = 60
+            logging.error("In Static.get_eta_minute value outside range 0-60")
+            raise ValueError
 
     def get_draught(self) -> None:
         '''
+        draught information should be rounded up to nearest decimeter
         Meters/10
         :return:
         '''
 
-        self.draught = round(float(self.binary_item(294,8))/10.0, 1)
+        try:
+            self.draught = round(float(self.binary_item(294,8))/10.0, 1)
+        except RuntimeError:
+            logging.error("In Static.draught Runtime error")
+            self.draught = 0.0
 
     def get_destination(self) -> None:
         '''
         In practice, the information in these fields (especially ETA and destination) is not reliable,
         as it has to be hand-updated by humans rather than gathered automatically from sensors.
 
+        For the destination, UN/LOCODE and ERI terminal codes should be used
+
         As noted this field may be truncated due to incorrect payload bit counts being given.
         Use  self.maxpayloadlen to avoid bit overrun
+
         :return:
             sets StaticData.eta_minute
         '''
