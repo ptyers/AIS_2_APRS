@@ -1082,13 +1082,112 @@ class Binary_broadcast_message(Payload):
 
 
 class SAR_aircraft_position_report(Payload):
-    # to be implemented
+    '''
+    Type 9: Standard SAR Aircraft Position Report
+    Tracking information for search-and-rescue aircraft. Total number of bits is 168.
+
+    Altitude is in meters.
+    The special value 4095 indicates altitude is not available; 4094 indicates 4094 meters or higher.
+
+    Speed over ground is in knots, not deciknots as in the common navigation block; planes go faster.
+    The special value 1023 indicates speed not available, 1022 indicates 1022 knots or higher.
+
+    Position Accuracy, Longitude, Latitude, and Course over Ground are encoded identically
+        as in the common navigation block and are even at the same bit offsets.
+    Time stamp has the same special values as in the common navigation block, but is at a different offset.
+
+    '''
+
+    altitude: int
+    speed_over_ground: int
+    course_over_ground: float
+    time_stamp: int
+    dte: bool
+    assigned: bool
+
 
     def __init__(self, p_payload):
-        super().__init__(p_payload)
+            super().__init__(p_payload)
 
-        pass
+            self.get_altitude()
+            self.get_speed_over_ground()
+            self.get_course_over_ground()
+            self.get_time_stamp()
+            self.get_dte()
+            self.get_assigned()
 
+    def __repr__(self):
+
+            return (f'{self.__class__.__name__}\n'
+                    f'Message Type:          {self.message_type}\n'
+                    f'MMSI:                  {self.mmsi}\n'
+                    f'Altitude:              {self.altitude}\n'
+                    f'Speed over Ground:     {self.speed_over_ground}'
+                    f'Position Accuracy:     {self.fix_quality}\n'
+                    f'Longitudee:            {self.longitude}\n'
+                    f'Latitude :             {self.latitude}\n'
+                    f'Course over Ground:    {self.course_over_ground}\n'
+                    f'TimeStamp:             {self.time_stamp}\n'
+                    f'DTE Status:          {self.dte}\n'
+                    f'RAIM flag:             {self.raim_flag}\n'
+                    )
+
+    def get_altitude(self):
+            '''
+            Altitude is in meters.
+            The special value 4095 indicates altitude is not available; 4094 indicates 4094 meters or higher.
+            :return:
+                sets mysar.altitude
+
+            '''
+            # no real checking possible , range 0-4095
+
+            self.altitude = self.binary_item(38, 12)
+
+
+
+
+            pass
+
+    def get_speed_over_ground(self):
+        '''
+        Speed over ground is in knots, not deciknots as in the common navigation block; planes go faster.
+        The special value 1023 indicates speed not available, 1022 indicates 1022 knots or higher.
+        10 bits range 0-1023
+
+        :return:
+            sets mysar.speed_over_ground
+        '''
+
+        self.speed_over_ground = self.binary_item(50, 10)
+
+    def get_course_over_ground(self):
+
+        '''
+        stored as inter value scaled up by 10
+        Course over ground will be 3600 (0xE10) if that data is not available.
+
+        :return:
+            sets mycnb.course over_ground (float)
+        '''
+        # course over ground - scaled by 10
+        intval = self.binary_item(116, 12)
+        if 0 <= intval <= 3600:
+            self.course_over_ground = round(float(intval) / 10.0, 1)
+        else:
+            self.valid_item = False
+            errstr: str = 'In SAR.get_COG - value outside range 0-360 ' + '{:d}'.format(intval)
+            logging.error(errstr)
+            raise ValueError
+
+    def get_time_stamp(self):
+            self.time_stamp = self.binary_item(128, 6)
+
+    def get_dte(self):
+            self.dte = self.get_flag_bit(142)
+
+    def get_assigned(self):
+           self.assigned = self.get_flag_bit(146)
 
 class UTC_date_enquiry(Payload):
     # to be implemented

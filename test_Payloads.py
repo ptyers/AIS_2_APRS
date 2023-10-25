@@ -18,10 +18,6 @@ class TestBinary_broadcast_message(TestCase):
     pass
 
 
-class TestSAR_aircraft_position_report(TestCase):
-    pass
-
-
 class TestUTC_date_enquiry(TestCase):
     pass
 
@@ -1325,7 +1321,7 @@ class TestStaticData(TestCase):
                 self.assertEqual(511, mystatic.dim_to_stbd,
                                  "In Static.get_dim_to_stbd value returned incorrect")
         except RuntimeError:
-                logging.error("Runtime error in Static.dim_to_stbd")
+            logging.error("Runtime error in Static.dim_to_stbd")
 
     def test_get_eta_month(self):
         #
@@ -1350,15 +1346,11 @@ class TestStaticData(TestCase):
                 self.assertEqual(0, mystatic.eta_month,
                                  "In Static.get_eta_month incorrect value returned")
 
-
-
-
-
     def test_get_eta_day(self):
         # bits 278-282, 5 bits range 0-31, 0 == default == N/A
         diction, mystream, mystatic = self.initialise()
         print("Testing Static.get_eta_day")
-        for i in [0, 1, 2, 5, 11, 12, 13, 28, 29, 30,31]:
+        for i in [0, 1, 2, 5, 11, 12, 13, 28, 29, 30, 31]:
             testbits = '{:05b}'.format(i)
             mystatic.payload = self.make_stream(278, testbits)
 
@@ -1368,14 +1360,13 @@ class TestStaticData(TestCase):
                 logging.error("Runtime error in Static.get_eta_day")
 
             self.assertEqual(i, mystatic.eta_day,
-                                 "In Static.get_eta_day incorrect value returned")
-
+                             "In Static.get_eta_day incorrect value returned")
 
     def test_get_eta_hour(self):
         # bits 283-287, 5 bits range 0-31, set to 24 (N/A) if outside range 0-23
         diction, mystream, mystatic = self.initialise()
         print("Testing Static.get_eta_hour")
-        for i in [0, 1, 2, 5, 11, 12, 13, 23, 24,28]:
+        for i in [0, 1, 2, 5, 11, 12, 13, 23, 24, 28]:
             testbits = '{:05b}'.format(i)
             mystatic.payload = self.make_stream(283, testbits)
 
@@ -1388,11 +1379,10 @@ class TestStaticData(TestCase):
 
             if i <= 23:
                 self.assertEqual(i, mystatic.eta_hour,
-                             "In Static.get_eta_hour incorrect value returned")
+                                 "In Static.get_eta_hour incorrect value returned")
             else:
                 self.assertEqual(24, mystatic.eta_hour,
                                  "In Static.get_eta_hour incorrect value returned")
-
 
     def test_get_eta_minute(self):
         diction, mystream, mystatic = self.initialise()
@@ -1410,12 +1400,11 @@ class TestStaticData(TestCase):
                 mystatic.eta_minute = 60
 
             if mystatic.eta_minute <= 59:
-                self.assertEqual(i,  mystatic.eta_minute,
+                self.assertEqual(i, mystatic.eta_minute,
                                  "In Static.get_eta_minute incorrect value returned")
             else:
                 self.assertEqual(60, mystatic.eta_minute,
                                  "In Static.get_eta_minute incorrect value returned")
-
 
     def test_get_draught(self):
         # bits 294-301, 8 bits range 0-255 theerefore draught 0-25.5
@@ -1431,8 +1420,9 @@ class TestStaticData(TestCase):
             except RuntimeError:
                 logging.error("Runtime error in Static.get_draught")
 
-            self.assertEqual(round(float(i)/10.0, 1), mystatic.draught,
-                                 "In Static.get_draughte incorrect value returned")
+            self.assertEqual(round(float(i) / 10.0, 1), mystatic.draught,
+                             "In Static.get_draughte incorrect value returned")
+
     def test_get_destination(self):
         diction, mystream, mystatic = self.initialise()
         print("Testing Static.get_destination")
@@ -1464,6 +1454,111 @@ class TestStaticData(TestCase):
         # should have a valid data set as a result of the initiaslise()
 
 
+class TestSAR_aircraft_position_report(TestCase):
 
-if __name__ == "main":
-    pass
+    def initialise(self):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        psuedo_AIS = '!AIVDM,1,1,,A,404kS@P000Htt<tSF0l4Q@100pAg,0*05'
+        mystream = Payloads.AISStream(psuedo_AIS)
+        mysar = Payloads.SAR_aircraft_position_report(mystream.binary_payload)
+        return diction, mystream, mysar
+
+    def test_get_altitude(self):
+        diction, mystream, mysar = self.initialise()
+
+        for i in [0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 4094, 4095]:
+            testbits = '{:012b}'.format(i)
+            mysar.payload = diction.make_stream(38, testbits)
+            mysar.get_altitude()
+            self.assertEqual(i, mysar.altitude,
+                             "in SAR.get_altitude value returned {} "
+                             "does match value expected {}".format(mysar.altitude, i))
+
+    def test_get_speed_over_ground(self):
+        diction, mystream, mysar = self.initialise()
+
+        for i in [0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 1022, 1023]:
+            testbits = '{:010b}'.format(i)
+            mysar.payload = diction.make_stream(50, testbits)
+            mysar.get_speed_over_ground()
+            self.assertEqual(i, mysar.speed_over_ground,
+                             "In SAR.get_SOG value returned {} "
+                             "does match value expected {}".format(mysar.speed_over_ground, i))
+
+    def test_get_cog(self):
+        diction, mystream, mycnb = self.initialise()
+        print("Testing get_COG")
+
+        # initially check for values 0, 0.5 1,359, 360 and value outside valid range
+        for i in [0, 0.5, 1, 90, 359, 360, 361]:
+            i = i * 10
+        testbits = '{:012b}'.format(i)
+        mycnb.payload = diction.make_stream(116, testbits)
+        try:
+            mycnb.get_course_over_ground()
+            self.assertEqual(float(i) / 10.0, mycnb.course_over_ground,
+                             "In get_COG value returned does not offered value " + '{:d}'.format(i))
+        except ValueError:
+            self.assertFalse(mycnb.valid_item, "In get_COG module did not detect invalid parameter")
+
+            # and for completeness a random set of values
+        for _ in range(100):
+            i = random.randint(0, 3600)
+            testbits = '{:012b}'.format(i)
+            mycnb.payload = diction.make_stream(116, testbits)
+            try:
+                mycnb.get_course_over_ground()
+                self.assertEqual(float(i) / 10.0, mycnb.course_over_ground,
+                                 "In get_COG value returned does not offered value " + '{:d}'.format(i))
+            except ValueError:
+                self.assertFalse(mycnb.valid_item, "In SAR.get_COG module did not detect invalid parameter")
+
+    def test_get_time_stamp(self):
+        diction, mystream, mysar = self.initialise()
+
+        for i in [0, 1, 2, 5, 10, 20, 50, 59, 60, 63]:
+            testbits = '{:06b}'.format(i)
+            mysar.payload = diction.make_stream(128, testbits)
+            mysar.get_time_stamp()
+            self.assertEqual(i, mysar.time_stamp,
+                             "In SAR.get_timestamp value returned {} "
+                             "does match value expected {}".format(mysar.time_stamp, i))
+
+    def test_get_dte(self):
+        diction, mystream, mysar = self.initialise()
+
+        for i in [0, 1]:
+            testbits = '{:01b}'.format(i)
+            mysar.payload = diction.make_stream(142, testbits)
+            mysar.get_dte()
+            if i == 1:
+                self.assertTrue(mysar.dte,
+                                "In SAR.get_dte value returned {} "
+                                "does match value expected True".format(mysar.dte))
+            else:
+                self.assertFalse(mysar.dte,
+                                 "In SAR.get_dte value returned {} "
+                                 "does match value expected True".format(mysar.dte))
+
+    def test_get_assigned(self):
+        diction, mystream, mysar = self.initialise()
+
+        for i in [0, 1]:
+            testbits = '{:01b}'.format(i)
+            mysar.payload = diction.make_stream(146, testbits)
+            mysar.get_assigned()
+            if i == 1:
+                self.assertTrue(mysar.assigned,
+                                "In SAR.get_dte value returned {} "
+                                "does match value expected True".format(mysar.assigned))
+            else:
+                self.assertFalse(mysar.assigned,
+                                 "In SAR.get_dte value returned {} "
+                                 "does match value expected True".format(mysar.assigned))
+    def test_repr(self):
+        diction, mystream, mysar = self.initialise()
+
+        print(mysar)
