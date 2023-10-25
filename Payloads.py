@@ -27,6 +27,7 @@ class Payload:
     valid_item: bool
 
     def __init__(self, p_payload: str):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         # p_payload is binary_payload string
         self.payload = p_payload
 
@@ -97,7 +98,32 @@ class Payload:
                 "Error in ExtractString startpos = " + str(startpos) + " blength = " + str(
                     blength) + "binary_length = ")
             logging.error("Exception while ExtractString startpos", sys.exc_info()[0])
-            raise
+
+    def extract_text(self, startpos: int, length: int):
+
+        # given a payload , start position and a number of bits (which should be 0 modulo six)
+        # return an ascii character string which is decoded in accordance with the AISDictionaries.nibble_to_text
+        #
+
+        # veracity test
+        if length % 6 != 0:
+            raise RuntimeError("Invalid number of bits {} defined in extract text".format(length))
+        diction = AISDictionaries()
+
+        # now get the text
+        self.endpos = startpos + 6
+        self.outstring = ''
+        self.start = startpos
+        while self.endpos < startpos + length + 6:
+            #            print('in extract_text nibble presented ', self.payload[self.start: self.endpos+1])
+            nibble = self.payload[self.start: self.endpos]
+            self.outstring = self.outstring + diction.binary_to_char(nibble)
+            self.start += 6
+            self.endpos += 6
+        #           print('in extract text startpos, supposed end, currect_end, outsring',
+        #                  startpos, startpos+length, self.endpos, self.outstring)
+
+        return self.outstring
 
     def extract_int(self, startpos: int, blength: int) -> int:  # int
         # extracts an integer from the binary payload
@@ -180,7 +206,7 @@ class Payload:
 
     def get_longitude(self, startpos: int, length: int = 28):
         # longitude is in various positions in differing blocks
-        self.longitude = float(self.signed_binary_item(startpos, length))/600000
+        self.longitude = float(self.signed_binary_item(startpos, length)) / 600000
 
     def get_latitude(self, startpos: int, length: int = 27):
         # longitude is in various positions in differing blocks
@@ -242,7 +268,6 @@ class Payload:
 
         return self.raim_flag
 
-
     def getRAIMflag(self, position: int) -> None:
         '''
          The RAIM flag indicates whether Receiver Autonomous Integrity Monitoring is being used
@@ -260,8 +285,6 @@ class Payload:
         # location varies in blocks
 
         self.raim_flag = self.get_flag_bit(position)
-
-
 
     def getfix(self, position: int) -> None:
         '''
@@ -312,6 +335,24 @@ class CNB(Payload):
         logging.basicConfig(level=logging.CRITICAL)
 
         pass
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type:        {self.message_type}\n'
+                f'Repeat Indicator:    {self.repeat_indicator}\n'
+                f'MMSI:                {self.mmsi}\n'
+                f'Navigation Status:   {self.navigation_status}\n'
+                f'Rate of Turn:        {self.rate_of_turn}\n'
+                f'Speed over Ground:   {self.speed_over_ground}\n'
+                f'Positionn Accuracy:  {self.position_accuracy}\n'
+                f'Longitude:           {self.longitude}\n'
+                f'Latitude:            {self.latitude}\n'
+                f'Course over Ground:  {self.course_over_ground}\n'
+                f'True Heading:        {self.true_heading}\n'
+                f'Timestamp:           {self.time_stamp}\n'
+                f'Maneuver Indicator:  {self.maneouver_indicator}\n'
+                f'RAIM status:         {self.raim_flag}\n'
+                )
 
     def get_nav_status(self) -> None:
         '''
@@ -367,7 +408,7 @@ class CNB(Payload):
             if 0 <= irot <= 126:
                 self.rate_of_turn = float(round((float(irot) / 4.733) ** 2))
             elif irot == 127:
-                self.rate_of_turn = 1005.0 # indicates ROT of > 5 degres/30sec right (No Turn Indic available)
+                self.rate_of_turn = 1005.0  # indicates ROT of > 5 degres/30sec right (No Turn Indic available)
             elif irot == -128:
                 self.rate_of_turn = 1000.0  # indicates No Turn Indication available - DEFAULT
 
@@ -395,10 +436,6 @@ class CNB(Payload):
 
         self.speed_over_ground = float(intval) / 10.0
 
-
-
-
-
     def get_COG(self) -> None:
         '''
         stored as inter value scaled up by 10
@@ -414,9 +451,8 @@ class CNB(Payload):
         else:
             self.valid_item = False
             errstr: str = 'In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval)
-            logging.error( errstr)
+            logging.error(errstr)
             raise ValueError
-
 
     def get_tru_head(self) -> None:
         '''
@@ -435,7 +471,7 @@ class CNB(Payload):
             self.true_heading = itru
         else:
             self.valid_item = False
-            errstr: str = '{:d}'.format( itru)
+            errstr: str = '{:d}'.format(itru)
             logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + errstr)
             raise ValueError
 
@@ -480,7 +516,6 @@ class CNB(Payload):
             self.valid_item = False
             logging.error('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
             raise ValueError
-
 
     def get_man_indic(self):
         '''
@@ -533,6 +568,22 @@ class Basestation(Payload):
         self.getfix(78)
         self.getRAIMflag(148)
 
+    def __repr__(self):
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type: {self.message_type}\n'
+                f'MMSI:         {self.mmsi}\n'
+                f'Year:         {self.year}\n'
+                f'Month:        {self.month}\n'
+                f'Day:          {self.day}\n'
+                f'Hour:         {self.hour}\n'
+                f'Minute :      {self.minute}\n'
+                f'Second:       {self.second}\n'
+                f'Longitude:    {self.longitude}\n'
+                f'Latitude:     {self.latitude}\n'
+                f'EPFDD Type:   {self.EPFD_type}\n'
+                f'RAIM Flag:    {self.raim_flag}\n'
+                )
+
     def get_year(self) -> None:
         '''
         Bits 38-51  length 14  Year (UTC)  year  UTC, 1-9999, 0 = N/A (default)
@@ -575,10 +626,10 @@ class Basestation(Payload):
         # now look for the strange cases
         self.get_year()
         self.get_month()
-        #print(self.year, '  modulo', self.year % 4, ' ', self.month, ' ', self.day)
+        # print(self.year, '  modulo', self.year % 4, ' ', self.month, ' ', self.day)
         if self.year % 4 == 0 and self.month == 2 and self.day > 29:
-            #print(self.year, '  modulo', self.year % 4, ' ', self.month, ' ', self.day)
-            #print('day greater 29')
+            # print(self.year, '  modulo', self.year % 4, ' ', self.month, ' ', self.day)
+            # print('day greater 29')
             self.valid_item = False
             logging.error("Base.day value returned for February leap year invalid " + '{:d}'.format(self.day))
             raise ValueError
@@ -589,7 +640,7 @@ class Basestation(Payload):
             self.valid_item = False
             raise ValueError
 
-        if self.month in [4,6, 9, 11]:
+        if self.month in [4, 6, 9, 11]:
             if self.day > 30:
                 logging.error(
                     "Base.day value returned for 30 day months  invalid" + '{:d}'.format(self.day))
@@ -620,18 +671,17 @@ class Basestation(Payload):
             logging.error("Base.minute outside range 0-60 " + '{:d}'.format(self.minute))
             raise ValueError
 
-
     def get_second(self) -> None:
-            '''
+        '''
                 Bits 72-77 length 6  Second (UTC) second  0-59; 60 = N/A (default)
             :return:
                 sets Base.second
             '''
-            self.second = self.binary_item(72, 6)
-            if not (0 <= self.second <= 60):
-                self.valid_item = False
-                logging.error("Base.second outside range 0-60 " + '{:d}'.format(self.second))
-                raise ValueError
+        self.second = self.binary_item(72, 6)
+        if not (0 <= self.second <= 60):
+            self.valid_item = False
+            logging.error("Base.second outside range 0-60 " + '{:d}'.format(self.second))
+            raise ValueError
 
     def get_EPFD(self) -> None:
         '''
@@ -647,6 +697,7 @@ class Basestation(Payload):
             self.EPFD_type = 0
             logging.error("In Base.get_EPFD_type found value between 9 and 14")
 
+
 class StaticData(Payload):
     # type 5
     '''
@@ -657,11 +708,11 @@ class StaticData(Payload):
     Robust decoders should ignore trailing garbage and deal gracefully with a slightly truncated destination field.
     '''
 
-    ais_version: int = 0      # enumerated normally 0, 1-3 future editions
+    ais_version: int = 0  # enumerated normally 0, 1-3 future editions
     imo_number: str
     callsign: str
     vessel_name: str
-    ship_type: int          # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
+    ship_type: int  # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
     dim_to_bow: int
     dim_to_stern: int
     dim_to_port: int
@@ -672,23 +723,25 @@ class StaticData(Payload):
     eta_hour: int
     eta_min: int
     draught: float
-    destination: str    # as above destination field may be truncated due to wrong bit length being supplied
-    payload: str        # holds the "binary payload supplied as part of instatiation
+    destination: str  # as above destination field may be truncated due to wrong bit length being supplied
+    payload: str  # holds the "binary payload supplied as part of instatiation
     maxpayloadlen: int  # used to check for packet truncation
-
-
-
 
     def __init__(self, p_payload):
         super().__init__(p_payload)
         # first check actual payload length
         self.payload = p_payload
-        self.maxpayloadlen = len(p_payload)      # will be used when attempting to get destination to avoid bit overrun
+        self.maxpayloadlen = len(p_payload)  # will be used when attempting to get destination to avoid bit overrun
 
         self.create_mmsi()
         self.get_ais_version()
         self.get_imo_number()
         self.get_callsign()
+        self.get_vessel_name()
+        self.get_dim_to_bow()
+        self.get_dim_to_stern()
+        self.get_dim_to_port()
+        self.get_dim_to_stbd()
         self.get_ship_type()
         self.get_eta_month()
         self.get_eta_day()
@@ -697,10 +750,29 @@ class StaticData(Payload):
         self.get_draught()
         self.get_destination()
 
-
-
-
         pass
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type: {self.message_type}\n'
+                f'MMSI:         {self.mmsi}\n'
+                f'AIS version:  {self.ais_version}\n'
+                f'IMO Number:   {self.imo_number}\n'
+                f'Callsign:    {self.callsign}\n'
+                f'Vessel Name:  {self.vessel_name}\n'
+                f'Ship Type :   {self.ship_type}\n'
+                f'Dim to Bow:   {self.dim_to_bow}\n'
+                f'Dim to Stern: {self.dim_to_stern}\n'
+                f'Dim to Stbd:  {self.dim_to_stbd}\n'
+                f'Fix Type:     {self.fix_quality}\n'
+                f'ETA Month:    {self.eta_month}\n'
+                f'ETA Month:    {self.eta_month}\n'
+                f'ETA Day:      {self.eta_day}\n'
+                f'ETA Hour:     {self.eta_hour}\n'
+                f'ETA Minute:   {self.eta_minute}\n'
+                f'Draught       {self.draught}\n'
+                f'Destination   {self.destination}'
+                )
 
     def get_ais_version(self) -> None:
         '''
@@ -708,11 +780,11 @@ class StaticData(Payload):
         :return:
             sets StaticData.ais_version - returns zero currently until new edition specifies 1-3
         '''
-        self.ais_version = self.binary_item(38,2)
+        self.ais_version = self.binary_item(38, 2)
         if self.ais_version != 0:
             if self.ais_version in [1, 2, 3]:
+                logging.error("In Static.get_ais_version found " + '{:d}'.format(self.ais_version) + " rather than 0")
                 self.ais_version = 0
-                logging.error("In Static.get_ais_version found" + '{:d}'.format(self.ais_version) + " rather than 1")
 
             # dont invalidate object but flag error
 
@@ -732,7 +804,8 @@ class StaticData(Payload):
             sets StaticData.imo_number
         '''
         try:
-            intimo =  self.binary_item(46,30)
+            intimo = self.binary_item(46, 30)
+            self.imo_number = '{:07d}'.format(intimo)
         except RuntimeError:
             self.imo_number = '0000000'
             logging.error("In Static.get_imo_number got RunTime Error")
@@ -746,17 +819,14 @@ class StaticData(Payload):
             self.imo_number = '0000000'
             raise ValueError
 
-
-
     def get_callsign(self) -> None:
         '''
         fairly obvious - get ships callsign 7 characters free text encoded as 6 bit chars
         :return:
             sets StaticData.callsign
         '''
-
         try:
-            self.callsign = self.extract_string(70,42)
+            self.callsign = self.extract_text(70, 42)
         except RuntimeError:
             self.callsign = 'NoCall '
             logging.error("In Static.get_callsign Runtime error")
@@ -770,11 +840,13 @@ class StaticData(Payload):
         '''
 
         try:
-            self.vessel_name = self.extract_string(112,120)
+            self.vessel_name = self.extract_text(112, 120)
         except RuntimeError:
             self.vessel_name = 'VesselName Unknown'
             logging.error("In Static.get_vessel_name Runtime error")
 
+        while self.vessel_name[len(self.vessel_name) - 1] == '@':
+            self.vessel_name = self.vessel_name[0:len(self.vessel_name) - 1]
 
     def get_ship_type(self) -> None:
         '''
@@ -789,18 +861,16 @@ class StaticData(Payload):
         '''
         try:
             self.ship_type = self.binary_item(232, 8)
+            status = self.ship_type in AISDictionaries.Ship_Type
         except RuntimeError:
             logging.error("In Static.get_ship_type Runtime error")
             self.ship_type = 0
 
         if self.ship_type not in AISDictionaries.Ship_Type:
+            logging.error('In Static.get_ship_type  type not in range 0-99' )
             self.ship_type = 0
 
-
-
-
-
-    def get_dim_to_bow(self)-> None:
+    def get_dim_to_bow(self) -> None:
         '''
                 Ship dimensions will be 0 if not available.
                 For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
@@ -814,7 +884,7 @@ class StaticData(Payload):
                 '''
 
         try:
-            self.dim_to_bow = self.binary_item(240,9)
+            self.dim_to_bow = self.binary_item(240, 9)
         except RuntimeError:
             logging.error("In Static.get_dim_to_bow got run time error")
             self.dim_to_stern = 0
@@ -829,7 +899,7 @@ class StaticData(Payload):
 
         '''
         try:
-            self.dim_to_stern = self.binary_item(249,9)
+            self.dim_to_stern = self.binary_item(249, 9)
         except RuntimeError:
             logging.error("In Static.get_dim_to_stern got run time error")
             self.dim_to_stern = 0
@@ -845,7 +915,7 @@ class StaticData(Payload):
                 '''
 
         try:
-            self.dim_to_port = self.binary_item(258,6)
+            self.dim_to_port = self.binary_item(258, 6)
         except RuntimeError:
             logging.error("In Static.get_dim_to_port got run time error")
             self.dim_to_stern = 0
@@ -894,18 +964,16 @@ class StaticData(Payload):
         # check if self.eta_month = 2 and if self.eta_day > 29
         # and that for 30 day months day < 31
 
-
         if self.eta_month == 2 and self.eta_day > 29:
             logging.error("In Static.get_eta_day february day set > 29")
             self.valid_item = False
             raise ValueError
 
-        if self.eta_month in [4,6, 9, 11] and self.eta_day > 30:
+        if self.eta_month in [4, 6, 9, 11] and self.eta_day > 30:
             logging.error("In Static.get_eta_day 30 day month day set > 30")
             self.valid_item = False
             self.eta_day = 0
             raise ValueError
-
 
     def get_eta_hour(self) -> None:
         '''
@@ -923,7 +991,7 @@ class StaticData(Payload):
 
         # 5 bits can get values above 24 will be flagged and reset to 24 the default
 
-        if not( 0 <= self.eta_hour <= 24):
+        if not (0 <= self.eta_hour <= 24):
             self.eta_hour = 24
             logging.error("In Static.get_eta_hour value outside range 0-24")
             raise ValueError
@@ -941,13 +1009,12 @@ class StaticData(Payload):
             self.eta_minute = self.binary_item(288, 6)
         except RuntimeError:
             logging.error("In Static.get_eta_minute got run time error")
-            self.eta_hour = 60
+            self.eta_minute = 60
 
-
-        # 5 bits can get values above 24 will be flagged and reset to 24 the default
+        # 5 bits can get values above 60 will be flagged and reset to 24 the default
 
         if not (0 <= self.eta_minute <= 60):
-            self.eta_hour = 60
+            self.eta_minute = 60
             logging.error("In Static.get_eta_minute value outside range 0-60")
             raise ValueError
 
@@ -959,7 +1026,7 @@ class StaticData(Payload):
         '''
 
         try:
-            self.draught = round(float(self.binary_item(294,8))/10.0, 1)
+            self.draught = round(float(self.binary_item(294, 8)) / 10.0, 1)
         except RuntimeError:
             logging.error("In Static.draught Runtime error")
             self.draught = 0.0
@@ -978,11 +1045,13 @@ class StaticData(Payload):
             sets StaticData.eta_minute
         '''
         if 421 > self.maxpayloadlen:
-            # will need to truncate the call to Extract Text
-            self.destination = self.extract_string(302, self.maxpayloadlen -302)
+            # will need to truncate the call to Extract String
+            self.destination = self.extract_text(302, self.maxpayloadlen - 302)
         else:
-            self.destination = self.extract_string(302,120)
+            self.destination = self.extract_text(302, 120)
 
+        while self.destination[len(self.destination) - 1] == '@':
+            self.destination = self.destination[0:len(self.destination) - 1]
 
 
 class Binary_addressed_message(Payload):

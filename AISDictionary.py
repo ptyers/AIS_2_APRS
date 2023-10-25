@@ -13,7 +13,7 @@ class AISDictionaries:
     '''
 
     payload_armour = {"0": "000000", '1': '000001', '2': '000010', '3': '000011',
-                      '4': '000100', '5': '000101', '6': '000110', '7': '000111',
+                      '4': '000100', '5': '000101', '6': '000110',  '7':'000111',
                       '8': '001000', '9': '001001', ':': '001010', ';': '001011',
                       '<': '001100', '=': '001101', '>': '001110', '?': '001111',
                       '@': '010000', 'A': '010001', 'B': '010010', 'C': '010011',
@@ -28,6 +28,26 @@ class AISDictionaries:
                       'l': '110100', 'm': '110101', 'n': '110110', 'o': '110111',
                       'p': '111000', 'q': '111001', 'r': '111010', 's': '111011',
                       't': '111100', 'u': '111101', 'v': '111110', 'w': '111111'
+                      }
+
+    # REVERSE LOOKUP TABLE TO CONVERT NIBBLES BACK TO ASCII TEXT
+
+    nibble_to_text = {"000000": '@', '000001': 'A', '000010': 'B', '000011': 'C',
+                      '000100': 'D', '000101': 'E', '000110': 'F', '000111': 'G',
+                      '001000': 'H', '001001': 'I', '001010': 'J', '001011': 'K',
+                      '001100': 'L', '001101': 'M', '001110': 'N', '001111': 'O',
+                      '010000': 'P', '010001': 'Q', '010010': 'R', '010011': 'S',
+                      '010100': 'T', '010101': 'U', '010110': 'V', '010111': 'W',
+                      '011000': 'X', '011001': 'Y', '011010': 'Z', '011011': '[',
+                      '011100': '\\', '011101': ']', '011110': '^', '011111': '_',
+                      '100000': ' ', '100001': '!', '100010': '\"', '100011': '#',
+                      '100100': '$', '100101': '%', '100110': '&', '100111': '\'',
+                      '101000': '(', '101001': ')', '101010': '*', '101011': '+',
+                      '101100': ',', '101101': '-', '101110': '.', '101111': '/',
+                      '110000': '0', '110001': '1', '110010': '2', '110011': '3',
+                      '110100': '4', '110101': '5', '110110': '6', '110111': '7',
+                      '111000': '8', '111001': '9', '111010': ':', '111011': ';',
+                      '111100': '<', '111101': '=', '111110': '>', '111111': '?'
                       }
 
     ch_numb_dict = {'1': 'A', '2': 'B', 'A': 'A', 'B': 'B'}
@@ -66,7 +86,7 @@ class AISDictionaries:
 
     Ship_Type: dict = {
         0: ' Not available(default)',
-        2: ' Reservedfor future use',
+        1: ' Reservedfor future use',
         2: ' Reservedfor future use',
         3: ' Reservedfor future use',
         4: ' Reservedfor future use',
@@ -169,6 +189,24 @@ class AISDictionaries:
 
     def __init__(self):
         pass
+    def make_stream(self, preamlen: int, testbits: str):
+        # creates a fake binary payload to allow testing
+        # preamble is number number of bits needed to fill up to beginning of testbits
+        # testbits is the binary stream representing the area of thge domain under test
+        # a couple of 'constants'
+        fakehead: str = '00010000'
+        faketail: str = '00000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+        # prefill the preamble with message type 4
+        preamble: str = fakehead
+        # fillcount is number of required prefill with allowance for the 8 bit header
+        fillcount = preamlen - 8
+
+        while fillcount > 0:
+            preamble = preamble + '1'
+            fillcount -= 1
+
+        # print('in make_stream nr bits needed, nr bits offered', preamlen, len(preamble))
+        return preamble + testbits + faketail
 
     def makebinpayload(self, binpay: str, payload_char: str) -> str:
         # print(self.payload_armour[payload_char])
@@ -176,4 +214,39 @@ class AISDictionaries:
         return binpay + self.payload_armour[payload_char]
 
     def get_payload_armour(self, char: str) -> str:
+        # takes in character from encoded AIS stream and returns six bit binary nibble it should produce
         return self.payload_armour[char]
+
+    def char_to_nibble(self, character: str) -> str:
+        # takes in single character , return binary nibble representing the character
+        # as per the Six Bit ASCII table
+        # used in producing test data for the various AIS objects
+        #print('in char to nibble character = ', character)
+        for mykey, dictchar in self.nibble_to_text.items():
+
+            if character == dictchar:
+                return mykey
+
+    def char_to_binary(self, character: str) -> str:
+        # takes in character string , return binary string representing the character string as 6 bit nibbles
+        # as per the Six Bit ASCII table
+        # used in producing test data for the various AIS objects
+        returnstring = ''
+        #print('in char to binary input =', character)
+        for sglchar in character:
+            returnstring = returnstring + self.char_to_nibble(sglchar)
+
+        return returnstring
+
+
+    def binary_to_char(self, inputstring) -> str:
+        # takes in six bit binary string returns character from dictionary nibble_to_text
+        # used in producing text strings from the binary_payloads
+
+        return self.nibble_to_text[inputstring]
+
+
+
+
+
+
