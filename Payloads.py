@@ -299,8 +299,110 @@ class Payload:
         # location varies in blocks
         self.fix_quality = self.get_flag_bit(position)
 
+class Basic_Position(Payload):
 
-class CNB(Payload):
+    # basse class from mwhich CNB, Class B Aid to Nav objects will inherit
+
+    speed_over_ground: float
+    course_over_ground: float
+    true_heading: int
+    time_stamp: int
+
+
+    def  __init__(self, p_payload):
+        super().__init__(p_payload)
+
+
+
+
+
+    def getSOG(self, position: int, length: int) -> None:
+        '''
+
+        Speed over ground is in 0.1-knot resolution from 0 to 102 knots.
+        Value 1023 indicates speed is not available,
+         value 1022 indicates 102.2 knots or higher.
+        :return:
+            set mycnb.speed_over_ground (float)
+        '''
+
+        intval = self.binary_item(position, length)
+
+        self.speed_over_ground = float(intval) / 10.0
+
+
+    def get_COG(self, position: int, length: int) -> None:
+        '''
+        stored as inter value scaled up by 10
+        Course over ground will be 3600 (0xE10) if that data is not available.
+
+        :return:
+            sets mycnb.course over_ground (float)
+        '''
+        # course over ground - scaled by 10
+        intval = self.binary_item(116, 12)
+        if 0 <= intval <= 3600:
+            self.course_over_ground = round(float(intval) / 10.0, 1)
+        else:
+            self.valid_item = False
+            errstr: str = 'In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval)
+            logging.error(errstr)
+            raise ValueError
+
+
+    def get_tru_head(self, position: int, length: int) -> None:
+        '''
+            true heading is integer value
+            0-359 degrees
+            511 not avaiulable
+
+            routine checks validity sets to False if outside 0-259 and/or 511
+
+        :return:
+            sets mycnb.true_heading (integer)
+        '''
+
+        itru = self.binary_item(128, 9)
+        if 0 <= itru <= 259 or itru == 511:
+            self.true_heading = itru
+        else:
+            self.valid_item = False
+            errstr: str = '{:d}'.format(itru)
+            logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + errstr)
+            raise ValueError
+
+
+    def get_timestamp(self, position: int, length: int) -> None:
+        '''
+        Seconds in UTC timestamp should be 0-59, except for these special values:
+
+        60 if time stamp is not available (default)
+
+        61 if positioning system is in manual input mode
+
+        62 if Electronic Position Fixing System operates in estimated (dead reckoning) mode,
+
+        63 if the positioning system is inoperative.
+
+        bits 137-142 in binary_payload
+
+        :return:
+            sets mycnb.time_stamp (integer)
+        '''
+        # timestamp = second of UTC timestamp. 6 bits at 137
+        intval = self.binary_item(137, 6)
+
+        # validate
+        if 0 <= intval <= 63:
+            self.time_stamp = self.binary_item(137, 6)
+        else:
+            self.valid_item = False
+            logging.error('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
+            raise ValueError
+
+
+
+class CNB(Basic_Position):
     # additional fields
 
     navigation_status: int
@@ -311,24 +413,20 @@ class CNB(Payload):
     # -1005.0 turning leftat more than 5 degrees/ 30 seconds
     # otherwise range is -708.0 t0 708.0 degrees per minute - negetive left, positivew right
     raw_rate_of_turn: int
-    speed_over_ground: float
     position_accuracy: bool
-    course_over_ground: float
-    true_heading: int
-    time_stamp: int
     maneouver_indicator: int
 
     def __init__(self, p_payload: str):
         super().__init__(p_payload)
         self.get_nav_status()
         self.get_ROT()
-        self.getSOG()
+        self.getCNB_SOG()
         self.get_pos_accuracy()
         self.get_longitude(61, 28)
         self.get_latitude(89, 27)
-        self.get_COG()
-        self.get_tru_head()
-        self.get_timestamp()
+        self.getCNB_COG()
+        self.getCNB_tru_head()
+        self.getCNB_timestamp()
         self.get_man_indic()
         self.getfix(60)
 
@@ -344,7 +442,7 @@ class CNB(Payload):
                 f'Navigation Status:   {self.navigation_status}\n'
                 f'Rate of Turn:        {self.rate_of_turn}\n'
                 f'Speed over Ground:   {self.speed_over_ground}\n'
-                f'Positionn Accuracy:  {self.position_accuracy}\n'
+                f'Position\ Accuracy:  {self.position_accuracy}\n'
                 f'Longitude:           {self.longitude}\n'
                 f'Latitude:            {self.latitude}\n'
                 f'Course over Ground:  {self.course_over_ground}\n'
@@ -422,58 +520,21 @@ class CNB(Payload):
                     self.rate_of_turn = -1005.0  # indicates ROT of > 5 degres/30sec left (No Turn Indic available)
             self.raw_rate_of_turn = irot
 
-    def getSOG(self) -> None:
-        '''
 
-        Speed over ground is in 0.1-knot resolution from 0 to 102 knots.
-        Value 1023 indicates speed is not available,
-         value 1022 indicates 102.2 knots or higher.
-        :return:
-            set mycnb.speed_over_ground (float)
-        '''
 
-        intval = self.binary_item(50, 10)
+    def getCNB_SOG(self):
+        self.getSOG(50,10)
 
-        self.speed_over_ground = float(intval) / 10.0
 
-    def get_COG(self) -> None:
-        '''
-        stored as inter value scaled up by 10
-        Course over ground will be 3600 (0xE10) if that data is not available.
 
-        :return:
-            sets mycnb.course over_ground (float)
-        '''
-        # course over ground - scaled by 10
-        intval = self.binary_item(116, 12)
-        if 0 <= intval <= 3600:
-            self.course_over_ground = round(float(intval) / 10.0, 1)
-        else:
-            self.valid_item = False
-            errstr: str = 'In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval)
-            logging.error(errstr)
-            raise ValueError
 
-    def get_tru_head(self) -> None:
-        '''
-            true heading is integer value
-            0-359 degrees
-            511 not avaiulable
+    def getCNB_COG(self):
+        self.get_COG(116,12)
 
-            routine checks validity sets to False if outside 0-259 and/or 511
 
-        :return:
-            sets mycnb.true_heading (integer)
-        '''
 
-        itru = self.binary_item(128, 9)
-        if 0 <= itru <= 259 or itru == 511:
-            self.true_heading = itru
-        else:
-            self.valid_item = False
-            errstr: str = '{:d}'.format(itru)
-            logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + errstr)
-            raise ValueError
+    def getCNB_tru_head(self):
+        self.get_tru_head(128,9)
 
     def get_pos_accuracy(self) -> bool:
         '''
@@ -489,33 +550,10 @@ class CNB(Payload):
 
         self.position_accuracy = self.get_flag_bit(60)
 
-    def get_timestamp(self) -> None:
-        '''
-        Seconds in UTC timestamp should be 0-59, except for these special values:
 
-        60 if time stamp is not available (default)
 
-        61 if positioning system is in manual input mode
-
-        62 if Electronic Position Fixing System operates in estimated (dead reckoning) mode,
-
-        63 if the positioning system is inoperative.
-
-        bits 137-142 in binary_payload
-
-        :return:
-            sets mycnb.time_stamp (integer)
-        '''
-        # timestamp = second of UTC timestamp. 6 bits at 137
-        intval = self.binary_item(137, 6)
-
-        # validate
-        if 0 <= intval <= 63:
-            self.time_stamp = self.binary_item(137, 6)
-        else:
-            self.valid_item = False
-            logging.error('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
-            raise ValueError
+    def getCNB_timestamp(self):
+        self.get_timestamp(137, 6)
 
     def get_man_indic(self):
         '''
@@ -1081,7 +1119,7 @@ class Binary_broadcast_message(Payload):
         pass
 
 
-class SAR_aircraft_position_report(Payload):
+class SAR_aircraft_position_report(Basic_Position):
     '''
     Type 9: Standard SAR Aircraft Position Report
     Tracking information for search-and-rescue aircraft. Total number of bits is 168.
@@ -1373,7 +1411,7 @@ class DGNS_broadcast_binaty_message(Payload):
         pass
 
 
-class ClassB_position_report(CNB):
+class ClassB_position_report(Basic_Position):
     '''
     A less detailed report than types 1-3 for vessels using Class B transmitters. 
     Omits navigational status and rate of turn. 
@@ -1441,7 +1479,7 @@ class ClassB_position_report(CNB):
 
 
 
-class Extende_ClassB_position_report(CNB):
+class Extende_ClassB_position_report(Basic_Position):
     '''
     A slightly more detailed report than type 18 for vessels using Class B transmitters.
     Omits navigational status and rate of turn. Fields are encoded as in the common navigation block

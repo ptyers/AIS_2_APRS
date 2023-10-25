@@ -614,7 +614,7 @@ class TestCNB(TestCase):
         testbits = '{:010b}'.format(i)
         mycnb.payload = diction.make_stream(50, testbits)
 
-        mycnb.getSOG()
+        mycnb.getCNB_SOG()
         self.assertEqual(float(i) / 10.0, mycnb.speed_over_ground,
                          "In getSOG value returned does not match value offered")
 
@@ -622,7 +622,7 @@ class TestCNB(TestCase):
             i = random.randint(0, 1022)
             testbits = '{:010b}'.format(i)
             mycnb.payload = diction.make_stream(50, testbits)
-            mycnb.getSOG()
+            mycnb.getCNB_SOG()
             self.assertEqual(float(i) / 10.0, mycnb.speed_over_ground,
                              "In getSOG value returned does not match value offered")
 
@@ -636,7 +636,7 @@ class TestCNB(TestCase):
         testbits = '{:012b}'.format(i)
         mycnb.payload = diction.make_stream(116, testbits)
         try:
-            mycnb.get_COG()
+            mycnb.getCNB_COG()
             self.assertEqual(float(i) / 10.0, mycnb.course_over_ground,
                              "In get_COG value returned does not offered value " + '{:d}'.format(i))
         except ValueError:
@@ -648,7 +648,7 @@ class TestCNB(TestCase):
             testbits = '{:012b}'.format(i)
             mycnb.payload = diction.make_stream(116, testbits)
             try:
-                mycnb.get_COG()
+                mycnb.getCNB_COG()
                 self.assertEqual(float(i) / 10.0, mycnb.course_over_ground,
                                  "In get_COG value returned does not offered value " + '{:d}'.format(i))
             except ValueError:
@@ -665,7 +665,7 @@ class TestCNB(TestCase):
             testbits = '{:09b}'.format(i)
             mycnb.payload = diction.make_stream(128, testbits)
             try:
-                mycnb.get_tru_head()
+                mycnb.getCNB_tru_head()
                 self.assertEqual(i, mycnb.true_heading,
                                  "In get_tru_head value returned does not match value offered")
             except ValueError:
@@ -677,7 +677,7 @@ class TestCNB(TestCase):
             testbits = '{:09b}'.format(i)
             mycnb.payload = diction.make_stream(128, testbits)
             try:
-                mycnb.get_tru_head()
+                mycnb.getCNB_tru_head()
                 self.assertEqual(i, mycnb.true_heading,
                                  "In get_COG value returned does not match value offered")
             except ValueError:
