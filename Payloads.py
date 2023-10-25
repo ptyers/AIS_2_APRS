@@ -1204,17 +1204,89 @@ class UTC_date_response(Payload):
 
         pass
 
-
 class Addressed_safety_related_message(Payload):
-    # to be implemented
+    '''
+        Pragmatic note:
+        On [AISHUB] the actual content of these messages is highly variable,
+        ranging from fairly plain English ("PLEASE REPORT TO JOBOURG TRAFFIC CHANNEL 13")
+        through snippets of tabular data ("PAX 589 FG 36 IX 74 MOTO 10 CREW 108+1" through
+        what look like opaque commercial codes ("EP285 IX46 FG3 DK8 PL56") to empty strings
+        and content that looks like line noise ("]XFD5D/\7`>PA!Q DX0??K?8?>D").
+
+        Such apparently garbled content does not mean there is an error in your decoder.
+        It may indicate faulty encoders, operator error, or even the use of private
+        encodings for non-ASCII character sets.
+    '''
+
+    # message type, Repeat Indicator, Source MMSI inherited from base class
+
+    sequence_number: int    # range 0-3bits 38-39, 2 bits
+    destination_mmsi: str   # 9 digits unsigned integer but stored as str bits 40-69
+    retransmit_flag: bool   # bit 70, 0 no retransmit, 1 transmitted
+    safety_text: str        # 1-156 characters of six bit text. starts at bit 72, may be shorter than 936 bits
+                            # almost certainly will be derived from aggregated fragments
+
+    payload: str            # the binary payload deriverd from the AIS Stream
+
 
     def __init__(self, p_payload):
         super().__init__(p_payload)
 
-        pass
+        self.payload = p_payload
+
+        self.get_sequence_number()
+        self.get_destination_mmsi()
+        self.get_retransmit_flag()
+        self.get_safety_text()
+
+    def __repr__(self):
+
+        formatted_safety_text = ''
+        start_text =0
+
+        if len(self.safety_text) > 60:
+            while start_text + 60 < len(self.safety_text):
+                formatted_safety_text = formatted_safety_text + self.safefty_text[start_text: start_text+60] + '\n'
+                start_text += 60
+
+        # and the last line
+        formatted_safety_text = formatted_safety_text + self.safefty_text[start_text: ] + '\n'
 
 
-class Safety_relatyed_acknowledgement(Payload):
+
+
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type:          {self.message_type}\n'
+                f'MMSI:                  {self.mmsi}\n'
+                f'Sequence_Number:       {self.sequence_number}\n'
+                f'Destination MMSI:      {self.destination_mmsi}'
+                f'Safety Text:           {formatted_safety_text}\n'
+                f'Retransmit Flag:       {self.retransmit_flag}\n'
+                )
+
+    def get_sequence_number(self):
+        self.sequence_number = self.binary_item(38,2)
+
+
+
+    def destination_mmsi(self):
+        self.destination_mmsi = '{:09d}'.format(self.binary_item(40, 30))
+    def get_retransmit_flag(self):
+        self.retransmit_flag  = self.get_flag_bit(70)
+    def get_safety_text(self):
+        text_start = 72
+        text_length = len(self.payload) - 72
+        # ensure we get ony six bit count
+        while text_length % 6 !=0:
+            text_length -= 1
+
+
+        # going to make assumption that the safety_text runs from bit 72 to the end of the binary payload
+
+        self.safety_text = self.extract_text(72, text_length )
+
+
+class Safety_related_acknowledgement(Payload):
     # to be implemented
 
     def __init__(self, p_payload):
@@ -1224,12 +1296,63 @@ class Safety_relatyed_acknowledgement(Payload):
 
 
 class Safety_related_broadcast_message(Payload):
-    # to be implemented
+    '''
+        Pragmatic note:
+        On [AISHUB] the actual content of these messages is highly variable,
+        ranging from fairly plain English ("PLEASE REPORT TO JOBOURG TRAFFIC CHANNEL 13")
+        through snippets of tabular data ("PAX 589 FG 36 IX 74 MOTO 10 CREW 108+1" through
+        what look like opaque commercial codes ("EP285 IX46 FG3 DK8 PL56") to empty strings
+        and content that looks like line noise ("]XFD5D/\7`>PA!Q DX0??K?8?>D").
+
+        Such apparently garbled content does not mean there is an error in your decoder.
+        It may indicate faulty encoders, operator error, or even the use of private
+        encodings for non-ASCII character sets.
+    '''
+
+    # message type, Repeat Indicator, Source MMSI inherited from base class
+
+    safety_text: str  # 1-161 characters of six bit text. starts at bit 72, may be shorter than 968 bits
+    # almost certainly will be derived from aggregated fragments
+
+    payload: str  # the binary payload derived from the AIS Stream
 
     def __init__(self, p_payload):
         super().__init__(p_payload)
 
-        pass
+        self.payload = p_payload
+        self.get_safety_text()
+
+    def __repr__(self):
+
+        formatted_safety_text = ''
+        start_text = 0
+
+        if len(self.safety_text) > 60:
+            while start_text + 60 < len(self.safety_text):
+                formatted_safety_text = formatted_safety_text + self.safefty_text[start_text: start_text + 60] + '\n'
+                start_text += 60
+
+        # and the last line
+        formatted_safety_text = formatted_safety_text + self.safefty_text[start_text:] + '\n'
+
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type:          {self.message_type}\n'
+                f'MMSI:                  {self.mmsi}\n'
+                f'Safety Text:           {formatted_safety_text}\n'
+                )
+
+    def get_safety_text(self):
+        text_start = 40
+        text_length = len(self.payload) - 40
+        # ensure we get ony six bit count
+        while text_length % 6 != 0:
+            text_length -= 1
+
+        # going to make assumption that the safety_text runs from bit 72 to the end of the binary payload
+
+        self.safety_text = self.extract_text(40, text_length)
+
+
 
 
 class Interrogation(Payload):
@@ -1250,19 +1373,89 @@ class DGNS_broadcast_binaty_message(Payload):
         pass
 
 
-class ClassB_position_report(Payload):
-    # to be implemented
+class ClassB_position_report(CNB):
+    '''
+    A less detailed report than types 1-3 for vessels using Class B transmitters. 
+    Omits navigational status and rate of turn. 
+    Fields are encoded as in the common navigation block. 168 bits total.
+
+    In [IALA] (and [ITU1371]) bits 141-145 were designated "Spare"; 
+    the bit-flag semantics given here are from ITU-1371-3 and were communicated by Kurt Schwehr. 
+    Kurt warns that "the spec does not do a good job of explaining these fields…
+    ​ I don’t think that I totally understand these fields."
+
     # type 18
+    # message_type, repeat_indicator, mmsi, longitude, latitude, speed over_ground, position_accuracy,
+    # course_over_ground, True heading, time stamp DSC flag, assigned flag raim flag 
+    #derived from base position report class *** To be written to allow CNB to be derived from it also ****
+    # CNB will require a rewrite accordingly 
+    ''''
+
+    cs_unit: bool       # 0=Class B SOTDMA unit 1=Class B CS (Carrier Sense) unit
+    display_flag: bool # 0=No visual display, 1=Has display, (Probably not reliable).
+    band_flag: bool     # Base stations can command units to switch frequency.
+                        # If this flag is 1, the unit can use any part of the marine channel.
+    message22_flag: bool    # If 1, unit can accept a channel assignment via Message Type 22.
+
+
 
     def __init__(self, p_payload):
         super().__init__(p_payload)
 
-        pass
+        self.get_cs_unit()
+        self.get_display_flag()
+        self.get_band_flag()
+        self.get_message22_flag()
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type:        {self.message_type}\n'
+                f'Repeat Indicator:    {self.repeat_indicator}\n'
+                f'MMSI:                {self.mmsi}\n'
+                f'Speed over Ground:   {self.speed_over_ground}\n'
+                f'Positionn Accuracy:  {self.position_accuracy}\n'
+                f'Longitude:           {self.longitude}\n'
+                f'Latitude:            {self.latitude}\n'
+                f'Course over Ground:  {self.course_over_ground}\n'
+                f'True Heading:        {self.true_heading}\n'
+                f'Timestamp:           {self.time_stamp}\n'
+                f'CS Unit Flag:        {self.cs_unit}\n'
+                f'Display Flag:        {self.display_flag}\n'
+                f'Band Flag:           {self.band_flag}\n'
+                f'Message22 Flag:      {self.message22_flag}\n'
+                f'RAIM status:         {self.raim_flag}\n'
+                )
+
+    def get_cs_unit(self):
+        self.cs_unit = self.get_flag_bit(141)
+
+    def get_display_flag(self):
+        self.display_flagdi = self.get_flag_bit(142)
+
+    def get_band_flag(self):
+        self.band_flag = self.get_flag_bit(144)
+
+    def get_message22_flag(self):
+        self.message22_flag = self.get_flag_bit(145)
 
 
-class Extende_ClassB_position_report(Payload):
+
+
+class Extende_ClassB_position_report(CNB):
+    '''
+    A slightly more detailed report than type 18 for vessels using Class B transmitters.
+    Omits navigational status and rate of turn. Fields are encoded as in the common navigation block
+    and the Type 5 message. Note that until just before the reserved field at bit 139
+    this is identical to message 18. 312 bits total.
+
+    In practice, the information in the ship name and dimension fields is not reliable,
+    as it has to be hand-entered by humans rather than gathered automatically from sensors.
+
     # to be implemented
     # type 19
+
+    '''
+
 
     def __init__(self, p_payload):
         super().__init__(p_payload)
