@@ -194,12 +194,12 @@ class AISDictionaries:
         # preamble is number number of bits needed to fill up to beginning of testbits
         # testbits is the binary stream representing the area of thge domain under test
         # a couple of 'constants'
-        fakehead: str = '00010000'
+        fakehead: str = '000100'
         faketail: str = '00000000000000000000000000000000000000000000000000000000000000000000000000000000000'
         # prefill the preamble with message type 4
         preamble: str = fakehead
-        # fillcount is number of required prefill with allowance for the 8 bit header
-        fillcount = preamlen - 8
+        # fillcount is number of required prefill with allowance for the 6 bit header
+        fillcount = preamlen - 6
 
         while fillcount > 0:
             preamble = preamble + '1'

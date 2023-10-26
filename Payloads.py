@@ -307,10 +307,20 @@ class Basic_Position(Payload):
     course_over_ground: float
     true_heading: int
     time_stamp: int
+    ship_type: int  # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
+    vessel_name: str
+    ship_type: int  # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
+    dim_to_bow: int
+    dim_to_stern: int
+    dim_to_port: int
+    dim_to_stbd: int
+    ais_version: int = 0  # enumerated normally 0, 1-3 future editions
 
 
     def  __init__(self, p_payload):
         super().__init__(p_payload)
+
+        # very little initiation done in this class just provides routines for use in CNB, Static, Class B
 
 
 
@@ -356,19 +366,19 @@ class Basic_Position(Payload):
             0-359 degrees
             511 not avaiulable
 
-            routine checks validity sets to False if outside 0-259 and/or 511
+            routine checks validity sets to False if outside 0-359 and/or 511
 
         :return:
             sets mycnb.true_heading (integer)
         '''
 
         itru = self.binary_item(128, 9)
-        if 0 <= itru <= 259 or itru == 511:
+        if 0 <= itru <= 359 or itru == 511:
             self.true_heading = itru
         else:
             self.valid_item = False
             errstr: str = '{:d}'.format(itru)
-            logging.error('In CNB.get_tru_head - value outside range 0-259 or != 511 : ' + errstr)
+            logging.error('In get_tru_head - value outside range 0-359 or != 511 : ' + errstr)
             raise ValueError
 
 
@@ -399,6 +409,143 @@ class Basic_Position(Payload):
             self.valid_item = False
             logging.error('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
             raise ValueError
+
+
+    def get_vessel_name(self, position: int, length: int) -> None:
+        '''
+        also obvioous - get ships name
+        20 six bit free text characters
+        :return:
+            sets StaticData.ships_name
+        '''
+
+        try:
+            self.vessel_name = self.extract_text(position, length)
+        except RuntimeError:
+            self.vessel_name = 'VesselName Unknown'
+            logging.error("In Static.get_vessel_name Runtime error")
+
+        while self.vessel_name[len(self.vessel_name) - 1] == '@':
+            self.vessel_name = self.vessel_name[0:len(self.vessel_name) - 1]
+
+
+    def get_ship_type(self, position: int, length: int) -> None:
+        '''
+        dfecribed in AISDictionary
+        range 0-99
+        Note that garbage values greater than 99 are supposed to be unused,
+        but are not uncommon in the wild; AIS transmitters seem prone to put junk in this field
+        when it’s not explicitly set. Decoders should treat these like value 0 rather than throwing an exception
+         until and unless the controlled vocabulary is extended to include the unknown values.
+         :retur:
+            sets StatcData.ship_type
+        '''
+        try:
+            self.ship_type = self.binary_item(position, length)
+            status = self.ship_type in AISDictionaries.Ship_Type
+        except RuntimeError:
+            logging.error("In Static.get_ship_type Runtime error")
+            self.ship_type = 0
+
+        if self.ship_type not in AISDictionaries.Ship_Type:
+            logging.error('In Static.get_ship_type  type not in range 0-99')
+            self.ship_type = 0
+
+
+    def get_dim_to_bow(self, position: int, length: int) -> None:
+        '''
+                Ship dimensions will be 0 if not available.
+                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
+                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+
+                ship dimensions should be set to the maximum rectangle size of the convoy
+
+                :return:
+                    sets StaticData.dim_to_bow
+
+                '''
+
+        try:
+            self.dim_to_bow = self.binary_item(position, length)
+        except RuntimeError:
+            logging.error("In Static.get_dim_to_bow got run time error")
+            self.dim_to_stern = 0
+
+
+    def get_dim_to_stern(self, position: int, length: int) -> None:
+        '''
+        Ship dimensions will be 0 if not available.
+        For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
+        for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+        :return:
+            sets StaticData.dim_to_stern
+
+        '''
+        try:
+            self.dim_to_stern = self.binary_item(position, length)
+        except RuntimeError:
+            logging.error("In Static.get_dim_to_stern got run time error")
+            self.dim_to_stern = 0
+
+
+    def get_dim_to_port(self, position: int, length: int) -> None:
+        '''
+                Ship dimensions will be 0 if not available.
+                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
+                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+                :return:
+                    sets StaticData.dim_to_port
+
+                '''
+
+        try:
+            self.dim_to_port = self.binary_item(position, length)
+        except RuntimeError:
+            logging.error("In Static.get_dim_to_port got run time error")
+            self.dim_to_stern = 0
+
+
+    def get_dim_to_stbd(self, position: int, length: int) -> None:
+        '''
+                Ship dimensions will be 0 if not available.
+                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
+                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+                :return:
+                    sets StaticData.dim_to_stbd
+
+                '''
+
+        try:
+            self.dim_to_stbd = self.binary_item(position, length)
+        except RuntimeError:
+            logging.error("In Static.get_dim_to_stbd got run time error")
+            self.dim_to_stern = 0
+
+    def get_EPFD(self, position: int, length: int) -> None:
+        '''
+        The standard uses "EPFD" to designate any Electronic Position Fixing Device.
+        Bits 134-137  length 4  Type of EPFD epfd  See "EPFD Fix Types" in Dictionary
+        Valid 0-8 15 not uncommen
+        :return:
+            sets Base.EPFD_type for 9-14 logs error returns 0 but does not invalidate object
+        '''
+
+        self.EPFD_type = self.binary_item(position,length)
+        if 9 <= self.EPFD_type <= 14:
+            self.EPFD_type = 0
+            logging.error("In get_EPFD_type found value between 9 and 14")
+
+    def get_ais_version(self, position: int, length: int) -> None:
+        '''
+        0=[ITU1371], 1-3 = future editions
+        :return:
+            sets StaticData.ais_version - returns zero currently until new edition specifies 1-3
+        '''
+        self.ais_version = self.binary_item(position, length)
+        if self.ais_version != 0:
+            if self.ais_version in [1, 2, 3]:
+                logging.error("In Static.get_ais_version found " + '{:d}'.format(self.ais_version) + " rather than 0")
+                self.ais_version = 0
 
 
 
@@ -536,7 +683,7 @@ class CNB(Basic_Position):
     def getCNB_tru_head(self):
         self.get_tru_head(128,9)
 
-    def get_pos_accuracy(self) -> bool:
+    def get_pos_accuracy(self) -> None:
         '''
 
         The position accuracy flag indicates the accuracy of the fix.
@@ -582,7 +729,7 @@ class CNB(Basic_Position):
             raise ValueError
 
 
-class Basestation(Payload):
+class Basestation(Basic_Position):
     # base station report - Type 4
 
     # items specific to base station
@@ -602,7 +749,7 @@ class Basestation(Payload):
         self.get_hour()
         self.get_minute()
         self.get_second()
-        self.get_EPFD()
+        self.get_Base_EPFD()
         self.getfix(78)
         self.getRAIMflag(148)
 
@@ -721,22 +868,10 @@ class Basestation(Payload):
             logging.error("Base.second outside range 0-60 " + '{:d}'.format(self.second))
             raise ValueError
 
-    def get_EPFD(self) -> None:
-        '''
-        The standard uses "EPFD" to designate any Electronic Position Fixing Device.
-        Bits 134-137  length 4  Type of EPFD epfd  See "EPFD Fix Types" in Dictionary
-        Valid 0-8 15 not uncommen
-        :return:
-            sets Base.EPFD_type for 9-14 logs error returns 0 but does not invalidate object
-        '''
 
-        self.EPFD_type = self.binary_item(134, 4)
-        if 9 <= self.EPFD_type <= 14:
-            self.EPFD_type = 0
-            logging.error("In Base.get_EPFD_type found value between 9 and 14")
-
-
-class StaticData(Payload):
+    def get_Base_EPFD(self):
+        self.get_EPFD(134,4)
+class StaticData(Basic_Position):
     # type 5
     '''
     Message has a total of 424 bits, occupying two AIVDM sentences.
@@ -746,15 +881,10 @@ class StaticData(Payload):
     Robust decoders should ignore trailing garbage and deal gracefully with a slightly truncated destination field.
     '''
 
-    ais_version: int = 0  # enumerated normally 0, 1-3 future editions
+
     imo_number: str
     callsign: str
-    vessel_name: str
-    ship_type: int  # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
-    dim_to_bow: int
-    dim_to_stern: int
-    dim_to_port: int
-    dim_to_stbd: int
+
     # fix type derived from super class
     eta_month: int
     eta_day: int
@@ -772,15 +902,15 @@ class StaticData(Payload):
         self.maxpayloadlen = len(p_payload)  # will be used when attempting to get destination to avoid bit overrun
 
         self.create_mmsi()
-        self.get_ais_version()
+        self.get_Base_ais_version()
         self.get_imo_number()
         self.get_callsign()
-        self.get_vessel_name()
-        self.get_dim_to_bow()
-        self.get_dim_to_stern()
-        self.get_dim_to_port()
-        self.get_dim_to_stbd()
-        self.get_ship_type()
+        self.get_Static_vessel_name()
+        self.get_Static_dim_to_bow()
+        self.get_Static_dim_to_stern()
+        self.get_Static_dim_to_port()
+        self.get_Static_dim_to_stbd()
+        self.get_Static_ship_type()
         self.get_eta_month()
         self.get_eta_day()
         self.get_eta_hour()
@@ -788,7 +918,7 @@ class StaticData(Payload):
         self.get_draught()
         self.get_destination()
 
-        pass
+
 
     def __repr__(self):
         return (f'{self.__class__.__name__}\n'
@@ -812,19 +942,12 @@ class StaticData(Payload):
                 f'Destination   {self.destination}'
                 )
 
-    def get_ais_version(self) -> None:
-        '''
-        0=[ITU1371], 1-3 = future editions
-        :return:
-            sets StaticData.ais_version - returns zero currently until new edition specifies 1-3
-        '''
-        self.ais_version = self.binary_item(38, 2)
-        if self.ais_version != 0:
-            if self.ais_version in [1, 2, 3]:
-                logging.error("In Static.get_ais_version found " + '{:d}'.format(self.ais_version) + " rather than 0")
-                self.ais_version = 0
+
 
             # dont invalidate object but flag error
+
+    def get_Base_ais_version(self):
+        self.get_ais_version(38,2)
 
     def get_imo_number(self) -> None:
         '''
@@ -842,18 +965,18 @@ class StaticData(Payload):
             sets StaticData.imo_number
         '''
         try:
-            intimo = self.binary_item(46, 30)
-            self.imo_number = '{:07d}'.format(intimo)
+            self.intimo = self.binary_item(46, 30)
+            self.imo_number = '{:07d}'.format(self.intimo)
         except RuntimeError:
             self.imo_number = '0000000'
             logging.error("In Static.get_imo_number got RunTime Error")
 
         # little validation can be done here other than that number less equal 9999999
 
-        if intimo <= 9999999:
-            self.imo_number = '{:07d}'.format(intimo)
+        if self.intimo <= 9999999:
+            self.imo_number = '{:07d}'.format(self.intimo)
             self.valid_item = False
-            logging.error("In Static.get_imo_number found value greater than 99999999 - {:d}".format(intimo))
+            logging.error("In Static.get_imo_number found value greater than 99999999 - {:d}".format(self.intimo))
             self.imo_number = '0000000'
             raise ValueError
 
@@ -869,110 +992,24 @@ class StaticData(Payload):
             self.callsign = 'NoCall '
             logging.error("In Static.get_callsign Runtime error")
 
-    def get_vessel_name(self) -> None:
-        '''
-        also obvioous - get ships name
-        20 six bit free text characters
-        :return:
-            sets StaticData.ships_name
-        '''
+    def get_Static_vessel_name(self):
+        self.get_vessel_name(112,120)
 
-        try:
-            self.vessel_name = self.extract_text(112, 120)
-        except RuntimeError:
-            self.vessel_name = 'VesselName Unknown'
-            logging.error("In Static.get_vessel_name Runtime error")
+    def get_Static_ship_type(self):
+        self.get_ship_type(232,8)
 
-        while self.vessel_name[len(self.vessel_name) - 1] == '@':
-            self.vessel_name = self.vessel_name[0:len(self.vessel_name) - 1]
+    def get_Static_dim_to_bow(self):
+        self.get_dim_to_bow(240,9)
 
-    def get_ship_type(self) -> None:
-        '''
-        dfecribed in AISDictionary
-        range 0-99
-        Note that garbage values greater than 99 are supposed to be unused,
-        but are not uncommon in the wild; AIS transmitters seem prone to put junk in this field
-        when it’s not explicitly set. Decoders should treat these like value 0 rather than throwing an exception
-         until and unless the controlled vocabulary is extended to include the unknown values.
-         :retur:
-            sets StatcData.ship_type
-        '''
-        try:
-            self.ship_type = self.binary_item(232, 8)
-            status = self.ship_type in AISDictionaries.Ship_Type
-        except RuntimeError:
-            logging.error("In Static.get_ship_type Runtime error")
-            self.ship_type = 0
+    def get_Static_dim_to_stern(self):
+        self.get_dim_to_stern(249,9)
 
-        if self.ship_type not in AISDictionaries.Ship_Type:
-            logging.error('In Static.get_ship_type  type not in range 0-99' )
-            self.ship_type = 0
+    def get_Static_dim_to_port(self):
+        self.get_dim_to_port(258,6)
 
-    def get_dim_to_bow(self) -> None:
-        '''
-                Ship dimensions will be 0 if not available.
-                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
-                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+    def get_Static_dim_to_stbd(self):
+        self.get_dim_to_stbd(264,6)
 
-                ship dimensions should be set to the maximum rectangle size of the convoy
-
-                :return:
-                    sets StaticData.dim_to_bow
-
-                '''
-
-        try:
-            self.dim_to_bow = self.binary_item(240, 9)
-        except RuntimeError:
-            logging.error("In Static.get_dim_to_bow got run time error")
-            self.dim_to_stern = 0
-
-    def get_dim_to_stern(self) -> None:
-        '''
-        Ship dimensions will be 0 if not available.
-        For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
-        for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
-        :return:
-            sets StaticData.dim_to_stern
-
-        '''
-        try:
-            self.dim_to_stern = self.binary_item(249, 9)
-        except RuntimeError:
-            logging.error("In Static.get_dim_to_stern got run time error")
-            self.dim_to_stern = 0
-
-    def get_dim_to_port(self) -> None:
-        '''
-                Ship dimensions will be 0 if not available.
-                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
-                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
-                :return:
-                    sets StaticData.dim_to_port
-
-                '''
-
-        try:
-            self.dim_to_port = self.binary_item(258, 6)
-        except RuntimeError:
-            logging.error("In Static.get_dim_to_port got run time error")
-            self.dim_to_stern = 0
-
-    def get_dim_to_stbd(self) -> None:
-        '''
-                Ship dimensions will be 0 if not available.
-                For the dimensions to bow and stern, the special value 511 indicates 511 meters or greater;
-                for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
-                :return:
-                    sets StaticData.dim_to_stbd
-
-                '''
-
-        try:
-            self.dim_to_stbd = self.binary_item(264, 6)
-        except RuntimeError:
-            logging.error("In Static.get_dim_to_stbd got run time error")
-            self.dim_to_stern = 0
 
     def get_eta_month(self) -> None:
         '''
@@ -1160,13 +1197,13 @@ class SAR_aircraft_position_report(Basic_Position):
                     f'Message Type:          {self.message_type}\n'
                     f'MMSI:                  {self.mmsi}\n'
                     f'Altitude:              {self.altitude}\n'
-                    f'Speed over Ground:     {self.speed_over_ground}'
+                    f'Speed over Ground:     {self.speed_over_ground}\n'
                     f'Position Accuracy:     {self.fix_quality}\n'
                     f'Longitudee:            {self.longitude}\n'
                     f'Latitude :             {self.latitude}\n'
                     f'Course over Ground:    {self.course_over_ground}\n'
                     f'TimeStamp:             {self.time_stamp}\n'
-                    f'DTE Status:          {self.dte}\n'
+                    f'DTE Status:            {self.dte}\n'
                     f'RAIM flag:             {self.raim_flag}\n'
                     )
 
@@ -1284,11 +1321,11 @@ class Addressed_safety_related_message(Payload):
 
         if len(self.safety_text) > 60:
             while start_text + 60 < len(self.safety_text):
-                formatted_safety_text = formatted_safety_text + self.safefty_text[start_text: start_text+60] + '\n'
+                formatted_safety_text = formatted_safety_text + self.safety_text[start_text: start_text+60] + '\n'
                 start_text += 60
 
         # and the last line
-        formatted_safety_text = formatted_safety_text + self.safefty_text[start_text: ] + '\n'
+        formatted_safety_text = formatted_safety_text + self.safety_text[start_text: ] + '\n'
 
 
 
@@ -1297,7 +1334,7 @@ class Addressed_safety_related_message(Payload):
                 f'Message Type:          {self.message_type}\n'
                 f'MMSI:                  {self.mmsi}\n'
                 f'Sequence_Number:       {self.sequence_number}\n'
-                f'Destination MMSI:      {self.destination_mmsi}'
+                f'Destination MMSI:      {self.destination_mmsi}\n'
                 f'Safety Text:           {formatted_safety_text}\n'
                 f'Retransmit Flag:       {self.retransmit_flag}\n'
                 )
@@ -1306,8 +1343,11 @@ class Addressed_safety_related_message(Payload):
         self.sequence_number = self.binary_item(38,2)
 
 
+    def get_repeat_indicator(self):
+        self.repeat_indicator = self.binary_item(6,2)
 
-    def destination_mmsi(self):
+
+    def get_destination_mmsi(self):
         self.destination_mmsi = '{:09d}'.format(self.binary_item(40, 30))
     def get_retransmit_flag(self):
         self.retransmit_flag  = self.get_flag_bit(70)
@@ -1315,13 +1355,16 @@ class Addressed_safety_related_message(Payload):
         text_start = 72
         text_length = len(self.payload) - 72
         # ensure we get ony six bit count
-        while text_length % 6 !=0:
+        while text_length % 6 != 0:
             text_length -= 1
 
 
         # going to make assumption that the safety_text runs from bit 72 to the end of the binary payload
 
-        self.safety_text = self.extract_text(72, text_length )
+        self.safety_text = self.extract_text(72, text_length)
+
+        while self.safety_text[len(self.safety_text) - 1] == '@':
+            self.safety_text = self.safety_text[0:len(self.safety_text) - 1]
 
 
 class Safety_related_acknowledgement(Payload):
@@ -1367,11 +1410,11 @@ class Safety_related_broadcast_message(Payload):
 
         if len(self.safety_text) > 60:
             while start_text + 60 < len(self.safety_text):
-                formatted_safety_text = formatted_safety_text + self.safefty_text[start_text: start_text + 60] + '\n'
+                formatted_safety_text = formatted_safety_text + self.safety_text[start_text: start_text + 60] + '\n'
                 start_text += 60
 
         # and the last line
-        formatted_safety_text = formatted_safety_text + self.safefty_text[start_text:] + '\n'
+        formatted_safety_text = formatted_safety_text + self.safety_text[start_text:] + '\n'
 
         return (f'{self.__class__.__name__}\n'
                 f'Message Type:          {self.message_type}\n'
@@ -1390,6 +1433,9 @@ class Safety_related_broadcast_message(Payload):
 
         self.safety_text = self.extract_text(40, text_length)
 
+        while self.safety_text[len(self.safety_text) - 1] == '@':
+            self.safety_text = self.safety_text[0:len(self.safety_text) - 1]
+
 
 
 
@@ -1402,7 +1448,7 @@ class Interrogation(Payload):
         pass
 
 
-class DGNS_broadcast_binaty_message(Payload):
+class DGNS_broadcast_binary_message(Payload):
     # to be implemented
 
     def __init__(self, p_payload):
@@ -1427,7 +1473,7 @@ class ClassB_position_report(Basic_Position):
     # course_over_ground, True heading, time stamp DSC flag, assigned flag raim flag 
     #derived from base position report class *** To be written to allow CNB to be derived from it also ****
     # CNB will require a rewrite accordingly 
-    ''''
+    '''
 
     cs_unit: bool       # 0=Class B SOTDMA unit 1=Class B CS (Carrier Sense) unit
     display_flag: bool # 0=No visual display, 1=Has display, (Probably not reliable).
@@ -1491,14 +1537,108 @@ class Extende_ClassB_position_report(Basic_Position):
 
     # to be implemented
     # type 19
+    The following are derived from parent classes Payloads an d BasicPosition
+
+    message_type: int
+    repeat_indicator: int
+    mmsi: str
+    longitude: float
+    latitude: float
+    fix_quality: bool = False
+    raim_flag: bool = 0  # default not in use
+    radio_status: int = 0  # Not implemented
+    payload: str  # binary payload
+    valid_item: bool
+    speed_over_ground: float
+    course_over_ground: float
+    true_heading: int
+    time_stamp: int
+    ship_name: str
+    dims to bow, ster, port and starboard
 
     '''
+
+
 
 
     def __init__(self, p_payload):
         super().__init__(p_payload)
 
-        pass
+        self.get_CLB_SOG()
+        self.get_CLB_fix()
+        self.get_CLB_longitude()
+        self.get_CLB_latitude()
+        self.get_CLB_COG()
+        self.get_CLB_Tru_head()
+        self.get_CLB_timestamp()
+        self.get_CLB_vessell_name()
+        self.get_CLB_ship_type()
+        self.get_CLB_diom_to_bow()
+        self.get_CLB_diom_to_stern()
+        self.get_CLB_diom_to_port()
+        self.get_CLB_diom_to_stbd()
+        self.get_CLB_EPFD()
+        self.get_CLB_raim_flag()
+        self.getr_CLB_dte()
+
+
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type:         {self.message_type}\n'
+                f'Repeat Indicator:     {self.repeat_indicator}\n'
+                f'MMSI:                 {self.mmsi}\n'
+                f'Speed over Ground:    {self.speed_over_ground}\n'
+                f'Positionn Accuracy:   {self.position_accuracy}\n'
+                f'Longitude:            {self.longitude}\n'
+                f'Latitude:             {self.latitude}\n'
+                f'Course over Ground:   {self.course_over_ground}\n'
+                f'True Heading:         {self.true_heading}\n'
+                f'Timestamp:            {self.time_stamp}\n'
+                f'Vessel Name:          {self.vessel_name}\n'
+                f'Ship Type :           {self.ship_type}\n'
+                f'Dim to Bow:           {self.dim_to_bow}\n'
+                f'Dim to Stern:         {self.dim_to_stern}\n'
+                f'Dim to Stbd:          {self.dim_to_stbd}\n'
+                f'Fix Type:             {self.fix_quality}\n'
+                f'RAIM status:          {self.raim_flag}\n'
+                )
+
+    def get_CLB_SOG(self):
+        self.getSOG(46,10)
+
+    def get_CLB_fix(self):
+        self.position_accuracy = self.get_flag_bit(56)
+    def get_CLB_longtitude(self):
+        self.get_longitude(57,28)
+    def get_CLB_latitude(self):
+        self.get_longitude(85, 27)
+    def get_CLB_COG(self):
+        self.get_COG(112,12)
+    def get_CLB_Tru_head(self):
+        self.get_tru_head(124,9)
+    def get_CLB_timestamp(self):
+        self.get_timestamp(133,6)
+    def get_CLB_vessell_name(self):
+        self.get_vessel_name(143,120)
+    def get_CLB_ship_type(self):
+        self.get_ship_type(263, 8)
+    def get_CLB_dim_to_bow(self):
+        self.get_dim_to_bow(271,9)
+    def get_CLB_dim_to_stern(self):
+        self.get_dim_to_bow(280, 9)
+    def get_CLB_dim_to_port(self):
+        self.get_dim_to_bow(289, 6)
+    def get_CLB_dim_to_stbd(self):
+        self.get_dim_to_bow(295, 6)
+    def get_CLB_EPFD(self):
+        self.get_EPFD(301,4)
+    def get_CLB_raim_flag(self):
+        self.get_flag_bit(305)
+    def getr_CLB_dte(self):
+        self.get_flag_bit(306)
+
+
 
 
 class Data_link_management_message(Payload):

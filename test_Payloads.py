@@ -26,17 +26,8 @@ class TestUTC_date_response(TestCase):
     pass
 
 
-class TestAddressed_safety_related_message(TestCase):
+class TestSafety_related_acknowledgement(TestCase):
     pass
-
-
-class TestSafety_relatyed_acknowledgement(TestCase):
-    pass
-
-
-class TestSafety_related_broadcast_message(TestCase):
-    pass
-
 
 class TestInterrogation(TestCase):
     pass
@@ -654,26 +645,26 @@ class TestCNB(TestCase):
             except ValueError:
                 self.assertFalse(mycnb.valid_item, "In get_COG module did not detect invalid parameter")
 
-    def test_get_tru_head(self):
+    def test_get_CNBtru_head(self):
         diction, mystream, mycnb = self.initialise()
         print("Testing get_truhead")
 
         # initially check for values 0, 1,359, 360 and value outside valid range
 
-        for i in [0, 1, 90, 359, 511, 360]:
+        for i in [0, 1, 90, 259, 359, 511, 360]:
 
             testbits = '{:09b}'.format(i)
             mycnb.payload = diction.make_stream(128, testbits)
             try:
                 mycnb.getCNB_tru_head()
                 self.assertEqual(i, mycnb.true_heading,
-                                 "In get_tru_head value returned does not match value offered")
+                                 "In get_CNBtru_head value returned does not match value offered")
             except ValueError:
-                self.assertFalse(mycnb.valid_item, "In get_tru_head module did not detect invalid parameter")
+                self.assertFalse(mycnb.valid_item, "In get_CNBtru_head module did not detect invalid parameter")
 
         # and again a random selection
         for _ in range(100):
-            i = random.randint(0, 3600)
+            i = random.randint(0, 360)
             testbits = '{:09b}'.format(i)
             mycnb.payload = diction.make_stream(128, testbits)
             try:
@@ -681,7 +672,7 @@ class TestCNB(TestCase):
                 self.assertEqual(i, mycnb.true_heading,
                                  "In get_COG value returned does not match value offered")
             except ValueError:
-                self.assertFalse(mycnb.valid_item, "In CNB.get_tri_hed invalid value not flagged")
+                self.assertFalse(mycnb.valid_item, "In CNB.get_tru_hed invalid value not flagged")
 
     def test_get_pos_accuracy(self):
         diction, mystream, mycnb = self.initialise()
@@ -708,7 +699,7 @@ class TestCNB(TestCase):
         for i in [0, 1, 30, 59, 60, 61, 62, 63]:
             testbits = '{:06b}'.format(i)
             mycnb.payload = diction.make_stream(137, testbits)
-            mycnb.get_timestamp()
+            mycnb.getCNB_timestamp()
             self.assertEqual(i, mycnb.time_stamp,
                              "In get_timestamp value returned does not match value offered" + '{:d}'.format(i))
 
@@ -880,7 +871,7 @@ class TestBasestation(TestCase):
         for yval in [0, 8, 1, 15, 10]:
             mybase.payload = diction.make_stream(134, '{:04b}'.format(yval))
             try:
-                mybase.get_EPFD()
+                mybase.get_Base_EPFD()
                 if 0 <= yval <= 8 or yval == 15:
                     self.assertEqual(yval, mybase.EPFD_type,
                                      "In Base.get_EPFD - value returned does match value set")
@@ -892,7 +883,7 @@ class TestBasestation(TestCase):
                 self.assertFalse(mybase.valid_item,
                                  "In Base.get_EPFD - somethings very wrong should not get here")
 
-    def test_rerr(self):
+    def test_repr(self):
         diction, mystream, mybase = self.initialise()
         print("testing  Base __repr__")
 
@@ -1188,7 +1179,7 @@ class TestStaticData(TestCase):
         # again effectively free text 20 char max
 
         try:
-            mystatic.get_vessel_name()
+            mystatic.get_Static_vessel_name()
         except RuntimeError:
             self.assertFalse(True, "Runtime Error in Static.get_vessel_name")
 
@@ -1203,7 +1194,7 @@ class TestStaticData(TestCase):
             test_bits = diction.make_stream(112, test_bits)
             mystatic.payload = test_bits
             try:
-                mystatic.get_vessel_name()
+                mystatic.get_Static_vessel_name()
                 self.assertEqual(a.upper()[0:20], mystatic.vessel_name, "In Static.get_destination, value returned "
                                  + mystatic.vessel_name + " not equal to value offered " + a)
             except RuntimeError:
@@ -1224,8 +1215,7 @@ class TestStaticData(TestCase):
             mystatic.payload = self.make_stream(232, testbits)
 
             try:
-                mystatic.get_ship_type()
-                print('ín test ship type =', mystatic.ship_type, testbits)
+                mystatic.get_Static_ship_type()
                 if i <= 99:
                     self.assertEqual(i, mystatic.ship_type, "In Static.get+_ship_type incorrect value retrieved")
                 else:
@@ -1247,7 +1237,7 @@ class TestStaticData(TestCase):
             mystatic.payload = self.make_stream(240, testbits)
 
             try:
-                mystatic.get_dim_to_bow()
+                mystatic.get_Static_dim_to_bow()
                 if i <= 511:
                     self.assertEqual(i, mystatic.dim_to_bow,
                                      "In Static.get_dim_to_bow value reurned incorrect")
@@ -1270,13 +1260,13 @@ class TestStaticData(TestCase):
             mystatic.payload = self.make_stream(249, testbits)
 
             try:
-                mystatic.get_dim_to_stern()
+                mystatic.get_Static_dim_to_stern()
                 if i <= 511:
                     self.assertEqual(i, mystatic.dim_to_stern,
-                                     "In Static.get_dim_to_stern value reurned incorrect")
+                                     "In Static.get_dim_to_stern value returned incorrect")
                 else:
                     self.assertEqual(511, mystatic.dim_to_stern,
-                                     "In Static.get_dim_to_stern value reurned incorrect")
+                                     "In Static.get_dim_to_stern value returned incorrect")
             except RuntimeError:
                 logging.error("Runtime error in Static.dim_to_stern")
 
@@ -1292,12 +1282,12 @@ class TestStaticData(TestCase):
             mystatic.payload = self.make_stream(258, testbits)
 
             try:
-                mystatic.get_dim_to_port()
-                if i <= 511:
+                mystatic.get_Static_dim_to_port()
+                if i <= 62:
                     self.assertEqual(i, mystatic.dim_to_port,
                                      "In Static.get_dim_to_stern value reurned incorrect")
                 else:
-                    self.assertEqual(511, mystatic.dim_to_port,
+                    self.assertEqual(63, mystatic.dim_to_port,
                                      "In Static.get_dim_to_stern value reurned incorrect")
             except RuntimeError:
                 logging.error("Runtime error in Static.dim_to_port")
@@ -1313,12 +1303,12 @@ class TestStaticData(TestCase):
             mystatic.payload = self.make_stream(264, testbits)
 
         try:
-            mystatic.get_dim_to_stbd()
-            if i <= 511:
+            mystatic.get_Static_dim_to_stbd()
+            if i <= 62:
                 self.assertEqual(i, mystatic.dim_to_stbd,
                                  "In Static.get_dim_to_stbd value returned incorrect")
             else:
-                self.assertEqual(511, mystatic.dim_to_stbd,
+                self.assertEqual(63, mystatic.dim_to_stbd,
                                  "In Static.get_dim_to_stbd value returned incorrect")
         except RuntimeError:
             logging.error("Runtime error in Static.dim_to_stbd")
@@ -1558,7 +1548,182 @@ class TestSAR_aircraft_position_report(TestCase):
                 self.assertFalse(mysar.assigned,
                                  "In SAR.get_dte value returned {} "
                                  "does match value expected True".format(mysar.assigned))
+
     def test_repr(self):
         diction, mystream, mysar = self.initialise()
 
         print(mysar)
+
+
+class TestAddressed_safety_related_message(TestCase):
+    def initialise(self):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        psuedo_AIS = '!AIVDM,1,1,,A,<04k5@P0<AD8D89CP9CP1PDCD>,0*05'
+        mystream = Payloads.AISStream(psuedo_AIS)
+        mysafety = Payloads.Addressed_safety_related_message(mystream.binary_payload)
+        return diction, mystream, mysafety
+
+    def test_get_repeat_indicator(self):
+        diction, mystream, mysafety = self.initialise()
+
+        # 2 bits, 6-7 unsigned integer 0-3, no other values exist
+        for i in [0, 1, 2, 3]:
+            testbits = '{:02b}'.format(i)
+            testbits = diction.make_stream(4, testbits)
+
+            mysafety.payload = testbits
+            mysafety.get_repeat_indicator()
+            self.assertEqual(i, mysafety.repeat_indicator,
+                             "In Addressed Safety.sequence returned value does not match expected value")
+    def test_get_sequence_number(self):
+        diction, mystream, mysafety = self.initialise()
+
+        # 2 bits, 38-39 unsigned integer 0-3, no other values exist
+        for i in [0,1,2,3]:
+
+            testbits = '{:02b}'.format(i)
+            testbits = diction.make_stream(38,testbits)
+
+            mysafety.payload = testbits
+            mysafety.get_sequence_number()
+            self.assertEqual(i, mysafety.sequence_number,
+                             "In Addressed Safety.sequence returned value does not match expected value")
+
+    def test_get_destination_mmsi(self):
+        diction, mystream, mysafety = self.initialise()
+
+        print('Testing Addressed Safety get Destination mmsi')
+
+        smmsi_list: list = [
+            '850312345', '503543210', '050398765', '005037651', '111504678',
+            '998761234', '984135432', '970654987', '972654321', '974765432',
+            '999999999'
+        ]
+
+        # the mmsi field is bits 40-69 of the binary payload string
+
+
+        for ssm in smmsi_list:
+            sm: str = ssm
+            mmsibits = '{:030b}'.format(int(sm))
+            mmsibits = diction.make_stream(40, mmsibits)
+            mysafety.payload = mmsibits
+
+            try:
+                mysafety.get_destination_mmsi()
+
+                self.assertEqual(sm, mysafety.destination_mmsi,
+                                 "Failed in Addressed Safety get destination mmsi ")
+            except RuntimeError:
+                logging.error("Runtime Error in testing Addressed SAfety get destination mmsi")
+
+    def test_get_retransmit_flag(self):
+        diction, mystream, mysafety = self.initialise()
+
+        print('Testing Addressed Safety get Retransmit flag')
+
+        for i in [0,1]:
+            testbits = "{:01b}".format(i)
+            testbits = diction.make_stream(70,testbits)
+
+            mysafety.payload = testbits
+            mysafety.get_retransmit_flag()
+            if i == 0:
+                self.assertFalse(mysafety.retransmit_flag,
+                                 "In Addressed SAfety get retrandsmit flag incorrectr bool returned")
+            else:
+                self.assertTrue(mysafety.retransmit_flag,
+                             "In Addressed SAfety get retrandsmit flag incorrectr bool returned")
+
+
+    def test_get_safety_text(self):
+        diction, mystream, mysafety = self.initialise()
+        print('Testing Addressed Safety get Safety Text')
+
+        # again effectively free text - only upper case allowed
+
+        for a in ['Melbourne',
+                  'Australian Explorer',
+                  '12345678901234567890',
+                  'ABCDEFGHIJKLMNOPQRST',
+                  'abcdefghijklmnopqrst',
+                  '12345678901234567890',
+                    '01234567890123456789012345678901234567890123456789012345678900987654321'
+                  ]:
+            test_bits = ''
+            test_bits = diction.char_to_binary(a.upper())
+            test_bits = diction.make_stream(72, test_bits)
+            mysafety.payload = test_bits
+            try:
+                mysafety.get_safety_text()
+                self.assertEqual(a.upper(), mysafety.safety_text,
+                                 "In Addressed Safety.get_safety text, value returned\n "
+                                 + mysafety.safety_text + "\nnot equal to value offered \n" + a)
+            except RuntimeError:
+                self.assertFalse(True, "Runtime Error in Addressed Safety.get_safety text")
+
+    def test_repr(self):
+        diction, mystream, mysafety = self.initialise()
+        print("testing Addressed Safety  __repr__")
+        print(mysafety)
+        # should have a valid data set as a result of the initiaslise()
+
+
+
+class TestSafety_related_broadcast_message(TestCase):
+    def initialise(self):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        psuedo_AIS = '!AIVDM,1,1,,A,<04k5@QQ1:L1:L0<2PbJP,0*05'
+        mystream = Payloads.AISStream(psuedo_AIS)
+        mysafety = Payloads.Safety_related_broadcast_message(mystream.binary_payload)
+        return diction, mystream, mysafety
+
+
+    def test_get_safety_text(self):
+        diction, mystream, mysafety = self.initialise()
+        print('Testing Addressed Safety get Safety Text')
+
+        # again effectively free text - only upper case allowed
+
+        for a in ['Melbourne',
+                  'Australian Explorer',
+                  '12345678901234567890',
+                  'ABCDEFGHIJKLMNOPQRST',
+                  'abcdefghijklmnopqrst',
+                  '12345678901234567890',
+                    '01234567890123456789012345678901234567890123456789012345678900987654321'
+                  ]:
+            test_bits = ''
+            test_bits = diction.char_to_binary(a.upper())
+            test_bits = diction.make_stream(40, test_bits)
+            mysafety.payload = test_bits
+            try:
+                mysafety.get_safety_text()
+                self.assertEqual(a.upper(), mysafety.safety_text,
+                                 "In Addressed Safety.get_safety text, value returned\n "
+                                 + mysafety.safety_text + "\nnot equal to value offered \n" + a)
+            except RuntimeError:
+                self.assertFalse(True, "Runtime Error in Addressed Safety.get_safety text")
+
+    def test_repr(self):
+        diction, mystream, mysafety = self.initialise()
+        print("testing Broadcast Safety __repr__")
+        print(mysafety)
+        # should have a valid data set as a result of the initiaslise()
+
+
+
+
+
+
+
+
+
+
+
