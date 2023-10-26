@@ -29,6 +29,7 @@ class TestUTC_date_response(TestCase):
 class TestSafety_related_acknowledgement(TestCase):
     pass
 
+
 class TestInterrogation(TestCase):
     pass
 
@@ -1578,14 +1579,14 @@ class TestAddressed_safety_related_message(TestCase):
             mysafety.get_repeat_indicator()
             self.assertEqual(i, mysafety.repeat_indicator,
                              "In Addressed Safety.sequence returned value does not match expected value")
+
     def test_get_sequence_number(self):
         diction, mystream, mysafety = self.initialise()
 
         # 2 bits, 38-39 unsigned integer 0-3, no other values exist
-        for i in [0,1,2,3]:
-
+        for i in [0, 1, 2, 3]:
             testbits = '{:02b}'.format(i)
-            testbits = diction.make_stream(38,testbits)
+            testbits = diction.make_stream(38, testbits)
 
             mysafety.payload = testbits
             mysafety.get_sequence_number()
@@ -1604,7 +1605,6 @@ class TestAddressed_safety_related_message(TestCase):
         ]
 
         # the mmsi field is bits 40-69 of the binary payload string
-
 
         for ssm in smmsi_list:
             sm: str = ssm
@@ -1625,9 +1625,9 @@ class TestAddressed_safety_related_message(TestCase):
 
         print('Testing Addressed Safety get Retransmit flag')
 
-        for i in [0,1]:
+        for i in [0, 1]:
             testbits = "{:01b}".format(i)
-            testbits = diction.make_stream(70,testbits)
+            testbits = diction.make_stream(70, testbits)
 
             mysafety.payload = testbits
             mysafety.get_retransmit_flag()
@@ -1636,8 +1636,7 @@ class TestAddressed_safety_related_message(TestCase):
                                  "In Addressed SAfety get retrandsmit flag incorrectr bool returned")
             else:
                 self.assertTrue(mysafety.retransmit_flag,
-                             "In Addressed SAfety get retrandsmit flag incorrectr bool returned")
-
+                                "In Addressed SAfety get retrandsmit flag incorrectr bool returned")
 
     def test_get_safety_text(self):
         diction, mystream, mysafety = self.initialise()
@@ -1651,7 +1650,7 @@ class TestAddressed_safety_related_message(TestCase):
                   'ABCDEFGHIJKLMNOPQRST',
                   'abcdefghijklmnopqrst',
                   '12345678901234567890',
-                    '01234567890123456789012345678901234567890123456789012345678900987654321'
+                  '01234567890123456789012345678901234567890123456789012345678900987654321'
                   ]:
             test_bits = ''
             test_bits = diction.char_to_binary(a.upper())
@@ -1672,18 +1671,16 @@ class TestAddressed_safety_related_message(TestCase):
         # should have a valid data set as a result of the initiaslise()
 
 
-
 class TestSafety_related_broadcast_message(TestCase):
     def initialise(self):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         diction = AISDictionaries()
         # the stream offered here is valid but the mystream.payload , mypayload.payload
         #  and/or mystream.binary_payload will be overwritten during testing
-        psuedo_AIS = '!AIVDM,1,1,,A,<04k5@QQ1:L1:L0<2PbJP,0*05'
+        psuedo_AIS = '!AIVDM,1,1,,A,<04k5@Q@PU>0U>1@E=@,0*05'
         mystream = Payloads.AISStream(psuedo_AIS)
         mysafety = Payloads.Safety_related_broadcast_message(mystream.binary_payload)
         return diction, mystream, mysafety
-
 
     def test_get_safety_text(self):
         diction, mystream, mysafety = self.initialise()
@@ -1697,7 +1694,7 @@ class TestSafety_related_broadcast_message(TestCase):
                   'ABCDEFGHIJKLMNOPQRST',
                   'abcdefghijklmnopqrst',
                   '12345678901234567890',
-                    '01234567890123456789012345678901234567890123456789012345678900987654321'
+                  '01234567890123456789012345678901234567890123456789012345678900987654321'
                   ]:
             test_bits = ''
             test_bits = diction.char_to_binary(a.upper())
@@ -1718,12 +1715,48 @@ class TestSafety_related_broadcast_message(TestCase):
         # should have a valid data set as a result of the initiaslise()
 
 
+class TestAid_to_navigation_report(TestCase):
+    def test_get_aid_type(self):
+        self.fail()
 
+    def test_get_nav_name(self):
+        self.fail()
 
+    def test_get_nav_longitude(self):
+        self.fail()
 
+    def test_get_nav_latitude(self):
+        self.fail()
 
+    def test_get_nav_dim_to_bow(self):
+        self.fail()
 
+    def test_get_nav_dim_to_stern(self):
+        self.fail()
 
+    def test_get_nav_dim_to_port(self):
+        self.fail()
 
+    def test_get_nav_dim_to_stbd(self):
+        self.fail()
 
+    def test_get_nav_epfd(self):
+        self.fail()
 
+    def test_get_nav_utc_second(self):
+        self.fail()
+
+    def test_get_nav_off_position_indicator(self):
+        self.fail()
+
+    def test_get_nav_raim_flag(self):
+        self.fail()
+
+    def test_get_nav_virtual_aid_flag(self):
+        self.fail()
+
+    def test_get_nav_assigned_flag(self):
+        self.fail()
+
+    def test_get_nav_name_extension(self):
+        self.fail()

@@ -262,11 +262,11 @@ class Payload:
         '''
 
         if self.binary_item(position, 1) == 1:
-            self.raim_flag = True
+            self.flag = True
         else:
-            self.raim_flag = False
+            self.flag = False
 
-        return self.raim_flag
+        return self.flag
 
     def getRAIMflag(self, position: int) -> None:
         '''
@@ -748,7 +748,7 @@ class Basestation(Basic_Position):
         self.get_day()
         self.get_hour()
         self.get_minute()
-        self.get_second()
+        self.get_second(72,6)
         self.get_Base_EPFD()
         self.getfix(78)
         self.getRAIMflag(148)
@@ -856,7 +856,7 @@ class Basestation(Basic_Position):
             logging.error("Base.minute outside range 0-60 " + '{:d}'.format(self.minute))
             raise ValueError
 
-    def get_second(self) -> None:
+    def get_second(self, position: int, length: int = 6) -> None:
         '''
                 Bits 72-77 length 6  Second (UTC) second  0-59; 60 = N/A (default)
             :return:
@@ -1191,6 +1191,7 @@ class SAR_aircraft_position_report(Basic_Position):
             self.get_dte()
             self.get_assigned()
 
+
     def __repr__(self):
 
             return (f'{self.__class__.__name__}\n'
@@ -1490,6 +1491,7 @@ class ClassB_position_report(Basic_Position):
         self.get_display_flag()
         self.get_band_flag()
         self.get_message22_flag()
+        self.getfix(56)
 
     def __repr__(self):
         return (f'{self.__class__.__name__}\n'
@@ -1497,7 +1499,7 @@ class ClassB_position_report(Basic_Position):
                 f'Repeat Indicator:    {self.repeat_indicator}\n'
                 f'MMSI:                {self.mmsi}\n'
                 f'Speed over Ground:   {self.speed_over_ground}\n'
-                f'Positionn Accuracy:  {self.position_accuracy}\n'
+                f'Position Accuracy:   {self.fix_quality}\n'
                 f'Longitude:           {self.longitude}\n'
                 f'Latitude:            {self.latitude}\n'
                 f'Course over Ground:  {self.course_over_ground}\n'
@@ -1565,7 +1567,7 @@ class Extende_ClassB_position_report(Basic_Position):
         super().__init__(p_payload)
 
         self.get_CLB_SOG()
-        self.get_CLB_fix()
+        self.getfix(56)
         self.get_CLB_longitude()
         self.get_CLB_latitude()
         self.get_CLB_COG()
@@ -1573,10 +1575,10 @@ class Extende_ClassB_position_report(Basic_Position):
         self.get_CLB_timestamp()
         self.get_CLB_vessell_name()
         self.get_CLB_ship_type()
-        self.get_CLB_diom_to_bow()
-        self.get_CLB_diom_to_stern()
-        self.get_CLB_diom_to_port()
-        self.get_CLB_diom_to_stbd()
+        self.get_CLB_dim_to_bow()
+        self.get_CLB_dim_to_stern()
+        self.get_CLB_dim_to_port()
+        self.get_CLB_dim_to_stbd()
         self.get_CLB_EPFD()
         self.get_CLB_raim_flag()
         self.getr_CLB_dte()
@@ -1609,10 +1611,10 @@ class Extende_ClassB_position_report(Basic_Position):
 
     def get_CLB_fix(self):
         self.position_accuracy = self.get_flag_bit(56)
-    def get_CLB_longtitude(self):
+    def get_CLB_longitude(self):
         self.get_longitude(57,28)
     def get_CLB_latitude(self):
-        self.get_longitude(85, 27)
+        self.get_latitude(85, 27)
     def get_CLB_COG(self):
         self.get_COG(112,12)
     def get_CLB_Tru_head(self):
@@ -1634,9 +1636,9 @@ class Extende_ClassB_position_report(Basic_Position):
     def get_CLB_EPFD(self):
         self.get_EPFD(301,4)
     def get_CLB_raim_flag(self):
-        self.get_flag_bit(305)
+        self.raim_flag = self.get_flag_bit(305)
     def getr_CLB_dte(self):
-        self.get_flag_bit(306)
+        self.dte = self.get_flag_bit(306)
 
 
 
@@ -1651,14 +1653,87 @@ class Data_link_management_message(Payload):
         pass
 
 
-class Aid_to_navigation_report(Payload):
-    # to be implemented
+class Aid_to_navigation_report(Basic_Position):
+    '''
+    Identification and location message to be emitted by aids to navigation such as buoys and lighthouses.
+
+    This message is unusual in that it varies in length depending on the presence and size of the Name Extension field.
+     May vary between 272 and 360 bits.
+     Will implty that the get_extension text fiunction needs to check where the end is
+
     # type 21
+
+    '''
+
+    aid_type: int
+    off_position_indicator: bool
+    virtual_aid_flag: bool
+    name_extension: str
+
 
     def __init__(self, p_payload):
         super().__init__(p_payload)
+        self.get_aid_type()
+        self.get_NAV_name()
+        self.getfix(163)
+        self.get_NAV_longitude()
+        self.get_NAV_latitude()
+        self.get_NAV_dim_to_bow()
+        self.get_NAV_dim_to_stern()
+        self.get_NAV_dim_to_port()
+        self.get_NAV_dim_to_stbd()
+        self.get_NAV_EPFD()
+        self.get_NAV_UTC_second()
+        self.get_NAV_off_position_indicator()
+        self.get_NAV_raim_flag()
+        self.get_NAV_virtual_aid_flag()
+        self.get_NAV_assigned_flag()
+        self.get_NAV_name_extension()
 
+
+    def get_aid_type(self):
         pass
+
+    def get_NAV_name(self):
+        self.get_vessel_name(43,120)
+
+    def get_NAV_longitude(self):
+        self.get_longitude(164,28)
+    def get_NAV_latitude(self):
+        self.get_latitude(192,27)
+    def get_NAV_dim_to_bow(self):
+        self.get_dim_to_bow(219,9)
+    def get_NAV_dim_to_stern(self):
+        self.get_dim_to_stern(228,9)
+    def get_NAV_dim_to_port(self):
+        self.get_dim_to_port(237,6)
+    def get_NAV_dim_to_stbd(self):
+        self.get_dim_to_stbd(243,6)
+    def get_NAV_EPFD(self):
+        self.get_EPFD(249,4)
+    def get_NAV_UTC_second(self):
+        self.utc_second = self.binary_item(253,6)
+        self.get_second(253,6)
+    def get_NAV_off_position_indicator(self):
+        self.off_position_indicator = self.get_flag_bit(259)
+    def get_NAV_raim_flag(self):
+        self.raim_flag = self.get_flag_bit(268)
+    def get_NAV_virtual_aid_flag(self):
+        self.virtual_aid_flag = self.get_flag_bit(269)
+    def get_NAV_assigned_flag(self):
+        self.get_flag_bit(270)
+    def get_NAV_name_extension(self):
+
+        # needs work to check for length of payload to avoid overun
+        extlen = len(self.payload) - 272
+
+        while extlen % 6 != 0:
+            extlen -= 1
+
+        self.name_extension = self.extract_text(272, extlen)
+
+        while self.name_extension[len(self.name_extension) - 1] == '@':
+            self.name_extension = self.name_extension[0:len(self.name_extension) - 1]
 
 
 class Channel_management(Payload):
