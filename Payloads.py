@@ -137,8 +137,10 @@ class Payload:
 
         # veracity check
         if not (startpos + blength < len(self.payload)):
-            logging.error("In Payload.binary_item() - Request to extract more bits which overrun end of binary payload")
-            raise RuntimeError("Request to extract more bits which overrun end of binary payload")
+            logging.error("In Payload.binary_item() - Request to extract more bits {} + {} "
+                          "which overrun end of binary payload {}".format(startpos, blength,len(self.payload)))
+            raise RuntimeError("Request to extract more bits {} {} which overrun end of binary payload "
+                               "{}".format(startpos, blength,len(self.payload)))
         reqbits = self.payload[startpos:startpos + blength]
         logging.debug('in Binary Item  reqbits = ', type(reqbits), ' value reqbits =', reqbits)
         if len(reqbits) != 0:
@@ -318,6 +320,7 @@ class Basic_Position(Payload):
 
 
     def  __init__(self, p_payload):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
 
         # very little initiation done in this class just provides routines for use in CNB, Static, Class B
@@ -529,7 +532,6 @@ class Basic_Position(Payload):
         :return:
             sets Base.EPFD_type for 9-14 logs error returns 0 but does not invalidate object
         '''
-
         self.EPFD_type = self.binary_item(position,length)
         if 9 <= self.EPFD_type <= 14:
             self.EPFD_type = 0
@@ -564,6 +566,7 @@ class CNB(Basic_Position):
     maneouver_indicator: int
 
     def __init__(self, p_payload: str):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
         self.get_nav_status()
         self.get_ROT()
@@ -742,6 +745,7 @@ class Basestation(Basic_Position):
     EPFD_type: int
 
     def __init__(self, p_payload: str):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
         self.get_year()
         self.get_month()
@@ -871,6 +875,7 @@ class Basestation(Basic_Position):
 
     def get_Base_EPFD(self):
         self.get_EPFD(134,4)
+
 class StaticData(Basic_Position):
     # type 5
     '''
@@ -896,6 +901,7 @@ class StaticData(Basic_Position):
     maxpayloadlen: int  # used to check for packet truncation
 
     def __init__(self, p_payload):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
         # first check actual payload length
         self.payload = p_payload
@@ -1182,14 +1188,15 @@ class SAR_aircraft_position_report(Basic_Position):
 
 
     def __init__(self, p_payload):
-            super().__init__(p_payload)
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        super().__init__(p_payload)
 
-            self.get_altitude()
-            self.get_speed_over_ground()
-            self.get_course_over_ground()
-            self.get_time_stamp()
-            self.get_dte()
-            self.get_assigned()
+        self.get_altitude()
+        self.get_speed_over_ground()
+        self.get_course_over_ground()
+        self.get_time_stamp()
+        self.get_dte()
+        self.get_assigned()
 
 
     def __repr__(self):
@@ -1306,6 +1313,7 @@ class Addressed_safety_related_message(Payload):
 
 
     def __init__(self, p_payload):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
 
         self.payload = p_payload
@@ -1354,18 +1362,33 @@ class Addressed_safety_related_message(Payload):
         self.retransmit_flag  = self.get_flag_bit(70)
     def get_safety_text(self):
         text_start = 72
+
         text_length = len(self.payload) - 72
+        print('in get safety text text_length = ', text_length )
         # ensure we get ony six bit count
         while text_length % 6 != 0:
             text_length -= 1
+
+        print('in get safety text after modulas text_length = ', text_length)
+
+
 
 
         # going to make assumption that the safety_text runs from bit 72 to the end of the binary payload
 
         self.safety_text = self.extract_text(72, text_length)
+        print('in get safety text after extract text, safety_text = ', self.safety_text)
 
-        while self.safety_text[len(self.safety_text) - 1] == '@':
+        while self.safety_text[len(self.safety_text) - 1] == '@' and len(self.safety_text) != 1:
             self.safety_text = self.safety_text[0:len(self.safety_text) - 1]
+
+        print('in get safety text after stripping text, safety_text = ', self.safety_text)
+
+        # accounting for empty text
+        if len(self.safety_text) == 1 and self.safety_text == '@':
+            self.safety_text = ''
+
+        print('in get safety text after stripping text, safety_text = ', self.safety_text)
 
 
 class Safety_related_acknowledgement(Payload):
@@ -1399,6 +1422,7 @@ class Safety_related_broadcast_message(Payload):
     payload: str  # the binary payload derived from the AIS Stream
 
     def __init__(self, p_payload):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
 
         self.payload = p_payload
@@ -1564,6 +1588,7 @@ class Extende_ClassB_position_report(Basic_Position):
 
 
     def __init__(self, p_payload):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
 
         self.get_CLB_SOG()
@@ -1661,17 +1686,44 @@ class Aid_to_navigation_report(Basic_Position):
      May vary between 272 and 360 bits.
      Will implty that the get_extension text fiunction needs to check where the end is
 
+     The name field is up to 20 characters of 6-bit ASCII.
+     If this field is full (has no trailing @ characters) the decoder should interpret the
+     Name Extension field later in the message (no more than 14 6-bit characters)
+      and concatenate it to this one to obtain the full name.
+
+    [IALA] describes bits 219-248 As "Dimension/Reference for Position",
+    implying that it is vessel dimensions as in message type 5.
+
+    The Off-Position Indicator is for floating Aids-to-Navigation only:
+    0 means on position;
+    1 means off position.
+    Only valid if UTC second is equal to or below 59.
+
+    The Virtual Aid flag is interpreted as follows:
+    0 = default = real Aid to Navigation at indicated position;
+    1 = virtual Aid to Navigation simulated by nearby AIS station.
+
+    If present, the Name Extension consists of packed six-bit ASCII characters
+    followed by 0-6 bits of padding to an 8-bit boundary.
+    The [IALA] description says "This parameter should be omitted when no more than 20 characters
+    for the name of the A-to-N are needed in total. Only the required number of characters should be transmitted,
+    i.e. no @-character should be used." A decoder can deduce the bit length of the name extension field
+    by subtracting 272 from the total message bit length.
+
     # type 21
 
     '''
 
-    aid_type: int
+    aid_type: int                # described in AISDictionaries
     off_position_indicator: bool
     virtual_aid_flag: bool
     name_extension: str
+    assigned_mode: bool
+    utc_second: int
 
 
     def __init__(self, p_payload):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
         self.get_aid_type()
         self.get_NAV_name()
@@ -1690,9 +1742,35 @@ class Aid_to_navigation_report(Basic_Position):
         self.get_NAV_assigned_flag()
         self.get_NAV_name_extension()
 
+    def __repr__(self):
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type:             {self.message_type}\n'
+                f'Repeat Indicator:         {self.repeat_indicator}\n'
+                f'MMSI:                     {self.mmsi}\n'
+                f'Aid Type:                 {self.aid_type}\n'
+                f'Name:                     {self.vessel_name}\n'
+                f'Fix Type:                 {self.fix_quality}\n'
+                f'Longitude:                {self.longitude}\n'
+                f'Latitude:                 {self.latitude}\n'
+                f'Dim to Bow:               {self.dim_to_bow}\n'
+                f'Dim to Stern:             {self.dim_to_stern}\n'
+                f'Dim to Port:              {self.dim_to_port}\n'
+                f'Dim to Stbd:              {self.dim_to_stbd}\n'
+                f'EPFD Type:                {self.EPFD_type}\n'
+                f'UTC Second:               {self.utc_second}\n'
+                f'Off Position Indicator:   {self.off_position_indicator}\n'
+                f'RAIM Flag:                {self.raim_flag}\n'
+                f'Virtual Aid Flag :        {self.virtual_aid_flag}\n'
+                f'Assigned Mode Flag :      {self.assigned_mode}\n'
+                f'Name Extension:           {self.name_extension}\n'
+                )
+
+
+
 
     def get_aid_type(self):
-        pass
+        # 5 bits at 38-42 range 0-31 so no range validation required
+        self.aid_type = self.binary_item(38,5)
 
     def get_NAV_name(self):
         self.get_vessel_name(43,120)
@@ -1713,7 +1791,7 @@ class Aid_to_navigation_report(Basic_Position):
         self.get_EPFD(249,4)
     def get_NAV_UTC_second(self):
         self.utc_second = self.binary_item(253,6)
-        self.get_second(253,6)
+
     def get_NAV_off_position_indicator(self):
         self.off_position_indicator = self.get_flag_bit(259)
     def get_NAV_raim_flag(self):
@@ -1721,19 +1799,30 @@ class Aid_to_navigation_report(Basic_Position):
     def get_NAV_virtual_aid_flag(self):
         self.virtual_aid_flag = self.get_flag_bit(269)
     def get_NAV_assigned_flag(self):
-        self.get_flag_bit(270)
+        self.assigned_mode = self.get_flag_bit(270)
     def get_NAV_name_extension(self):
 
         # needs work to check for length of payload to avoid overun
         extlen = len(self.payload) - 272
+        # allowance for no name extension field
+        if extlen <= 0:
+            self.name_extension = ''
+            self.vessel_name = self.vessel_name + self.name_extension
+            return
 
         while extlen % 6 != 0:
             extlen -= 1
 
         self.name_extension = self.extract_text(272, extlen)
 
-        while self.name_extension[len(self.name_extension) - 1] == '@':
+        while self.name_extension[len(self.name_extension)-1] == '@' and len(self.name_extension) != 1:
             self.name_extension = self.name_extension[0:len(self.name_extension) - 1]
+
+        # accounting for null extension
+        if len(self.name_extension) == 1 and self.name_extension == '@':
+            self.name_extension = ''
+
+        self.vessel_name = self.vessel_name + self.name_extension
 
 
 class Channel_management(Payload):
@@ -1756,14 +1845,219 @@ class Group_assigment_command(Payload):
         pass
 
 
-class Static_data_report(Payload):
+class Static_data_report(Basic_Position):
+    '''
     # to be implemented
     # type 24
+    Equivalent of a Type 5 message for ships using Class B equipment.
+    Also used to associate an MMSI with a name on either class A or class B equipment.
+
+    A "Type 24" may be in part A or part B format; According to the standard,
+    parts A and B are expected to be broadcast in adjacent pairs;
+    in the real world they may (due to quirks in various aggregation methods) be separated
+    by other sentences or even interleaved with different Type 24 pairs;
+    decoders must cope with this.
+    The interpretation of some fields in Type B format changes depending on the range of the Type B MMSI field.
+    160 bits for part A, 168 bits for part B.
+
+    According to the standard, both the A and B parts are supposed to be 168 bits.
+    However, in the wild, A parts are often transmitted with only 160 bits,
+    omitting the 'spare' 7 bits at the end. Implementers should be permissive about this.
+
+    Many of the parameters are inherited from classes Playload and BasicPosition
+
+    '''
+
+    part_number: int            # determines whether a "Part A"or "Part B" packet
 
     def __init__(self, p_payload):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        super().__init__(p_payload)
+        self.payload = p_payload
+        self.create_mmsi()
+        self.get_part_number()
+
+
+
+    def get_part_number(self):
+        self.part_number = self.binary_item(38,2)
+        if not (0 <= self.part_number <=1):
+            logging.error("Invalid Part Number returned in Type25 Base")
+            self.valid_item = False
+            raise ValueError
+
+
+class Static_data_PartA(Static_data_report):
+    '''
+    # to be implemented
+    # type 24
+    Equivalent of a Type 5 message for ships using Class B equipment.
+    Also used to associate an MMSI with a name on either class A or class B equipment.
+
+    A "Type 24" may be in part A or part B format; According to the standard,
+    parts A and B are expected to be broadcast in adjacent pairs;
+    '''
+
+    part_number: int  # determines whether a "Part A"or "Part B" packet
+
+    def __init__(self, p_payload):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
 
+        self.get_24_vessel_name()
+        self.get_24_ship_type()
+
         pass
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type:         {self.message_type}\n'
+                f'Repeat Indicator:     {self.repeat_indicator}\n'
+                f'MMSI:                 {self.mmsi}\n'
+                f'Part_number:    {self.part_number}\n'
+                f'Vessel Name:          {self.vessel_name}\n'
+                )
+
+    def get_24_vessel_name(self):
+        self.get_vessel_name(40, 120)
+
+    def get_24_ship_type(self):
+        # ship type described in AISDictionaries
+        # validation done in class BasicPosition
+        # testing will only need to check if a correct name returned - checks bit location parameters
+        self.get_ship_type(40, 120)
+
+
+
+class Static_data_PartB(Static_data_report):
+    '''
+    # to be implemented
+    # type 24
+    Equivalent of a Type 5 message for ships using Class B equipment.
+    Also used to associate an MMSI with a name on either class A or class B equipment.
+
+    A "Type 24" may be in part A or part B format; According to the standard,
+    parts A and B are expected to be broadcast in adjacent pairs;
+
+    Interpretation of the 30 bits 132-162 in Part B is variable.
+    If the MMSI at 8-37 is that of an auxiliary craft,
+    the entry is taken to refer to a small attached auxiliary vessel
+    and these 30 bits are read as the MMSI of the mother ship.
+    Otherwise the 30 bits describe vessel dimensions as in Message Type 5.
+
+    According to [MMSI], an MMSI is associated with an auxiliary craft when it is of the form 98XXXYYYY, where
+    (1) the '98' in positions 1 and 2 is required to designate an auxiliary craft,
+    (2) the digits XXX in the 3, 4 and 5 positions are the MID
+    (the three-digit country code as described in [ITU-MID])
+    and
+    (3) YYYY is any decimal literal from 0000 to 9999.
+
+    '''
+
+    vendor_id: str
+    pre1371_4_vendor_id: str
+    unit_model_code: int
+    callsign: str
+    mothership_mmsi: int
+
+
+    def __init__(self, p_payload):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        super().__init__(p_payload)
+
+        self.get_24_ship_type()
+        self.get_vendor_id()
+        self.get_unit_model_code()
+        self.get_serial_number()
+        self.get_callsign()
+        self.get_24_dim_to_bow()
+        self.get_24_dim_to_stern()
+        self.get_24_dim_to_port()
+        self.get_24_dim_to_stbd()
+        self.get_mothership_mmsi()
+
+        pass
+
+    def __repr__(self):
+        if self.mmsi[0:2] == '98':
+            return (f'{self.__class__.__name__}\n' 
+                    f'Message Type:         {self.message_type}\n' 
+                    f'Repeat Indicator:     {self.repeat_indicator}\n' 
+                    f'MMSI:                 {self.mmsi}\n' 
+                    f'Part_number:          {self.part_number}\n' 
+                    f'Ship Type :           {self.ship_type}\n' 
+                    f'Vendor ID:            {self.vendor_id}\n' 
+                    f'Pre1371_4_Vendor ID:  {self.pre1371_4_vendor_id}\n'
+                    f'Unit Model Code:      {self.unit_model_code}\n' 
+                    f'Serial Number:        {self.serial_number}\n' 
+                    f'Callsign:             {self.callsign}\n'
+                    f'Mothership MMSI:      {self.mothership_mmsi}\n'
+                    )
+        else:
+            return (
+                f'{self.__class__.__name__}\n'
+                f'Message Type:         {self.message_type}\n'
+                f'Repeat Indicator:     {self.repeat_indicator}\n'
+                f'MMSI:                 {self.mmsi}\n'
+                f'Part_number:          {self.part_number}\n'
+                f'Ship Type :           {self.ship_type}\n'
+                f'Vendor ID:            {self.vendor_id}\n'
+                f'Pre1371_4_Vendor ID:  {self.pre1371_4_vendor_id}\n'
+                f'Unit Model Code:      {self.unit_model_code}\n'
+                f'Serial Number:        {self.serial_number}\n'
+                f'Callsign:             {self.callsign}\n'
+                f'Dim to Bow:           {self.dim_to_bow}\n'
+                f'Dim to Stern:         {self.dim_to_stern}\n'
+                f'Dim to Port:          {self.dim_to_port}\n'
+                f'Dim to Stbd:          {self.dim_to_stbd}\n'
+            )
+
+
+
+    def get_24_ship_type(self):
+        self.get_ship_type(40, 120)
+
+    def get_vendor_id(self):
+        '''
+        Bits 48-89 are as described in ITU-R 1371-4.
+        In earlier versions to 1371-3 this was one sixbit-encoded 42-bit (7-character) string field,
+        the name of the AIS equipment vendor.
+        The last 4 characters of the string are reinterpreted as a model/serial numeric pair.
+        It is not clear that field practice has caught up with this incompatible change.
+        Implementations would be wise to decode that but span in both ways and trust human eyes
+        to detect when the final 4 characters of the string or the model and serial fields are garbage.
+
+        :return:
+        '''
+        # 3 six bit characters (or possibly one 7 character string in 1371-3)
+
+        self.vendor_id = self.extract_text(48, 65)
+        self.pre1371_4_vendor_id = self.extract_text(48, 42)
+
+    def get_unit_model_code(self):
+        # int 4 bits
+        self.unit_model_code = self.binary_item(66,4)
+
+    def get_serial_number(self):
+        self.serial_number = self.binary_item(70,20)
+
+    def get_callsign(self):
+        self.callsign = self.extract_text(90,42)
+
+    def get_24_dim_to_bow(self):
+        self.get_dim_to_bow(132,9)
+    def get_24_dim_to_stern(self):
+        self.get_dim_to_stern(141, 9)
+
+    def get_24_dim_to_port(self):
+        self.get_dim_to_port(150, 6)
+
+    def get_24_dim_to_stbd(self):
+        self.get_dim_to_stbd(156, 6)
+
+    def get_mothership_mmsi(self):
+        self.mothership_mmsi = self.binary_item(132,30)
+
 
 
 class Single_slot_binary_message(Payload):

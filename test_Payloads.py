@@ -62,10 +62,6 @@ class TestGroup_assigment_command(TestCase):
     pass
 
 
-class TestStatic_data_report(TestCase):
-    pass
-
-
 class TestSingle_slot_binary_message(TestCase):
     pass
 
@@ -857,7 +853,7 @@ class TestBasestation(TestCase):
         for yval in [0, 59, 60, 61]:
             mybase.payload = diction.make_stream(72, '{:06b}'.format(yval))
             try:
-                mybase.get_second()
+                mybase.get_second(72)
                 self.assertEqual(yval, mybase.second, "In Base.get_second - value returned does match value set")
             except ValueError:
                 self.assertFalse(mybase.valid_item, "In Base.get_second - module does not flag invalid value")
@@ -1653,14 +1649,16 @@ class TestAddressed_safety_related_message(TestCase):
                   '01234567890123456789012345678901234567890123456789012345678900987654321'
                   ]:
             test_bits = ''
+            print('in test safety text a = ', a.upper())
             test_bits = diction.char_to_binary(a.upper())
             test_bits = diction.make_stream(72, test_bits)
             mysafety.payload = test_bits
             try:
                 mysafety.get_safety_text()
-                self.assertEqual(a.upper(), mysafety.safety_text,
-                                 "In Addressed Safety.get_safety text, value returned\n "
-                                 + mysafety.safety_text + "\nnot equal to value offered \n" + a)
+                self.assertTrue(a.upper() == mysafety.safety_text,
+                                "In Addressed Safety.get_safety text, value returned\n "
+                                + mysafety.safety_text + "\nnot equal to value offered \n" + a.upper())
+
             except RuntimeError:
                 self.assertFalse(True, "Runtime Error in Addressed Safety.get_safety text")
 
@@ -1716,47 +1714,432 @@ class TestSafety_related_broadcast_message(TestCase):
 
 
 class TestAid_to_navigation_report(TestCase):
+    def initialise(self):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        psuedo_AIS = '!AIVDM,1,1,,A,E>lt<B9R2QWW9b9:Qb4WW@=7W2h5Cs=Bm0dJh00003V01=h,2*79'
+        mystream = Payloads.AISStream(psuedo_AIS)
+        myaid = Payloads.Aid_to_navigation_report(mystream.binary_payload)
+        return diction, mystream, myaid
+
     def test_get_aid_type(self):
-        self.fail()
+        # 5 bits range 0-31, no range validation needed
+        diction, mystream, myaid = self.initialise()
+
+        for i in [0, 1, 2, 5, 10, 20, 30, 31]:
+            testbits = '{:05b}'.format(i)
+            myaid.payload = diction.make_stream(38, testbits)
+            myaid.get_aid_type()
+            self.assertEqual(i, myaid.aid_type, "In Aid to Navigation.aid_type value returned {} "
+                                                "not equal to value expected {} ".format(i, myaid.aid_type))
 
     def test_get_nav_name(self):
-        self.fail()
+        diction, mystream, myaid = self.initialise()
+        for a in ['Melbourne',
+                  'Australian Explorer',
+                  '12345678901234567890',
+                  'ABCDEFGHIJKLMNOPQRST',
+                  'abcdefghijklmnopqrst',
+                  '12345678901234567890',
+                  '01234567890123456789012345678901234567890123456789012345678900987654321'
+                  ]:
+            test_bits = ''
+            test_bits = diction.char_to_binary(a.upper()[0:20])
+            test_bits = diction.make_stream(43, test_bits)
+            myaid.payload = test_bits
+            try:
+                myaid.get_NAV_name()
+                self.assertTrue(a.upper()[0:20] == myaid.vessel_name,
+                                "In Addressed Safety.get_safety text, value returned\n "
+                                + myaid.vessel_name + "\nnot equal to value offered \n" + a.upper())
+            except RuntimeError:
+                self.assertFalse(True, "Runtime Error in Aid to Navigation - get aid name")
 
     def test_get_nav_longitude(self):
-        self.fail()
+        # assumed OK if tests in class Payload are OK
+        pass
 
     def test_get_nav_latitude(self):
-        self.fail()
+        # assumed OK if tests in class Payload are OK
+        pass
 
     def test_get_nav_dim_to_bow(self):
-        self.fail()
+        # Ship  dimensions will be 0 if not available.
+        # For the dimensions to bow and stern, the special value  511 indicates 511 meters or greater;
+        # for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+        # 9 bits therefore range 0-511
+
+        diction, mystream, myaid = self.initialise()
+        print("Testing Static.get_dom_to_bow")
+
+        for i in [0, 10, 100, 500, 511]:
+            testbits = '{:09b}'.format(i)
+            myaid.payload = diction.make_stream(219, testbits)
+
+            try:
+                myaid.get_NAV_dim_to_bow()
+                if i <= 511:
+                    self.assertEqual(i, myaid.dim_to_bow,
+                                     "In Static.get_dim_to_bow value reurned incorrect")
+                else:
+                    self.assertEqual(511, myaid.dim_to_bow,
+                                     "In Static.get_dim_to_bow value reurned incorrect")
+            except RuntimeError:
+                logging.error("Runtime error in Static.dim_to_bow")
 
     def test_get_nav_dim_to_stern(self):
-        self.fail()
+        # Ship  dimensions will be 0 if not available.
+        # For the dimensions to bow and stern, the special value  511 indicates 511 meters or greater;
+        # for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+
+        diction, mystream, myaid = self.initialise()
+        print("Testing Static.get_dim_to_stern")
+
+        for i in [0, 10, 100, 500, 511]:
+            testbits = '{:09b}'.format(i)
+            myaid.payload = diction.make_stream(228, testbits)
+
+            try:
+                myaid.get_NAV_dim_to_stern()
+                if i <= 511:
+                    self.assertEqual(i, myaid.dim_to_stern,
+                                     "In Static.get_dim_to_stern value returned incorrect")
+                else:
+                    self.assertEqual(511, myaid.dim_to_stern,
+                                     "In Static.get_dim_to_stern value returned incorrect")
+            except RuntimeError:
+                logging.error("Runtime error in Static.dim_to_stern")
 
     def test_get_nav_dim_to_port(self):
-        self.fail()
+        # Ship  dimensions will be 0 if not available.
+        # for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+        # 6 bits range 0-63
+
+        diction, mystream, myaid = self.initialise()
+        print("Testing Static.get_dim_to_port")
+        for i in [0, 10, 62, 63]:
+            testbits = '{:06b}'.format(i)
+            myaid.payload = diction.make_stream(237, testbits)
+
+            try:
+                myaid.get_NAV_dim_to_port()
+                if i <= 62:
+                    self.assertEqual(i, myaid.dim_to_port,
+                                     "In Static.get_dim_to_stern value reurned incorrect")
+                else:
+                    self.assertEqual(63, myaid.dim_to_port,
+                                     "In Static.get_dim_to_stern value reurned incorrect")
+            except RuntimeError:
+                logging.error("Runtime error in Static.dim_to_port")
 
     def test_get_nav_dim_to_stbd(self):
-        self.fail()
+        # Ship  dimensions will be 0 if not available.
+        # for the dimensions to port and starboard, the special value 63 indicates 63 meters or greater.
+
+        diction, mystream, myaid = self.initialise()
+        print("Testing Static.get_dim_to_stbd")
+        for i in [0, 10, 62, 63]:
+            testbits = '{:06b}'.format(i)
+            myaid.payload = diction.make_stream(243, testbits)
+
+        try:
+            myaid.get_NAV_dim_to_stbd()
+            if i <= 62:
+                self.assertEqual(i, myaid.dim_to_stbd,
+                                 "In Static.get_dim_to_stbd value returned incorrect")
+            else:
+                self.assertEqual(63, myaid.dim_to_stbd,
+                                 "In Static.get_dim_to_stbd value returned incorrect")
+        except RuntimeError:
+            logging.error("Runtime error in Static.dim_to_stbd")
 
     def test_get_nav_epfd(self):
-        self.fail()
+        # 4 bits range 0-`15`, no range validation needed
+        diction, mystream, myaid = self.initialise()
+
+        for i in [0, 1, 2, 5, 8, 15]:
+            testbits = '{:04b}'.format(i)
+            myaid.payload = diction.make_stream(249, testbits)
+            myaid.get_NAV_EPFD()
+            self.assertEqual(i, myaid.EPFD_type, "In Aid to Navigation.epfd value returned {} "
+                                                 "not equal to value expected {} ".format(i, myaid.EPFD_type))
 
     def test_get_nav_utc_second(self):
-        self.fail()
+        diction, mystream, myaid = self.initialise()
+
+        myaid.utc_second = myaid.binary_item(253, 6)
 
     def test_get_nav_off_position_indicator(self):
-        self.fail()
+        diction, mystream, myaid = self.initialise()
+
+        for i in [0, 1]:
+            testbits = '{:01b}'.format(i)
+            myaid.payload = diction.make_stream(259, testbits)
+            myaid.get_NAV_off_position_indicator()
+            if i == 1:
+                self.assertTrue(myaid.off_position_indicator,
+                                "In NavAid get off posn value returned {} "
+                                "does match value expected True".format(myaid.off_position_indicator))
+            else:
+                self.assertFalse(myaid.off_position_indicator,
+                                 "In NavAid get off posn value returned {} "
+                                 "does match value expected True".format(myaid.off_position_indicator))
 
     def test_get_nav_raim_flag(self):
-        self.fail()
+        diction, mystream, myaid = self.initialise()
+
+        for i in [0, 1]:
+            testbits = '{:01b}'.format(i)
+            myaid.payload = diction.make_stream(268, testbits)
+            myaid.get_NAV_raim_flag()
+            if i == 1:
+                self.assertTrue(myaid.raim_flag,
+                                "In NavAid get raim value returned {} "
+                                "does match value expected True".format(myaid.raim_flag))
+            else:
+                self.assertFalse(myaid.off_position_indicator,
+                                 "In NavAid get rfaim value returned {} "
+                                 "does match value expected True".format(myaid.raim_flag))
 
     def test_get_nav_virtual_aid_flag(self):
-        self.fail()
+        diction, mystream, myaid = self.initialise()
+
+        for i in [0, 1]:
+            testbits = '{:01b}'.format(i)
+            myaid.payload = diction.make_stream(269, testbits)
+            myaid.get_NAV_virtual_aid_flag()
+            if i == 1:
+                self.assertTrue(myaid.virtual_aid_flag,
+                                "In NavAid get virt aid value returned {} "
+                                "does match value expected True".format(myaid.virtual_aid_flag))
+            else:
+                self.assertFalse(myaid.virtual_aid_flag,
+                                 "In NavAid get virt aid value returned {} "
+                                 "does match value expected True".format(myaid.virtual_aid_flag))
 
     def test_get_nav_assigned_flag(self):
-        self.fail()
+        diction, mystream, myaid = self.initialise()
+
+        for i in [0, 1]:
+            testbits = '{:01b}'.format(i)
+            myaid.payload = diction.make_stream(270, testbits)
+            myaid.get_NAV_assigned_flag()
+            if i == 1:
+                self.assertTrue(myaid.assigned_mode,
+                                "In NavAid get assoigned value returned {} "
+                                "does match value expected True".format(myaid.assigned_mode))
+            else:
+                self.assertFalse(myaid.assigned_mode,
+                                 "In NavAid get assoigned value returned {} "
+                                 "does match value expected True".format(myaid.assigned_mode))
 
     def test_get_nav_name_extension(self):
+        diction, mystream, myaid = self.initialise()
+
+        # should check for null name as well
+
+        for a in ['Melbourne',
+                  'Aust. Exp',
+                  '12345678901234',
+                  'ABCDEFGHIJKLMN',
+                  'abcdefghijklmn',
+                  ''
+                  ]:
+            test_bits = ''
+            test_bits = diction.char_to_binary(a.upper())
+            test_bits = diction.make_stream(272, test_bits)
+            myaid.payload = test_bits
+            try:
+                myaid.get_NAV_name_extension()
+                self.assertEqual(a.upper(), myaid.name_extension,
+                                 "In Addressed Safety.get_name extension, value returned\n "
+                                 + myaid.name_extension + "\nnot equal to value offered \n" + a)
+            except RuntimeError:
+                self.assertFalse(True, "Runtime Error in Aid to Navigation - get name extension")
+
+    def test_repr(self):
+        diction, mystream, myaid = self.initialise()
+        myaid.payload = '01010100'
+
+        myaid.payload = (myaid.payload + '{:030b}'.format(5031234) + '01010'
+                         + diction.char_to_binary('AID NAME@@@@@@@@@@@@')
+                         + '0'
+                         + '{:028b}'.format(2300000)
+                         + '{:027b}'.format(23000)
+                         + '{:09b}'.format(100)
+                         + '{:09b}'.format(105)
+                         + '{:06b}'.format(10)
+                         + '{:06b}'.format(15)
+                         + '{:04b}'.format(5)
+                         + '{:06b}'.format(47)
+                         + '1'
+                         + '000000001110'
+                         + diction.char_to_binary('EXTENSION')
+                         )
+
+        myaid.create_mmsi()
+        myaid.get_aid_type()
+        myaid.get_NAV_name()
+        myaid.get_NAV_longitude()
+        myaid.get_NAV_latitude()
+        myaid.get_NAV_dim_to_bow()
+        myaid.get_NAV_dim_to_stern()
+        myaid.get_NAV_dim_to_port()
+        myaid.get_NAV_dim_to_stbd()
+        myaid.get_NAV_EPFD()
+        myaid.get_NAV_UTC_second()
+        myaid.get_NAV_off_position_indicator()
+        myaid.get_NAV_raim_flag()
+        myaid.get_NAV_virtual_aid_flag()
+        myaid.get_NAV_assigned_flag()
+        myaid.get_NAV_name_extension()
+
+        print(myaid)
+
+
+class TestStatic_data_report(TestCase):
+    def initialise(self):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        psuedo_AIS = '!AIVDM,2,1,5,A,577Q0U82<A0II9ACR20pT<th4V0l4E9<f222221?Bhh??6`A0EAR`4mE`88888888888880,0*3E'
+        mystream = Payloads.AISStream(psuedo_AIS)
+        mybase24 = Payloads.Static_data_PartA(mystream.binary_payload)
+        return diction, mystream, mybase24
+
+    def test_get_part_number(self):
+        # 2 bits at 38-39
+        # values 0 or 1
+
+        diction, mystream, mybase24 = self.initialise()
+
+        for i in [0, 1, 2, 3]:
+
+            testbits = '{:02b}'.format(i)
+            mybase24.payload = diction.make_stream(38, testbits)
+
+            try:
+                mybase24.get_part_number()
+                self.assertEqual(i, mybase24.part_number,
+                                 "In Type24 base, part number returned does not match part number expoected")
+            except ValueError:
+                self.assertFalse(mybase24.valid_item, "In type 24 base, invalid part number not flagged")
+
+
+class TestStatic_data_PartA(TestCase):
+    def initialise(self):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        psuedo_AIS = '!AIVDM,2,1,5,A,577Q0U82<A0II9ACR20pT<th4V0l4E9<f222221?Bhh??6`A0EAR`4mE`88888888888880,0*3E'
+        mystream = Payloads.AISStream(psuedo_AIS)
+        mybase24A = Payloads.Static_data_PartA(mystream.binary_payload)
+        return diction, mystream, mybase24A
+
+
+    def test_get_24_vessel_name(self):
+        diction, mystream, mybase24A = self.initialise()
+
+        testbits = diction.char_to_binary('TEST SHIP NAME@@@@@@')
+        mybase24A.payload = diction.makebinpayload(40, testbits)
+
+        try:
+            mybase24A.get_24_vessel_name()
+            self.assertEqual('TEST SHIP NAME', mybase24A.vessel_name,
+                             "Incorrect data returned in TYpe 24 Part A vessel name")
+        except ValueError:
+            self.assertFalse(mybase24A.valid_item,
+                             "Incorrect value in type 24 get vessel name not flagged ")
+
+
+
+class TestStatic_data_PartB(TestCase):
+
+    def initialise(self):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        diction = AISDictionaries()
+        # the stream offered here is valid but the mystream.payload , mypayload.payload
+        #  and/or mystream.binary_payload will be overwritten during testing
+        psuedo_AIS = '!AIVDM,2,1,5,A,577Q0U82<A0II9ACR20pT<th4V0l4E9<f222221?Bhh??6`A0EAR`4mE`88888888888880,0*3E'
+        mystream = Payloads.AISStream(psuedo_AIS)
+        mybase24B = Payloads.Static_data_PartB(mystream.binary_payload)
+        return diction, mystream, mybase24B
+
+    def test_get_25_ship_type(self):
+        # validation for ship type done in class BasicPosition
+        # need to check here that when presented with a valid ship type the same value is returned
+        diction, mystream, mybase24B = self.initialise()
+
+        testbits = "{:08b}".format(30)
+        mybase24B.payload = diction.make_stream(40, testbits)
+        try:
+            self.assertEqual(30, mybase24B.ship_type, 'Incorrect value returned in Type24A ship type')
+        except ValueError:
+            self.assertFalse(mybase24B.valid_item, "Incorrect value in TYpe24B ship type not flagged correctly")
+
+    def test_get_vendor_id(self):
+        # this one is peculiar to TYpe24B so needs more testing
+        # 18 bits comprising 3 six bit characters or alternatively 7 characters (pre1371_4)
+        # all that can be testewd is that data presented is returned OK
+
+        diction, mystream, mybase24B = self.initialise()
+        # test posdt 1371_4 version first
+        testbits = diction.char_to_binary('ABC')
+        mybase24B.payload = diction.make_stream(48, testbits)
+        try:
+            mybase24B.get_vendor_id()
+            self.assertEqual('ABC', mybase24B.vendor_id, "In Type24B vendor ID incorrectly returned")
+        except ValueError:
+            self.assertFalse(mybase24B.valid_item, "In Type24B incorrect Vendor ID not correctly Flagged")
+
+        # now for pre1371_4
+        testbits = diction.char_to_binary('ABC0109')
+        mybase24B.payload = diction.make_stream(48, testbits)
+        try:
+            mybase24B.get_vendor_id()
+            self.assertEqual('ABC0109', mybase24B.pre1371_4_vendor_id,
+                             "In Type24B pre1371_4 vendor ID incorrectly returned")
+        except ValueError:
+            self.assertFalse(mybase24B.valid_item,
+                             "In Type24B pre1371_4 incorrect Vendor ID not correctly Flagged")
+
+    def test_get_unit_model_code(self):
+        # post 1371_4 4 bits 66-69 integer
+        # again can only check that correct value returned
+        diction, mystream, mybase24B = self.initialise()
+
+        testbits = '{:04b}'.format(12)
+        mybase24B.payload = diction.make_stream(48, testbits)
+        try:
+            try:
+                mybase24B.get_unit_model_code()
+                self.assertEqual(12, mybase24B.unit_model_code,
+                                 "In Type24B post1371_4 unit model incorrectly returned")
+            except ValueError:
+                self.assertFalse(mybase24B.valid_item,
+                                 "In Type24B post1371_4 incorrect unit model code not correctly Flagged")
+
+    def test_get_serial_number(self):
+        self.fail()
+
+    def test_get_callsign(self):
+        self.fail()
+
+    def test_get_25_dim_to_bow(self):
+        self.fail()
+
+    def test_get_25_dim_to_stern(self):
+        self.fail()
+
+    def test_get_25_dim_to_port(self):
+        self.fail()
+
+    def test_get_25_dim_to_stbd(self):
+        self.fail()
+
+    def test_get_mothership_mmsi(self):
         self.fail()
