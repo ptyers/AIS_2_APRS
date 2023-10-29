@@ -54,8 +54,8 @@ try:
             s = s[3:]
             while len(s) < len(aisfields[5]) * 6:
                 s = "0" + s
-            print("AIS_BinaryPayload")
-            print(s)
+            #print("AIS_BinaryPayload")
+            #print(s)
 
             # now call the new create binary payload
             binarypayload = NewBinaryManips.new_create_binary_payload(aisfields[5])
@@ -63,10 +63,10 @@ try:
             for x in binarypayload:
                 s2 = s2 + format(x, "08b")
 
-            print(s2, "\r\nNew Binary Payload above")
+            #print(s2, "\r\nNew Binary Payload above")
 
             strpayload = NewBinaryManips.newer_create_binary_payload(aisfields[5])
-            print(strpayload)
+            #print(strpayload)
 
             # now compare them bit by bit
 

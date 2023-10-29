@@ -82,7 +82,7 @@ def handle_fragments(payload):
 
             ExtractedFrags[testfrag[2]] = testfrag
         except KeyError:
-            logging.error("key error in checking")
+            #logging.error("key error in checking")
             # failed because of missing fragment number
         except Exception as e:
             raise RuntimeError(

@@ -33,14 +33,14 @@ class Payload:
 
         self.message_type = self.binary_item(0, 6)
         if not (1 <= self.message_type <= 27):
-            logging.error("In Payload.__ini__ - Invalid Message Type not in 1-27")
+            # logging.error("In Payload.__ini__ - Invalid Message Type not in 1-27")
             raise RuntimeError("Invalid Message Type not in 1-27")
 
         self.mmsi = self.create_mmsi()
 
         self.repeat_indicator = self.binary_item(6, 2)
         if not (0 <= self.repeat_indicator <= 3):
-            logging.error("In Payload.__ini__ - Invalid Repeat Indicator not in 0-3")
+            # logging.error("In Payload.__ini__ - Invalid Repeat Indicator not in 0-3")
             raise RuntimeError("Invalid Repeat Indicator not in 0-3")
 
         self.longitude = 0.0
@@ -94,10 +94,11 @@ class Payload:
 
             return buildit
         except:
-            logging.error(
-                "Error in ExtractString startpos = " + str(startpos) + " blength = " + str(
-                    blength) + "binary_length = ")
-            logging.error("Exception while ExtractString startpos", sys.exc_info()[0])
+            # logging.error(
+            #     "Error in ExtractString startpos = " + str(startpos) + " blength = " + str(
+            #         blength) + "binary_length = ")
+            # logging.error("Exception while ExtractString startpos", sys.exc_info()[0])
+            pass
 
     def extract_text(self, startpos: int, length: int):
 
@@ -137,10 +138,10 @@ class Payload:
 
         # veracity check
         if not (startpos + blength < len(self.payload)):
-            logging.error("In Payload.binary_item() - Request to extract more bits {} + {} "
-                          "which overrun end of binary payload {}".format(startpos, blength,len(self.payload)))
+            # logging.error("In Payload.binary_item() - Request to extract more bits {} + {} "
+            #               "which overrun end of binary payload {}".format(startpos, blength,len(self.payload)))
             raise RuntimeError("Request to extract more bits {} {} which overrun end of binary payload "
-                               "{}".format(startpos, blength,len(self.payload)))
+                               "{}".format(startpos, blength, len(self.payload)))
         reqbits = self.payload[startpos:startpos + blength]
         logging.debug('in Binary Item  reqbits = ', type(reqbits), ' value reqbits =', reqbits)
         if len(reqbits) != 0:
@@ -210,10 +211,21 @@ class Payload:
         # longitude is in various positions in differing blocks
         self.longitude = float(self.signed_binary_item(startpos, length)) / 600000
 
+        # validation
+        if not (-180.0 <= self.longitude <= 181.0):
+            # print("error in get_longitude value returned ", self.longitude)
+            self.valid_item = False
+            raise ValueError
+
     def get_latitude(self, startpos: int, length: int = 27):
         # longitude is in various positions in differing blocks
         x = self.signed_binary_item(startpos, length)
         self.latitude = float(self.signed_binary_item(startpos, length)) / 600000
+        # validation
+        if not (-90.0 <= self.latitude <= 91.0):
+            # print("error in get_latitude value returned ", self.latitude)
+            self.valid_item = False
+            raise ValueError
 
     def signed_binary_item(self, startpos: int, blength: int) -> int:
         '''
@@ -234,8 +246,8 @@ class Payload:
         # veracity check
 
         if not (startpos + blength < len(self.payload)):
-            logging.error("In Payload.signed_binary_item() - "
-                          + "Request to extract more bits which overrun end of binary payload")
+            # logging.error("In Payload.signed_binary_item() - "
+            #             + "Request to extract more bits which overrun end of binary payload")
             raise RuntimeError("Request to extract more bits which overrun end of binary payload")
 
         reqbits = self.payload[startpos:startpos + blength]
@@ -301,8 +313,8 @@ class Payload:
         # location varies in blocks
         self.fix_quality = self.get_flag_bit(position)
 
-class Basic_Position(Payload):
 
+class Basic_Position(Payload):
     # basse class from mwhich CNB, Class B Aid to Nav objects will inherit
 
     speed_over_ground: float
@@ -318,16 +330,28 @@ class Basic_Position(Payload):
     dim_to_stbd: int
     ais_version: int = 0  # enumerated normally 0, 1-3 future editions
 
-
-    def  __init__(self, p_payload):
+    def __init__(self, p_payload):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
 
         # very little initiation done in this class just provides routines for use in CNB, Static, Class B
 
+    def get_nav_status(self, position: int, length: int) -> None:
+        '''
+        Navigation Status is described in AISDictionary
 
+        :input:
+            bits 38-41 in self.payload
 
+        :values:
+            valid values 0-15, only four bits so cannot exceed  this range
+        :return:
+            sets self.navigation_status
+        '''
 
+        # at bits 38-41
+        #
+        self.navigation_status = self.binary_item(position, length)
 
     def getSOG(self, position: int, length: int) -> None:
         '''
@@ -342,7 +366,6 @@ class Basic_Position(Payload):
         intval = self.binary_item(position, length)
 
         self.speed_over_ground = float(intval) / 10.0
-
 
     def get_COG(self, position: int, length: int) -> None:
         '''
@@ -359,9 +382,8 @@ class Basic_Position(Payload):
         else:
             self.valid_item = False
             errstr: str = 'In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval)
-            logging.error(errstr)
+            # logging.error(errstr)
             raise ValueError
-
 
     def get_tru_head(self, position: int, length: int) -> None:
         '''
@@ -381,9 +403,8 @@ class Basic_Position(Payload):
         else:
             self.valid_item = False
             errstr: str = '{:d}'.format(itru)
-            logging.error('In get_tru_head - value outside range 0-359 or != 511 : ' + errstr)
+            # logging.error('In get_tru_head - value outside range 0-359 or != 511 : ' + errstr)
             raise ValueError
-
 
     def get_timestamp(self, position: int, length: int) -> None:
         '''
@@ -410,9 +431,8 @@ class Basic_Position(Payload):
             self.time_stamp = self.binary_item(137, 6)
         else:
             self.valid_item = False
-            logging.error('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
+            # logging.error('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
             raise ValueError
-
 
     def get_vessel_name(self, position: int, length: int) -> None:
         '''
@@ -426,11 +446,10 @@ class Basic_Position(Payload):
             self.vessel_name = self.extract_text(position, length)
         except RuntimeError:
             self.vessel_name = 'VesselName Unknown'
-            logging.error("In Static.get_vessel_name Runtime error")
+            # logging.error("In Static.get_vessel_name Runtime error")
 
         while self.vessel_name[len(self.vessel_name) - 1] == '@':
             self.vessel_name = self.vessel_name[0:len(self.vessel_name) - 1]
-
 
     def get_ship_type(self, position: int, length: int) -> None:
         '''
@@ -447,13 +466,12 @@ class Basic_Position(Payload):
             self.ship_type = self.binary_item(position, length)
             status = self.ship_type in AISDictionaries.Ship_Type
         except RuntimeError:
-            logging.error("In Static.get_ship_type Runtime error")
+            # logging.error("In Static.get_ship_type Runtime error")
             self.ship_type = 0
 
         if self.ship_type not in AISDictionaries.Ship_Type:
-            logging.error('In Static.get_ship_type  type not in range 0-99')
+            # logging.error('In Static.get_ship_type  type not in range 0-99')
             self.ship_type = 0
-
 
     def get_dim_to_bow(self, position: int, length: int) -> None:
         '''
@@ -471,9 +489,8 @@ class Basic_Position(Payload):
         try:
             self.dim_to_bow = self.binary_item(position, length)
         except RuntimeError:
-            logging.error("In Static.get_dim_to_bow got run time error")
+            # logging.error("In Static.get_dim_to_bow got run time error")
             self.dim_to_stern = 0
-
 
     def get_dim_to_stern(self, position: int, length: int) -> None:
         '''
@@ -487,9 +504,8 @@ class Basic_Position(Payload):
         try:
             self.dim_to_stern = self.binary_item(position, length)
         except RuntimeError:
-            logging.error("In Static.get_dim_to_stern got run time error")
+            # logging.error("In Static.get_dim_to_stern got run time error")
             self.dim_to_stern = 0
-
 
     def get_dim_to_port(self, position: int, length: int) -> None:
         '''
@@ -504,9 +520,8 @@ class Basic_Position(Payload):
         try:
             self.dim_to_port = self.binary_item(position, length)
         except RuntimeError:
-            logging.error("In Static.get_dim_to_port got run time error")
+            # logging.error("In Static.get_dim_to_port got run time error")
             self.dim_to_stern = 0
-
 
     def get_dim_to_stbd(self, position: int, length: int) -> None:
         '''
@@ -521,7 +536,7 @@ class Basic_Position(Payload):
         try:
             self.dim_to_stbd = self.binary_item(position, length)
         except RuntimeError:
-            logging.error("In Static.get_dim_to_stbd got run time error")
+            # logging.error("In Static.get_dim_to_stbd got run time error")
             self.dim_to_stern = 0
 
     def get_EPFD(self, position: int, length: int) -> None:
@@ -532,10 +547,10 @@ class Basic_Position(Payload):
         :return:
             sets Base.EPFD_type for 9-14 logs error returns 0 but does not invalidate object
         '''
-        self.EPFD_type = self.binary_item(position,length)
+        self.EPFD_type = self.binary_item(position, length)
         if 9 <= self.EPFD_type <= 14:
             self.EPFD_type = 0
-            logging.error("In get_EPFD_type found value between 9 and 14")
+            # logging.error("In get_EPFD_type found value between 9 and 14")
 
     def get_ais_version(self, position: int, length: int) -> None:
         '''
@@ -546,9 +561,8 @@ class Basic_Position(Payload):
         self.ais_version = self.binary_item(position, length)
         if self.ais_version != 0:
             if self.ais_version in [1, 2, 3]:
-                logging.error("In Static.get_ais_version found " + '{:d}'.format(self.ais_version) + " rather than 0")
+                # logging.error("In Static.get_ais_version found " + '{:d}'.format(self.ais_version) + " rather than 0")
                 self.ais_version = 0
-
 
 
 class CNB(Basic_Position):
@@ -568,7 +582,7 @@ class CNB(Basic_Position):
     def __init__(self, p_payload: str):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
-        self.get_nav_status()
+        self.get_CNB_nav_status()
         self.get_ROT()
         self.getCNB_SOG()
         self.get_pos_accuracy()
@@ -602,22 +616,8 @@ class CNB(Basic_Position):
                 f'RAIM status:         {self.raim_flag}\n'
                 )
 
-    def get_nav_status(self) -> None:
-        '''
-        Navigation Status is described in AISDictionary
-
-        :input:
-            bits 38-41 in self.payload
-
-        :values:
-            valid values 0-15, only four bits so cannot exceed  this range
-        :return:
-            sets self.navigation_status
-        '''
-
-        # at bits 38-41
-        #
-        self.navigation_status = self.binary_item(38, 4)
+    def get_CNB_nav_status(self):
+        self.get_nav_status(38, 4)
 
     def get_ROT(self) -> None:
         '''
@@ -670,21 +670,14 @@ class CNB(Basic_Position):
                     self.rate_of_turn = -1005.0  # indicates ROT of > 5 degres/30sec left (No Turn Indic available)
             self.raw_rate_of_turn = irot
 
-
-
     def getCNB_SOG(self):
-        self.getSOG(50,10)
-
-
-
+        self.getSOG(50, 10)
 
     def getCNB_COG(self):
-        self.get_COG(116,12)
-
-
+        self.get_COG(116, 12)
 
     def getCNB_tru_head(self):
-        self.get_tru_head(128,9)
+        self.get_tru_head(128, 9)
 
     def get_pos_accuracy(self) -> None:
         '''
@@ -699,8 +692,6 @@ class CNB(Basic_Position):
         '''
 
         self.position_accuracy = self.get_flag_bit(60)
-
-
 
     def getCNB_timestamp(self):
         self.get_timestamp(137, 6)
@@ -728,7 +719,7 @@ class CNB(Basic_Position):
         else:
             self.valid_item = False
             errstr: str = '{:d}'.format(intval)
-            logging.error('In CNB.get_man indicator - value outside range 0-2' + errstr)
+            # logging.error('In CNB.get_man indicator - value outside range 0-2' + errstr)
             raise ValueError
 
 
@@ -752,7 +743,7 @@ class Basestation(Basic_Position):
         self.get_day()
         self.get_hour()
         self.get_minute()
-        self.get_second(72,6)
+        self.get_second(72, 6)
         self.get_Base_EPFD()
         self.getfix(78)
         self.getRAIMflag(148)
@@ -783,7 +774,7 @@ class Basestation(Basic_Position):
         self.year = self.binary_item(38, 14)
         if not (0 <= self.year <= 9999):
             self.valid_item = False
-            logging.error("Base.year outside range 0-9999 " + '{:d}'.format(self.year))
+            # logging.error("Base.year outside range 0-9999 " + '{:d}'.format(self.year))
             raise ValueError
 
     def get_month(self) -> None:
@@ -796,7 +787,7 @@ class Basestation(Basic_Position):
         self.month = self.binary_item(52, 4)
         if not (0 <= self.month <= 12):
             self.valid_item = False
-            logging.error("Base.month outside range 0-12 " + '{:d}'.format(self.month))
+            # logging.error("Base.month outside range 0-12 " + '{:d}'.format(self.month))
             raise ValueError
 
     def get_day(self) -> None:
@@ -808,7 +799,7 @@ class Basestation(Basic_Position):
 
         self.day = self.binary_item(56, 5)
         if not (0 <= self.day <= 31):
-            logging.error("Base.day outside range 0-31 " + '{:d}'.format(self.day))
+            # logging.error("Base.day outside range 0-31 " + '{:d}'.format(self.day))
             self.valid_item = False
             raise ValueError
 
@@ -820,19 +811,19 @@ class Basestation(Basic_Position):
             # print(self.year, '  modulo', self.year % 4, ' ', self.month, ' ', self.day)
             # print('day greater 29')
             self.valid_item = False
-            logging.error("Base.day value returned for February leap year invalid " + '{:d}'.format(self.day))
+            # logging.error("Base.day value returned for February leap year invalid " + '{:d}'.format(self.day))
             raise ValueError
 
         if self.year % 4 != 0 and self.month == 2 and self.day > 28:
-            logging.error(
-                "Base.day value returned for February nonleap year invalid " + '{:d}'.format(self.day))
+            # logging.error(
+            #    "Base.day value returned for February nonleap year invalid " + '{:d}'.format(self.day))
             self.valid_item = False
             raise ValueError
 
         if self.month in [4, 6, 9, 11]:
             if self.day > 30:
-                logging.error(
-                    "Base.day value returned for 30 day months  invalid" + '{:d}'.format(self.day))
+                # logging.error(
+                #    "Base.day value returned for 30 day months  invalid" + '{:d}'.format(self.day))
                 self.valid_item = False
                 raise ValueError
 
@@ -845,7 +836,7 @@ class Basestation(Basic_Position):
         self.hour = self.binary_item(61, 5)
         if not (0 <= self.hour <= 24):
             self.valid_item = False
-            logging.error("Base.hour outside range 0-24 " + '{:d}'.format(self.hour))
+            # logging.error("Base.hour outside range 0-24 " + '{:d}'.format(self.hour))
             raise ValueError
 
     def get_minute(self) -> None:
@@ -857,7 +848,7 @@ class Basestation(Basic_Position):
         self.minute = self.binary_item(66, 6)
         if not (0 <= self.minute <= 60):
             self.valid_item = False
-            logging.error("Base.minute outside range 0-60 " + '{:d}'.format(self.minute))
+            # logging.error("Base.minute outside range 0-60 " + '{:d}'.format(self.minute))
             raise ValueError
 
     def get_second(self, position: int, length: int = 6) -> None:
@@ -869,12 +860,12 @@ class Basestation(Basic_Position):
         self.second = self.binary_item(72, 6)
         if not (0 <= self.second <= 60):
             self.valid_item = False
-            logging.error("Base.second outside range 0-60 " + '{:d}'.format(self.second))
+            # logging.error("Base.second outside range 0-60 " + '{:d}'.format(self.second))
             raise ValueError
 
-
     def get_Base_EPFD(self):
-        self.get_EPFD(134,4)
+        self.get_EPFD(134, 4)
+
 
 class StaticData(Basic_Position):
     # type 5
@@ -885,7 +876,6 @@ class StaticData(Basic_Position):
     Also note that it is fairly common in the wild for this message to have a wrong bit length (420 or 422).
     Robust decoders should ignore trailing garbage and deal gracefully with a slightly truncated destination field.
     '''
-
 
     imo_number: str
     callsign: str
@@ -924,8 +914,6 @@ class StaticData(Basic_Position):
         self.get_draught()
         self.get_destination()
 
-
-
     def __repr__(self):
         return (f'{self.__class__.__name__}\n'
                 f'Message Type: {self.message_type}\n'
@@ -948,12 +936,10 @@ class StaticData(Basic_Position):
                 f'Destination   {self.destination}'
                 )
 
-
-
-            # dont invalidate object but flag error
+        # dont invalidate object but flag error
 
     def get_Base_ais_version(self):
-        self.get_ais_version(38,2)
+        self.get_ais_version(38, 2)
 
     def get_imo_number(self) -> None:
         '''
@@ -975,14 +961,14 @@ class StaticData(Basic_Position):
             self.imo_number = '{:07d}'.format(self.intimo)
         except RuntimeError:
             self.imo_number = '0000000'
-            logging.error("In Static.get_imo_number got RunTime Error")
+            # logging.error("In Static.get_imo_number got RunTime Error")
 
         # little validation can be done here other than that number less equal 9999999
 
         if self.intimo <= 9999999:
             self.imo_number = '{:07d}'.format(self.intimo)
             self.valid_item = False
-            logging.error("In Static.get_imo_number found value greater than 99999999 - {:d}".format(self.intimo))
+            # logging.error("In Static.get_imo_number found value greater than 99999999 - {:d}".format(self.intimo))
             self.imo_number = '0000000'
             raise ValueError
 
@@ -996,26 +982,25 @@ class StaticData(Basic_Position):
             self.callsign = self.extract_text(70, 42)
         except RuntimeError:
             self.callsign = 'NoCall '
-            logging.error("In Static.get_callsign Runtime error")
+            # logging.error("In Static.get_callsign Runtime error")
 
     def get_Static_vessel_name(self):
-        self.get_vessel_name(112,120)
+        self.get_vessel_name(112, 120)
 
     def get_Static_ship_type(self):
-        self.get_ship_type(232,8)
+        self.get_ship_type(232, 8)
 
     def get_Static_dim_to_bow(self):
-        self.get_dim_to_bow(240,9)
+        self.get_dim_to_bow(240, 9)
 
     def get_Static_dim_to_stern(self):
-        self.get_dim_to_stern(249,9)
+        self.get_dim_to_stern(249, 9)
 
     def get_Static_dim_to_port(self):
-        self.get_dim_to_port(258,6)
+        self.get_dim_to_port(258, 6)
 
     def get_Static_dim_to_stbd(self):
-        self.get_dim_to_stbd(264,6)
-
+        self.get_dim_to_stbd(264, 6)
 
     def get_eta_month(self) -> None:
         '''
@@ -1028,7 +1013,7 @@ class StaticData(Basic_Position):
         self.eta_month = self.binary_item(274, 4)
         # can possibly return > 12 - if so set to 0 default
         if self.eta_month > 12:
-            logging.error("In Static.get_eta>month value returned greater than 12")
+            # logging.error("In Static.get_eta>month value returned greater than 12")
             self.eta_month = 0
 
     def get_eta_day(self) -> None:
@@ -1046,12 +1031,12 @@ class StaticData(Basic_Position):
         # and that for 30 day months day < 31
 
         if self.eta_month == 2 and self.eta_day > 29:
-            logging.error("In Static.get_eta_day february day set > 29")
+            # logging.error("In Static.get_eta_day february day set > 29")
             self.valid_item = False
             raise ValueError
 
         if self.eta_month in [4, 6, 9, 11] and self.eta_day > 30:
-            logging.error("In Static.get_eta_day 30 day month day set > 30")
+            # logging.error("In Static.get_eta_day 30 day month day set > 30")
             self.valid_item = False
             self.eta_day = 0
             raise ValueError
@@ -1067,14 +1052,14 @@ class StaticData(Basic_Position):
         try:
             self.eta_hour = self.binary_item(283, 5)
         except RuntimeError:
-            logging.error("In Static.get_eta_hour got run time error")
+            # logging.error("In Static.get_eta_hour got run time error")
             self.eta_hour = 24
 
         # 5 bits can get values above 24 will be flagged and reset to 24 the default
 
         if not (0 <= self.eta_hour <= 24):
             self.eta_hour = 24
-            logging.error("In Static.get_eta_hour value outside range 0-24")
+            # logging.error("In Static.get_eta_hour value outside range 0-24")
             raise ValueError
 
     def get_eta_minute(self) -> None:
@@ -1089,14 +1074,14 @@ class StaticData(Basic_Position):
         try:
             self.eta_minute = self.binary_item(288, 6)
         except RuntimeError:
-            logging.error("In Static.get_eta_minute got run time error")
+            # logging.error("In Static.get_eta_minute got run time error")
             self.eta_minute = 60
 
         # 5 bits can get values above 60 will be flagged and reset to 24 the default
 
         if not (0 <= self.eta_minute <= 60):
             self.eta_minute = 60
-            logging.error("In Static.get_eta_minute value outside range 0-60")
+            # logging.error("In Static.get_eta_minute value outside range 0-60")
             raise ValueError
 
     def get_draught(self) -> None:
@@ -1109,7 +1094,7 @@ class StaticData(Basic_Position):
         try:
             self.draught = round(float(self.binary_item(294, 8)) / 10.0, 1)
         except RuntimeError:
-            logging.error("In Static.draught Runtime error")
+            # logging.error("In Static.draught Runtime error")
             self.draught = 0.0
 
     def get_destination(self) -> None:
@@ -1186,7 +1171,6 @@ class SAR_aircraft_position_report(Basic_Position):
     dte: bool
     assigned: bool
 
-
     def __init__(self, p_payload):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
@@ -1198,39 +1182,35 @@ class SAR_aircraft_position_report(Basic_Position):
         self.get_dte()
         self.get_assigned()
 
-
     def __repr__(self):
 
-            return (f'{self.__class__.__name__}\n'
-                    f'Message Type:          {self.message_type}\n'
-                    f'MMSI:                  {self.mmsi}\n'
-                    f'Altitude:              {self.altitude}\n'
-                    f'Speed over Ground:     {self.speed_over_ground}\n'
-                    f'Position Accuracy:     {self.fix_quality}\n'
-                    f'Longitudee:            {self.longitude}\n'
-                    f'Latitude :             {self.latitude}\n'
-                    f'Course over Ground:    {self.course_over_ground}\n'
-                    f'TimeStamp:             {self.time_stamp}\n'
-                    f'DTE Status:            {self.dte}\n'
-                    f'RAIM flag:             {self.raim_flag}\n'
-                    )
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type:          {self.message_type}\n'
+                f'MMSI:                  {self.mmsi}\n'
+                f'Altitude:              {self.altitude}\n'
+                f'Speed over Ground:     {self.speed_over_ground}\n'
+                f'Position Accuracy:     {self.fix_quality}\n'
+                f'Longitudee:            {self.longitude}\n'
+                f'Latitude :             {self.latitude}\n'
+                f'Course over Ground:    {self.course_over_ground}\n'
+                f'TimeStamp:             {self.time_stamp}\n'
+                f'DTE Status:            {self.dte}\n'
+                f'RAIM flag:             {self.raim_flag}\n'
+                )
 
     def get_altitude(self):
-            '''
+        '''
             Altitude is in meters.
             The special value 4095 indicates altitude is not available; 4094 indicates 4094 meters or higher.
             :return:
                 sets mysar.altitude
 
             '''
-            # no real checking possible , range 0-4095
+        # no real checking possible , range 0-4095
 
-            self.altitude = self.binary_item(38, 12)
+        self.altitude = self.binary_item(38, 12)
 
-
-
-
-            pass
+        pass
 
     def get_speed_over_ground(self):
         '''
@@ -1260,17 +1240,18 @@ class SAR_aircraft_position_report(Basic_Position):
         else:
             self.valid_item = False
             errstr: str = 'In SAR.get_COG - value outside range 0-360 ' + '{:d}'.format(intval)
-            logging.error(errstr)
+            # logging.error(errstr)
             raise ValueError
 
     def get_time_stamp(self):
-            self.time_stamp = self.binary_item(128, 6)
+        self.time_stamp = self.binary_item(128, 6)
 
     def get_dte(self):
-            self.dte = self.get_flag_bit(142)
+        self.dte = self.get_flag_bit(142)
 
     def get_assigned(self):
-           self.assigned = self.get_flag_bit(146)
+        self.assigned = self.get_flag_bit(146)
+
 
 class UTC_date_enquiry(Payload):
     # to be implemented
@@ -1286,6 +1267,7 @@ class UTC_date_response(Payload):
         super().__init__(p_payload)
 
         pass
+
 
 class Addressed_safety_related_message(Payload):
     '''
@@ -1303,14 +1285,13 @@ class Addressed_safety_related_message(Payload):
 
     # message type, Repeat Indicator, Source MMSI inherited from base class
 
-    sequence_number: int    # range 0-3bits 38-39, 2 bits
-    destination_mmsi: str   # 9 digits unsigned integer but stored as str bits 40-69
-    retransmit_flag: bool   # bit 70, 0 no retransmit, 1 transmitted
-    safety_text: str        # 1-156 characters of six bit text. starts at bit 72, may be shorter than 936 bits
-                            # almost certainly will be derived from aggregated fragments
+    sequence_number: int  # range 0-3bits 38-39, 2 bits
+    destination_mmsi: str  # 9 digits unsigned integer but stored as str bits 40-69
+    retransmit_flag: bool  # bit 70, 0 no retransmit, 1 transmitted
+    safety_text: str  # 1-156 characters of six bit text. starts at bit 72, may be shorter than 936 bits
+    # almost certainly will be derived from aggregated fragments
 
-    payload: str            # the binary payload deriverd from the AIS Stream
-
+    payload: str  # the binary payload deriverd from the AIS Stream
 
     def __init__(self, p_payload):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
@@ -1326,18 +1307,15 @@ class Addressed_safety_related_message(Payload):
     def __repr__(self):
 
         formatted_safety_text = ''
-        start_text =0
+        start_text = 0
 
         if len(self.safety_text) > 60:
             while start_text + 60 < len(self.safety_text):
-                formatted_safety_text = formatted_safety_text + self.safety_text[start_text: start_text+60] + '\n'
+                formatted_safety_text = formatted_safety_text + self.safety_text[start_text: start_text + 60] + '\n'
                 start_text += 60
 
         # and the last line
-        formatted_safety_text = formatted_safety_text + self.safety_text[start_text: ] + '\n'
-
-
-
+        formatted_safety_text = formatted_safety_text + self.safety_text[start_text:] + '\n'
 
         return (f'{self.__class__.__name__}\n'
                 f'Message Type:          {self.message_type}\n'
@@ -1349,46 +1327,35 @@ class Addressed_safety_related_message(Payload):
                 )
 
     def get_sequence_number(self):
-        self.sequence_number = self.binary_item(38,2)
-
+        self.sequence_number = self.binary_item(38, 2)
 
     def get_repeat_indicator(self):
-        self.repeat_indicator = self.binary_item(6,2)
-
+        self.repeat_indicator = self.binary_item(6, 2)
 
     def get_destination_mmsi(self):
         self.destination_mmsi = '{:09d}'.format(self.binary_item(40, 30))
+
     def get_retransmit_flag(self):
-        self.retransmit_flag  = self.get_flag_bit(70)
+        self.retransmit_flag = self.get_flag_bit(70)
+
     def get_safety_text(self):
         text_start = 72
 
         text_length = len(self.payload) - 72
-        print('in get safety text text_length = ', text_length )
         # ensure we get ony six bit count
         while text_length % 6 != 0:
             text_length -= 1
 
-        print('in get safety text after modulas text_length = ', text_length)
-
-
-
-
         # going to make assumption that the safety_text runs from bit 72 to the end of the binary payload
 
         self.safety_text = self.extract_text(72, text_length)
-        print('in get safety text after extract text, safety_text = ', self.safety_text)
 
         while self.safety_text[len(self.safety_text) - 1] == '@' and len(self.safety_text) != 1:
             self.safety_text = self.safety_text[0:len(self.safety_text) - 1]
 
-        print('in get safety text after stripping text, safety_text = ', self.safety_text)
-
         # accounting for empty text
         if len(self.safety_text) == 1 and self.safety_text == '@':
             self.safety_text = ''
-
-        print('in get safety text after stripping text, safety_text = ', self.safety_text)
 
 
 class Safety_related_acknowledgement(Payload):
@@ -1462,8 +1429,6 @@ class Safety_related_broadcast_message(Payload):
             self.safety_text = self.safety_text[0:len(self.safety_text) - 1]
 
 
-
-
 class Interrogation(Payload):
     # to be implemented
 
@@ -1500,15 +1465,14 @@ class ClassB_position_report(Basic_Position):
     # CNB will require a rewrite accordingly 
     '''
 
-    cs_unit: bool       # 0=Class B SOTDMA unit 1=Class B CS (Carrier Sense) unit
-    display_flag: bool # 0=No visual display, 1=Has display, (Probably not reliable).
-    band_flag: bool     # Base stations can command units to switch frequency.
-                        # If this flag is 1, the unit can use any part of the marine channel.
-    message22_flag: bool    # If 1, unit can accept a channel assignment via Message Type 22.
-
-
+    cs_unit: bool  # 0=Class B SOTDMA unit 1=Class B CS (Carrier Sense) unit
+    display_flag: bool  # 0=No visual display, 1=Has display, (Probably not reliable).
+    band_flag: bool  # Base stations can command units to switch frequency.
+    # If this flag is 1, the unit can use any part of the marine channel.
+    message22_flag: bool  # If 1, unit can accept a channel assignment via Message Type 22.
 
     def __init__(self, p_payload):
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
 
         self.get_cs_unit()
@@ -1549,8 +1513,6 @@ class ClassB_position_report(Basic_Position):
         self.message22_flag = self.get_flag_bit(145)
 
 
-
-
 class Extende_ClassB_position_report(Basic_Position):
     '''
     A slightly more detailed report than type 18 for vessels using Class B transmitters.
@@ -1584,9 +1546,6 @@ class Extende_ClassB_position_report(Basic_Position):
 
     '''
 
-
-
-
     def __init__(self, p_payload):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
@@ -1607,8 +1566,6 @@ class Extende_ClassB_position_report(Basic_Position):
         self.get_CLB_EPFD()
         self.get_CLB_raim_flag()
         self.getr_CLB_dte()
-
-
 
     def __repr__(self):
         return (f'{self.__class__.__name__}\n'
@@ -1632,40 +1589,52 @@ class Extende_ClassB_position_report(Basic_Position):
                 )
 
     def get_CLB_SOG(self):
-        self.getSOG(46,10)
+        self.getSOG(46, 10)
 
     def get_CLB_fix(self):
         self.position_accuracy = self.get_flag_bit(56)
+
     def get_CLB_longitude(self):
-        self.get_longitude(57,28)
+        self.get_longitude(57, 28)
+
     def get_CLB_latitude(self):
         self.get_latitude(85, 27)
+
     def get_CLB_COG(self):
-        self.get_COG(112,12)
+        self.get_COG(112, 12)
+
     def get_CLB_Tru_head(self):
-        self.get_tru_head(124,9)
+        self.get_tru_head(124, 9)
+
     def get_CLB_timestamp(self):
-        self.get_timestamp(133,6)
+        self.get_timestamp(133, 6)
+
     def get_CLB_vessell_name(self):
-        self.get_vessel_name(143,120)
+        self.get_vessel_name(143, 120)
+
     def get_CLB_ship_type(self):
         self.get_ship_type(263, 8)
+
     def get_CLB_dim_to_bow(self):
-        self.get_dim_to_bow(271,9)
+        self.get_dim_to_bow(271, 9)
+
     def get_CLB_dim_to_stern(self):
         self.get_dim_to_bow(280, 9)
+
     def get_CLB_dim_to_port(self):
         self.get_dim_to_bow(289, 6)
+
     def get_CLB_dim_to_stbd(self):
         self.get_dim_to_bow(295, 6)
+
     def get_CLB_EPFD(self):
-        self.get_EPFD(301,4)
+        self.get_EPFD(301, 4)
+
     def get_CLB_raim_flag(self):
         self.raim_flag = self.get_flag_bit(305)
+
     def getr_CLB_dte(self):
         self.dte = self.get_flag_bit(306)
-
-
 
 
 class Data_link_management_message(Payload):
@@ -1714,13 +1683,12 @@ class Aid_to_navigation_report(Basic_Position):
 
     '''
 
-    aid_type: int                # described in AISDictionaries
+    aid_type: int  # described in AISDictionaries
     off_position_indicator: bool
     virtual_aid_flag: bool
     name_extension: str
     assigned_mode: bool
     utc_second: int
-
 
     def __init__(self, p_payload):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
@@ -1765,41 +1733,49 @@ class Aid_to_navigation_report(Basic_Position):
                 f'Name Extension:           {self.name_extension}\n'
                 )
 
-
-
-
     def get_aid_type(self):
         # 5 bits at 38-42 range 0-31 so no range validation required
-        self.aid_type = self.binary_item(38,5)
+        self.aid_type = self.binary_item(38, 5)
 
     def get_NAV_name(self):
-        self.get_vessel_name(43,120)
+        self.get_vessel_name(43, 120)
 
     def get_NAV_longitude(self):
-        self.get_longitude(164,28)
+        self.get_longitude(164, 28)
+
     def get_NAV_latitude(self):
-        self.get_latitude(192,27)
+        self.get_latitude(192, 27)
+
     def get_NAV_dim_to_bow(self):
-        self.get_dim_to_bow(219,9)
+        self.get_dim_to_bow(219, 9)
+
     def get_NAV_dim_to_stern(self):
-        self.get_dim_to_stern(228,9)
+        self.get_dim_to_stern(228, 9)
+
     def get_NAV_dim_to_port(self):
-        self.get_dim_to_port(237,6)
+        self.get_dim_to_port(237, 6)
+
     def get_NAV_dim_to_stbd(self):
-        self.get_dim_to_stbd(243,6)
+        self.get_dim_to_stbd(243, 6)
+
     def get_NAV_EPFD(self):
-        self.get_EPFD(249,4)
+        self.get_EPFD(249, 4)
+
     def get_NAV_UTC_second(self):
-        self.utc_second = self.binary_item(253,6)
+        self.utc_second = self.binary_item(253, 6)
 
     def get_NAV_off_position_indicator(self):
         self.off_position_indicator = self.get_flag_bit(259)
+
     def get_NAV_raim_flag(self):
         self.raim_flag = self.get_flag_bit(268)
+
     def get_NAV_virtual_aid_flag(self):
         self.virtual_aid_flag = self.get_flag_bit(269)
+
     def get_NAV_assigned_flag(self):
         self.assigned_mode = self.get_flag_bit(270)
+
     def get_NAV_name_extension(self):
 
         # needs work to check for length of payload to avoid overun
@@ -1815,7 +1791,7 @@ class Aid_to_navigation_report(Basic_Position):
 
         self.name_extension = self.extract_text(272, extlen)
 
-        while self.name_extension[len(self.name_extension)-1] == '@' and len(self.name_extension) != 1:
+        while self.name_extension[len(self.name_extension) - 1] == '@' and len(self.name_extension) != 1:
             self.name_extension = self.name_extension[0:len(self.name_extension) - 1]
 
         # accounting for null extension
@@ -1868,7 +1844,7 @@ class Static_data_report(Basic_Position):
 
     '''
 
-    part_number: int            # determines whether a "Part A"or "Part B" packet
+    part_number: int  # determines whether a "Part A"or "Part B" packet
 
     def __init__(self, p_payload):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
@@ -1877,12 +1853,11 @@ class Static_data_report(Basic_Position):
         self.create_mmsi()
         self.get_part_number()
 
-
-
     def get_part_number(self):
-        self.part_number = self.binary_item(38,2)
-        if not (0 <= self.part_number <=1):
-            logging.error("Invalid Part Number returned in Type25 Base")
+        self.part_number = self.binary_item(38, 2)
+
+        if not (0 <= self.part_number <= 1):
+            # logging.error('Invalid Part Number ' + '{:d}'.format(self.part_number) + ' returned in Type25 Base' )
             self.valid_item = False
             raise ValueError
 
@@ -1905,8 +1880,6 @@ class Static_data_PartA(Static_data_report):
         super().__init__(p_payload)
 
         self.get_24_vessel_name()
-        self.get_24_ship_type()
-
         pass
 
     def __repr__(self):
@@ -1920,13 +1893,6 @@ class Static_data_PartA(Static_data_report):
 
     def get_24_vessel_name(self):
         self.get_vessel_name(40, 120)
-
-    def get_24_ship_type(self):
-        # ship type described in AISDictionaries
-        # validation done in class BasicPosition
-        # testing will only need to check if a correct name returned - checks bit location parameters
-        self.get_ship_type(40, 120)
-
 
 
 class Static_data_PartB(Static_data_report):
@@ -1958,8 +1924,7 @@ class Static_data_PartB(Static_data_report):
     pre1371_4_vendor_id: str
     unit_model_code: int
     callsign: str
-    mothership_mmsi: int
-
+    mothership_mmsi: str
 
     def __init__(self, p_payload):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
@@ -1980,16 +1945,16 @@ class Static_data_PartB(Static_data_report):
 
     def __repr__(self):
         if self.mmsi[0:2] == '98':
-            return (f'{self.__class__.__name__}\n' 
-                    f'Message Type:         {self.message_type}\n' 
-                    f'Repeat Indicator:     {self.repeat_indicator}\n' 
-                    f'MMSI:                 {self.mmsi}\n' 
-                    f'Part_number:          {self.part_number}\n' 
-                    f'Ship Type :           {self.ship_type}\n' 
-                    f'Vendor ID:            {self.vendor_id}\n' 
+            return (f'{self.__class__.__name__}\n'
+                    f'Message Type:         {self.message_type}\n'
+                    f'Repeat Indicator:     {self.repeat_indicator}\n'
+                    f'MMSI:                 {self.mmsi}\n'
+                    f'Part_number:          {self.part_number}\n'
+                    f'Ship Type :           {self.ship_type}\n'
+                    f'Vendor ID:            {self.vendor_id}\n'
                     f'Pre1371_4_Vendor ID:  {self.pre1371_4_vendor_id}\n'
-                    f'Unit Model Code:      {self.unit_model_code}\n' 
-                    f'Serial Number:        {self.serial_number}\n' 
+                    f'Unit Model Code:      {self.unit_model_code}\n'
+                    f'Serial Number:        {self.serial_number}\n'
                     f'Callsign:             {self.callsign}\n'
                     f'Mothership MMSI:      {self.mothership_mmsi}\n'
                     )
@@ -2012,10 +1977,11 @@ class Static_data_PartB(Static_data_report):
                 f'Dim to Stbd:          {self.dim_to_stbd}\n'
             )
 
-
-
     def get_24_ship_type(self):
-        self.get_ship_type(40, 120)
+        # ship type described in AISDictionaries
+        # validation done in class BasicPosition
+        # testing will only need to check if a correct name returned - checks bit location parameters
+        self.get_ship_type(40, 8)
 
     def get_vendor_id(self):
         '''
@@ -2031,21 +1997,22 @@ class Static_data_PartB(Static_data_report):
         '''
         # 3 six bit characters (or possibly one 7 character string in 1371-3)
 
-        self.vendor_id = self.extract_text(48, 65)
+        self.vendor_id = self.extract_text(48, 18)
         self.pre1371_4_vendor_id = self.extract_text(48, 42)
 
     def get_unit_model_code(self):
         # int 4 bits
-        self.unit_model_code = self.binary_item(66,4)
+        self.unit_model_code = self.binary_item(66, 4)
 
     def get_serial_number(self):
-        self.serial_number = self.binary_item(70,20)
+        self.serial_number = self.binary_item(70, 20)
 
     def get_callsign(self):
-        self.callsign = self.extract_text(90,42)
+        self.callsign = self.extract_text(90, 42)
 
     def get_24_dim_to_bow(self):
-        self.get_dim_to_bow(132,9)
+        self.get_dim_to_bow(132, 9)
+
     def get_24_dim_to_stern(self):
         self.get_dim_to_stern(141, 9)
 
@@ -2056,8 +2023,7 @@ class Static_data_PartB(Static_data_report):
         self.get_dim_to_stbd(156, 6)
 
     def get_mothership_mmsi(self):
-        self.mothership_mmsi = self.binary_item(132,30)
-
+        self.mothership_mmsi = '{:09d}'.format(self.binary_item(132, 30))
 
 
 class Single_slot_binary_message(Payload):
@@ -2080,13 +2046,36 @@ class Multiple_slot_binary_message(Payload):
         pass
 
 
-class Long_range_AIS_broadcast_message(Payload):
-    # to be implemented
+class Long_range_AIS_broadcast_message(Basic_Position):
+    GNSS_position_status: bool
 
     def __init__(self, p_payload):
         super().__init__(p_payload)
+        self.payload = p_payload
+        self.create_mmsi()
+        self.fix_quality = self.get_flag_bit(38)
+        self.raim_flag = self.get_flag_bit(39)
+        self.navigation_status = self.get_nav_status(38, 4)
+        self.get_27longitude(44, 18)
+        self.get_27latitude(62, 17)
+        self.getSOG(79, 6)
+        self.get_COG(85, 9)
+        self.GNSS_position_status = self.get_flag_bit(94)
 
         pass
+
+    def __repr__(self):
+        pass
+
+    def get_27longitude(self, startpos: int, length: int = 18) -> None:
+        # longitude is in various positions in differing blocks
+        # in long distance AIS Broadcast the scaling factors have been changed
+        self.longitude = float(self.signed_binary_item(startpos, length)) / 600.0
+
+    def get_27latitude(self, startpos: int, length: int = 17) -> None:
+        # longitude is in various positions in differing blocks
+        # in long distance AIS Broadcast the scaling factors have been changed
+        self.latitude = float(self.signed_binary_item(startpos, length)) / 600.0
 
 
 class Fragments:
@@ -2109,30 +2098,45 @@ class Fragments:
     f_no: int
     f_count: int
     messid: int
-    ftuple: tuple
+    data: tuple
     success: bool
     new_bin_payload: str
 
     def __init__(self, binary_payload: str, fragment_count: int, fragment_number: int, message_id: int):
 
-        current_time = datetime.utcnow()
-        f_count = fragment_count
-        f_no = fragment_number
-        messid = message_id
-        payload = binary_payload
-        ftuple = [f_count, f_no, messid, payload, current_time]
-        inkey: str
-        rtime: datetime
-        success = False
-        new_bin_payload = ''
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+        #print("initialing fragment")
+        self.current_time = datetime.utcnow()
+        self.f_count = fragment_count
+        self.f_no = fragment_number
+        self.messid = message_id
+        self.payload = binary_payload
+        self.data = self.f_count, self.f_no, self.payload, self.current_time
+        self.inkey: str = ''
+        self.rtime: datetime = datetime.now()
+        self.success = False
+        self.new_bin_payload = ''
 
-        pass
+        #print(self)
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}\n'
+                f'Current Time:         {self.current_time}\n'
+                f'Fragment Count:       {self.f_count}\n'
+                f'Fragment Number:      {self.f_no}\n'
+                f'Payload:              {self.payload}\n'
+                f'The Tuple :           {self.data}\n'
+                f'Inkey:                {self.inkey}\n'
+                f'Success Flag:         {self.success}\n'
+                f'New Payload:          {self.new_bin_payload}\n'
+                )
 
     def put_frag_in_dict(self):
         # create a dictionary key comprising fragment_number and message_id
-        key = str(self.f_no) + '-' + str(self.messid)
-        Global.FragDict.update(key, self.ftuple)
+        key = str(self.messid) + ',' + str(self.f_no)
+        Global.FragDict.update({key: self.data})
         logging.debug('In Fragment.put_frag_in_dict dictionary  = ', Global.FragDict)
+        #print('In Fragment.put_frag_in_dict dictionary  = ', Global.FragDict)
 
         pass
 
@@ -2141,12 +2145,12 @@ class Fragments:
         inkey = key
         rtime = datetime.now()
         fraglist = []
-        for fkey, ftuple in Global.FragDict.items():
-            if fkey == key:
-                fraglist.extend(ftuple)
+        for fkey, data in Global.FragDict.items():
+            if fkey.strip(',')[0] == key:
+                fraglist.extend(data)
             #
             # now while we are parsing dictionary clean out stale records
-            if (datetime.utcnow() - ftuple[4]).total_seconds() > Global.FragDictTTL:
+            if (datetime.utcnow() - data[3]).total_seconds() > Global.FragDictTTL:
                 Global.FragDict.pop(fkey)
 
         # how many records did we find?
@@ -2192,6 +2196,8 @@ class AISStream:
 
     def __init__(self, input: str):
 
+        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+
         self.valid_message = True
         self.split_string(input)
 
@@ -2212,19 +2218,19 @@ class AISStream:
         if (str_split[0] == '!AIVDM') or (str_split[0] == '!AIVDO'):
             self.packet_id = str_split[0]
         else:
-            logging.error("In AISStream - packet_type not in AIVDM or AIVDO " + str_split[0])
+            # logging.error("In AISStream - packet_type not in AIVDM or AIVDO " + str_split[0])
             self.valid_message = False
 
         try:
             self.fragment_count = int(str_split[1])
         except ValueError:
-            logging.error("In AISStream - fragment count not numeric " + str_split[1])
+            # logging.error("In AISStream - fragment count not numeric " + str_split[1])
             self.fragment_count = 0
             self.valid_message = False
         try:
             self.fragment_number = int(str_split[2])
         except ValueError:
-            logging.error("In AISStream - fragment number not numeric " + str_split[2])
+            # logging.error("In AISStream - fragment number not numeric " + str_split[2])
             self.fragment_number = 0
             self.valid_message = False
         try:
@@ -2235,13 +2241,13 @@ class AISStream:
                 # null message_id
                 self.message_id = 0
         except ValueError:
-            logging.error("In AISStream - message_id not numeric " + str_split[3])
+            # logging.error("In AISStream - message_id not numeric " + str_split[3])
             self.message_id = 0
             self.valid_message = False
 
         self.channel = str_split[4]
         if self.channel not in ['A', 'B', '1', '2']:
-            logging.error('In AISStream.split_string - invalid channel ' + str_split[4])
+            # logging.error('In AISStream.split_string - invalid channel ' + str_split[4])
             self.valid_message = False
 
         self.payload = str_split[5]
@@ -2255,7 +2261,7 @@ class AISStream:
             messbyte: int = self.m_to_int(self.payload[0])
             logging.debug('In AISStream - messbyte = ' + '{:0d}'.format(messbyte))
             if not (1 <= messbyte <= 27):
-                logging.error('In AISStream.split_string - invalid message+type ' + str_split[5])
+                # logging.error('In AISStream.split_string - invalid message+type ' + str_split[5])
                 self.valid_message = False
             else:
                 self.message_type = messbyte

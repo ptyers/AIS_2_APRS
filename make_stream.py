@@ -31,7 +31,7 @@ def do_encode(input_payload: str, fragmentcount: str, fragmentnumber: str, messa
 
     encstring = do_header(fragmentcount, fragmentnumber, messageid, channelid)
     endex = 6
-    while endex < len(payload):
+    while endex < len(payload)+ 1:
         encstring = encstring + diction.nibble_to_armour(payload[endex - 6:endex])
         endex += 6
 
@@ -383,15 +383,15 @@ def do_12() -> str:
     if len(text) == 0 or len(text) > 156:
         text = 'INVALID TEXT'
 
-    while len(text) < 936:
+    while len(text) < 50:
         text = text + '@'
 
-    text = text.upper()[0:936]
+    text = text.upper()[0:50]
     binary_payload = binary_payload + diction.char_to_binary(text)
 
     # veracity check print out payload length
-    print("Having created Type 4 fields payload length expected 5688 got ", len(binary_payload))
-    if len(binary_payload) != 5688:
+    print("Having created Type 4 fields payload length expected 372 got ", len(binary_payload))
+    if len(binary_payload) != 372:
         print("ERROR wrong length")
 
     return binary_payload
@@ -418,15 +418,15 @@ def do_14() -> str:
     if len(text) == 0 or len(text) > 161:
         text = 'INVALID TEXT'
 
-    while len(text) < 161:
+    while len(text) < 50:
         text = text + '@'
 
-    text = text.upper()[0:161]
+    text = text.upper()[0:50]
     binary_payload = binary_payload + diction.char_to_binary(text)
 
     # veracity check print out payload length
-    print("Having created Type 4 fields payload length expected 1008 got ", len(binary_payload))
-    if len(binary_payload) != 1008:
+    print("Having created Type 4 fields payload length expected 342 got ", len(binary_payload))
+    if len(binary_payload) != 342:
         print("ERROR wrong length")
 
     return binary_payload
@@ -986,6 +986,8 @@ def main():
         binpayload = do_27()
 
     AISString = do_encode(binpayload, fragmentcount, fragmentnumber, messageid, channelid) + ',0*5'
+
+    print('{} \n {}'.format(binpayload, len(binpayload)))
 
     print(AISString)
 
