@@ -118,29 +118,61 @@ class TestFragments(TestCase):
 
     def test_match_fragments(self):
 
-        # set of fragments produced in testing put_frag_in_dict as test data
-        messid = []
-        message_memory = []
-        for i in range(0, 10):
-            messid.append((random.randint(0, 999), random.randint(1, 4)))
+        # first a simple test - produce two fragments with same message id, fragment counts 1 and 2
+        # possibly extend to three fragments once proven with two
+        print("***********************************************************\n"
+              "Testing match fragments\n"
+              "****************************************************************")
 
-        # print(messid)
-        current = 0
-        maxno = 10
-        for j in range(0, maxno):
-            # print(messid[j])
-            current += 1
+        fragements =  [  (3,1,'000000111111000000111111000000'),
+                        (3,2,'111111000000111111000000111111'),
+                         (3,3,'1011010101000000111111000000111111')]
+        expected = fragements[0][2] + fragements[1][2] + fragements[2][2]
 
-            for k in range(0, maxno):
-                if messid[k][1] > j:
-                    # create a random payload
-                    payload = '{:20b}'.format(random.randint(0, 999999))
-                    message_memory.append((messid[k][0], current, payload))
-                    # print(messid[k][0], current, payload)
-                    m = Payloads.Fragments(payload, messid[k][1], current, messid[k][0])
-                    m.put_frag_in_dict()
+        m = Payloads.Fragments(fragements[0][2], 3, 1, 4)
+        m.put_frag_in_dict(False)
+        m = Payloads.Fragments(fragements[1][2], 3, 2, 4)
+        m.put_frag_in_dict(False)
+        m = Payloads.Fragments(fragements[2][2], 3, 3, 4)
+        m.put_frag_in_dict(False)
 
-        # now take message_id from list messid and see if we can do matches
+        # now try merging - this normally would come out of put_frag_in_dict but for testing will do it seperately
+        # there is little validation done in the fragments object
+
+        success, newpayload = m.match_fragments('4,3')
+        print('After merge ', success)
+        if success:
+            print(expected)
+            print(newpayload)
+            self.assertEqual(expected, newpayload,
+                             'Failed in matching fragments test sequence does not match sequence retrurned')
+
+
+        # # set of fragments produced in testing put_frag_in_dict as test data
+        # messid = []
+        # message_memory = []
+        # for i in range(0, 10):
+        #     messid.append((random.randint(0, 999), random.randint(1, 4)))
+        #
+        # # print(messid)
+        # current = 0
+        # maxno = 10
+        # for j in range(0, maxno):
+        #     # print(messid[j])
+        #     current += 1
+        #
+        #     for k in range(0, maxno):
+        #         if messid[k][1] > j:
+        #             # create a random payload
+        #             payload = '{:20b}'.format(random.randint(0, 999999))
+        #             message_memory.append((messid[k][0], current, payload))
+        #             # print(messid[k][0], current, payload)
+        #             m = Payloads.Fragments(payload, messid[k][1], current, messid[k][0])
+        #             m.put_frag_in_dict()
+        #
+        # # now take message_id from list messid and see if we can do matches
+
+
 
 
 

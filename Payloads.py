@@ -2092,20 +2092,20 @@ class Fragments:
     #       Timeout set in Global_Parameters
     #
 
-    current_time: datetime
-    payload: str
-    mmnsi: str
-    f_no: int
-    f_count: int
-    messid: int
-    data: tuple
-    success: bool
-    new_bin_payload: str
+    # current_time: datetime
+    # payload: str
+    # mmnsi: str
+    # f_no: int
+    # f_count: int
+    # messid: int
+    # data: tuple
+    # success: bool
+    # new_bin_payload: str
 
     def __init__(self, binary_payload: str, fragment_count: int, fragment_number: int, message_id: int):
 
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
-        #print("initialing fragment")
+        # print("initialing fragment")
         self.current_time = datetime.utcnow()
         self.f_count = fragment_count
         self.f_no = fragment_number
@@ -2117,7 +2117,7 @@ class Fragments:
         self.success = False
         self.new_bin_payload = ''
 
-        #print(self)
+        # print(self)
 
     def __repr__(self):
         return (f'{self.__class__.__name__}\n'
@@ -2131,50 +2131,58 @@ class Fragments:
                 f'New Payload:          {self.new_bin_payload}\n'
                 )
 
-    def put_frag_in_dict(self):
+    def put_frag_in_dict(self, merge: bool = False):
         # create a dictionary key comprising fragment_number and message_id
         key = str(self.messid) + ',' + str(self.f_no)
         Global.FragDict.update({key: self.data})
         logging.debug('In Fragment.put_frag_in_dict dictionary  = ', Global.FragDict)
-        #print('In Fragment.put_frag_in_dict dictionary  = ', Global.FragDict)
+        # print('In Fragment.put_frag_in_dict dictionary  = ', Global.FragDict)
 
-        pass
+        # having put the fragment into the dictionary we need to check if we can amalgemate fragments
 
-    def match_fragments(self, key: str):
+        if merge:
+            self. success, self.new_bin_payload = self.match_fragments(key)
+
+    def match_fragments(self, key: str) -> tuple:
         # pass through Global.Fragdict looking for identical keys
-        inkey = key
-        rtime = datetime.now()
-        fraglist = []
+        # look for common message ids, strip off the fragment number from the key passed in
+        inkey = key.split(',')[0]
+        fraglist = {}
         for fkey, data in Global.FragDict.items():
-            if fkey.strip(',')[0] == key:
-                fraglist.extend(data)
+            if fkey.strip(',')[0] == inkey:
+                fno = data[1]
+                pload = data[2]
+                fraglist.update({fno: pload})
+
             #
             # now while we are parsing dictionary clean out stale records
             if (datetime.utcnow() - data[3]).total_seconds() > Global.FragDictTTL:
+                logging.info('In Fragments.match_records deleting outdated record ', fkey, data)
+                print('In Fragments.match_records deleting outdated record ', fkey, data)
                 Global.FragDict.pop(fkey)
 
         # how many records did we find?
 
         nr_recs = len(fraglist)
+        #print('len fraglist', nr_recs)
 
         # compare this with the number of fragments expected
+        new_bin_payload = ''
         if nr_recs == self.f_count:
             # got requisite number of fragments
             # get fragments in order
-            lump = 1
-            while lump <= nr_recs:
-                for ftuple in fraglist:
-                    if ftuple[1] == 1:
-                        self.new_bin_payload = ftuple[3]
-                    elif ftuple[1] == lump:
-                        self.new_bin_payload = self.new_bin_payload + ftuple[3]
-                lump += 1
+            for fnumber in range(1, nr_recs + 1):
+                new_bin_payload = new_bin_payload + fraglist[fnumber]
+                #print('ne payload ', new_bin_payload)
+                # and flush the fragment records from Global.Fragdict
+                #print('deleting ', inkey + ',' + str(fnumber) )
+                Global.FragDict.pop(inkey + ',' + str(fnumber))
             self.success = True
         else:
             # not got all bits yet
-            pass
+            new_bin_payload = ''
 
-        return self.success, self.new_bin_payload
+        return self.success, new_bin_payload
 
 
 class AISStream:
