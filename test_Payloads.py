@@ -120,9 +120,7 @@ class TestFragments(TestCase):
 
         # first a simple test - produce two fragments with same message id, fragment counts 1 and 2
         # possibly extend to three fragments once proven with two
-        print("***********************************************************\n"
-              "Testing match fragments\n"
-              "****************************************************************")
+        print("Testing match fragments")
 
         fragements =  [  (3,1,'000000111111000000111111000000'),
                         (3,2,'111111000000111111000000111111'),
@@ -140,37 +138,69 @@ class TestFragments(TestCase):
         # there is little validation done in the fragments object
 
         success, newpayload = m.match_fragments('4,3')
-        print('After merge ', success)
+        #print('After merge ', success)
         if success:
-            print(expected)
-            print(newpayload)
+            #print(expected)
+            #print(newpayload)
             self.assertEqual(expected, newpayload,
                              'Failed in matching fragments test sequence does not match sequence retrurned')
 
 
-        # # set of fragments produced in testing put_frag_in_dict as test data
-        # messid = []
-        # message_memory = []
-        # for i in range(0, 10):
-        #     messid.append((random.randint(0, 999), random.randint(1, 4)))
+        # set of fragments produced in testing put_frag_in_dict as test data
+        messid = []
+        message_memory = []
+        for i in range(0, 10):
+            messid.append((random.randint(0, 999), random.randint(1, 4)))
+
+        # print(messid)
+        current = 0
+        maxno = 10
+        for j in range(0, maxno):
+            # print(messid[j])
+            current += 1
+
+            for k in range(0, maxno):
+                if messid[k][1] > j:
+                    # create a random payload
+                    payload = '{:20b}'.format(random.randint(0, 999999))
+                    message_memory.append((messid[k][0], current, payload))
+                    # print(messid[k][0], current, payload)
+                    m = Payloads.Fragments(payload, messid[k][1], current, messid[k][0])
+                    m.put_frag_in_dict(False)   # dont attempt to invoke match_fragments as would be normal
+        #print(Global.FragDict)
+        # now take message_id from list messid and see if we can do matches
+        # yje list of tuples in message memory contains the message_id, the number of fragments and the portions of
+        # "fragmented"payload. Now work down the list presenting message id ,  when success flag is returned TRUE
+        # aggregate the fragmented payloads tresented and compare to the aggregate payload returned
         #
-        # # print(messid)
-        # current = 0
-        # maxno = 10
-        # for j in range(0, maxno):
-        #     # print(messid[j])
-        #     current += 1
-        #
-        #     for k in range(0, maxno):
-        #         if messid[k][1] > j:
-        #             # create a random payload
-        #             payload = '{:20b}'.format(random.randint(0, 999999))
-        #             message_memory.append((messid[k][0], current, payload))
-        #             # print(messid[k][0], current, payload)
-        #             m = Payloads.Fragments(payload, messid[k][1], current, messid[k][0])
-        #             m.put_frag_in_dict()
-        #
-        # # now take message_id from list messid and see if we can do matches
+
+        for m_id, fc in messid:
+            # collect the presented payloads on a per message_id basis
+
+            expected = ''
+            for mm_id, fn, pload in message_memory:
+                if m_id == mm_id:
+                    expected = expected + pload
+
+            # now have an expected payload to compare
+            # call match_fragements with a key ['m_id,fc']
+            key = str(m_id) + ',' + str(fc)
+            #print('calling match frags key = ', key)
+            success, newpayload = m.match_fragments(key)
+            #print('returned {}\n{}\n{}'.format(success,expected, newpayload))
+            if success:
+                self.assertEqual(expected, newpayload,
+                                 "Failed in random fragment matching\n {} \n {}vs".format(expected, newpayload))
+            else:
+                print("Failed matching fragments for {}\n ".format(m_id))
+
+
+
+
+
+
+
+
 
 
 

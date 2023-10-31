@@ -2147,33 +2147,41 @@ class Fragments:
         # pass through Global.Fragdict looking for identical keys
         # look for common message ids, strip off the fragment number from the key passed in
         inkey = key.split(',')[0]
+        #print("entering match frags ",key, inkey)
+        self.success = False
         fraglist = {}
         for fkey, data in Global.FragDict.items():
-            if fkey.strip(',')[0] == inkey:
+            #print("inkey, fkey, data, ",inkey, fkey, data)
+            #print("matching ", fkey.split(',')[0], inkey, (fkey.split(',')[0] == inkey))
+            if fkey.split(',')[0] == inkey:
+                #print('in match frags getting Fragdict entries ', inkey, fkey.split(',')[0], data)
                 fno = data[1]
                 pload = data[2]
+                self.f_count = data[0]
                 fraglist.update({fno: pload})
 
             #
             # now while we are parsing dictionary clean out stale records
             if (datetime.utcnow() - data[3]).total_seconds() > Global.FragDictTTL:
                 logging.info('In Fragments.match_records deleting outdated record ', fkey, data)
-                print('In Fragments.match_records deleting outdated record ', fkey, data)
+                #print('In Fragments.match_records deleting outdated record ', fkey, data)
                 Global.FragDict.pop(fkey)
 
         # how many records did we find?
 
         nr_recs = len(fraglist)
-        #print('len fraglist', nr_recs)
+        #print('len fraglist', nr_recs, fraglist)
 
         # compare this with the number of fragments expected
         new_bin_payload = ''
+        #print('nr recs fcount', nr_recs, self.f_count)
         if nr_recs == self.f_count:
             # got requisite number of fragments
             # get fragments in order
             for fnumber in range(1, nr_recs + 1):
+                #print("amagamating new_bin_payload, fnumber, fraglist[fnumber]",new_bin_payload, fnumber, fraglist[fnumber] )
                 new_bin_payload = new_bin_payload + fraglist[fnumber]
-                #print('ne payload ', new_bin_payload)
+                #print('new payload ', new_bin_payload)
                 # and flush the fragment records from Global.Fragdict
                 #print('deleting ', inkey + ',' + str(fnumber) )
                 Global.FragDict.pop(inkey + ',' + str(fnumber))
