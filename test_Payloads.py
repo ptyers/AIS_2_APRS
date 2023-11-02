@@ -83,7 +83,7 @@ class TestFragments(TestCase):
         # print("entering test put frag in dict")
         # print('8888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888')
 
-        fragcnt = random.randint(1,4)
+        fragcnt = random.randint(1, 4)
         messid = []
         message_memory = []
         # produce a list of tuples (message_id, Number of Fragments)
@@ -92,29 +92,27 @@ class TestFragments(TestCase):
         # we have success
 
         for i in range(0, 10):
-            messid.append((random.randint(0,999), random.randint(1,4)))
+            messid.append((random.randint(0, 999), random.randint(1, 4)))
 
-        #print(messid)
+        # print(messid)
         current = 0
         maxno = 10
-        for j in range(0,maxno):
-            #print(messid[j])
+        for j in range(0, maxno):
+            # print(messid[j])
             current += 1
 
-
-
-            for k in range(0,maxno):
-                if  messid[k][1] > j:
+            for k in range(0, maxno):
+                if messid[k][1] > j:
                     # create a random payload
-                    payload = '{:20b}'.format(random.randint(0,999999))
+                    payload = '{:20b}'.format(random.randint(0, 999999))
                     message_memory.append((messid[k][0], current, payload))
-                    #print(messid[k][0], current, payload)
+                    # print(messid[k][0], current, payload)
                     m = Payloads.Fragments(payload, messid[k][1], current, messid[k][0])
                     m.put_frag_in_dict()
 
         for data in message_memory:
-            #print(data[0], data[1], data[2], Global.FragDict[str(data[0]) + ',' + str(data[1])][2])
-            self.assertEqual(data[2], Global.FragDict[str(data[0]) + ',' + str(data[1])][2], "Failed")
+            # print(data[0], data[1], data[2], Global.FragDict[str(data[0]) + ',' + str(data[1])][2])
+            self.assertEqual(data[2], Payloads.Fragments.FragDict[str(data[0]) + ',' + str(data[1])][2], "Failed")
 
     def test_match_fragments(self):
 
@@ -122,9 +120,9 @@ class TestFragments(TestCase):
         # possibly extend to three fragments once proven with two
         print("Testing match fragments")
 
-        fragements =  [  (3,1,'000000111111000000111111000000'),
-                        (3,2,'111111000000111111000000111111'),
-                         (3,3,'1011010101000000111111000000111111')]
+        fragements = [(3, 1, '000000111111000000111111000000'),
+                      (3, 2, '111111000000111111000000111111'),
+                      (3, 3, '1011010101000000111111000000111111')]
         expected = fragements[0][2] + fragements[1][2] + fragements[2][2]
 
         m = Payloads.Fragments(fragements[0][2], 3, 1, 4)
@@ -138,13 +136,12 @@ class TestFragments(TestCase):
         # there is little validation done in the fragments object
 
         success, newpayload = m.match_fragments('4,3')
-        #print('After merge ', success)
+        # print('After merge ', success)
         if success:
-            #print(expected)
-            #print(newpayload)
+            # print(expected)
+            # print(newpayload)
             self.assertEqual(expected, newpayload,
                              'Failed in matching fragments test sequence does not match sequence retrurned')
-
 
         # set of fragments produced in testing put_frag_in_dict as test data
         messid = []
@@ -166,8 +163,8 @@ class TestFragments(TestCase):
                     message_memory.append((messid[k][0], current, payload))
                     # print(messid[k][0], current, payload)
                     m = Payloads.Fragments(payload, messid[k][1], current, messid[k][0])
-                    m.put_frag_in_dict(False)   # dont attempt to invoke match_fragments as would be normal
-        #print(Global.FragDict)
+                    m.put_frag_in_dict(False)  # dont attempt to invoke match_fragments as would be normal
+        # print(Global.FragDict)
         # now take message_id from list messid and see if we can do matches
         # yje list of tuples in message memory contains the message_id, the number of fragments and the portions of
         # "fragmented"payload. Now work down the list presenting message id ,  when success flag is returned TRUE
@@ -185,26 +182,14 @@ class TestFragments(TestCase):
             # now have an expected payload to compare
             # call match_fragements with a key ['m_id,fc']
             key = str(m_id) + ',' + str(fc)
-            #print('calling match frags key = ', key)
+            # print('calling match frags key = ', key)
             success, newpayload = m.match_fragments(key)
-            #print('returned {}\n{}\n{}'.format(success,expected, newpayload))
+            # print('returned {}\n{}\n{}'.format(success,expected, newpayload))
             if success:
                 self.assertEqual(expected, newpayload,
                                  "Failed in random fragment matching\n {} \n {}vs".format(expected, newpayload))
             else:
                 print("Failed matching fragments for {}\n ".format(m_id))
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class TestPayload(TestCase):
@@ -2154,7 +2139,7 @@ class TestStatic_data_report(TestCase):
         #  and/or mystream.binary_payload will be overwritten during testing
         psuedo_AIS = '!AIVDM,1,1,,A,H7Ol>00TqH4hTB1@EQ@00000000,0*5'
         mystream = Payloads.AISStream(psuedo_AIS)
-        mybase24 = Payloads.Static_data_PartA(mystream.binary_payload)
+        mybase24 = Payloads.Static_data_report(mystream.binary_payload)
         return diction, mystream, mybase24
 
     def test_get_part_number(self):
@@ -2176,125 +2161,101 @@ class TestStatic_data_report(TestCase):
             except ValueError:
                 self.assertFalse(mybase24.valid_item, "In type 24 base, invalid part number not flagged")
 
-
-class TestStatic_data_PartA(TestCase):
-    def initialise(self):
-        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
-        diction = AISDictionaries()
-        # the stream offered here is valid but the mystream.payload , mypayload.payload
-        #  and/or mystream.binary_payload will be overwritten during testing
-        psuedo_AIS = '!AIVDM,1,1,,A,H7Ol>00TqH4hTB1@EQ@00000000,0*5'
-        mystream = Payloads.AISStream(psuedo_AIS)
-        mybase24A = Payloads.Static_data_PartA(mystream.binary_payload)
-        return diction, mystream, mybase24A
-
     def test_get_24_vessel_name(self):
-        diction, mystream, mybase24A = self.initialise()
+        diction, mystream, mybase24 = self.initialise()
         print('Testing 24.get_vessel_name')
 
         testbits = diction.char_to_binary('TEST SHIP NAME@@@@@@')
-        mybase24A.payload = diction.make_stream(40, testbits)
+        mybase24.payload = diction.make_stream(40, testbits)
 
         try:
-            mybase24A.get_24_vessel_name()
-            self.assertEqual('TEST SHIP NAME', mybase24A.vessel_name,
+            mybase24.get_24_vessel_name()
+            self.assertEqual('TEST SHIP NAME', mybase24.vessel_name,
                              "Incorrect data returned in TYpe 24 Part A vessel name")
         except ValueError:
-            self.assertFalse(mybase24A.valid_item,
+            self.assertFalse(mybase24.valid_item,
                              "Incorrect value in type 24 get vessel name not flagged ")
 
-
-class TestStatic_data_PartB(TestCase):
-
-    def initialise(self):
-        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
-        diction = AISDictionaries()
-        # the stream offered here is valid but the mystream.payload , mypayload.payload
-        #  and/or mystream.binary_payload will be overwritten during testing
-        psuedo_AIS = '!AIVDM,1,1,,A,H7Ol>040F5>wwwwEg1F19<Mw@p00,0*5,0*5'
-        mystream = Payloads.AISStream(psuedo_AIS)
-        mybase24B = Payloads.Static_data_PartB(mystream.binary_payload)
-        return diction, mystream, mybase24B
 
     def test_get_24_ship_type(self):
         # validation for ship type done in class BasicPosition
         # need to check here that when presented with a valid ship type the same value is returned
-        diction, mystream, mybase24B = self.initialise()
+        diction, mystream, mybase24 = self.initialise()
         print('Testing 24.get_ship_type')
 
         testbits = "{:08b}".format(30)
-        mybase24B.payload = diction.make_stream(40, testbits)
+        mybase24.payload = diction.make_stream(40, testbits)
 
         try:
-            mybase24B.get_24_ship_type()
-            self.assertEqual(30, mybase24B.ship_type, 'Incorrect value returned in Type24B ship type')
+            mybase24.get_24_ship_type()
+            self.assertEqual(30, mybase24.ship_type, 'Incorrect value returned in Type24B ship type')
         except ValueError:
-            self.assertFalse(mybase24B.valid_item, "Incorrect value in TYpe24B ship type not flagged correctly")
+            self.assertFalse(mybase24.valid_item, "Incorrect value in TYpe24B ship type not flagged correctly")
 
     def test_get_vendor_id(self):
         # this one is peculiar to TYpe24B so needs more testing
         # 18 bits comprising 3 six bit characters or alternatively 7 characters (pre1371_4)
         # all that can be testewd is that data presented is returned OK
 
-        diction, mystream, mybase24B = self.initialise()
+        diction, mystream, mybase24 = self.initialise()
         print('Testing 24.get_vendor_id both pre and post 1371_4')
         # test posdt 1371_4 version first
         testbits = diction.char_to_binary('ABC')
-        mybase24B.payload = diction.make_stream(48, testbits)
+        mybase24.payload = diction.make_stream(48, testbits)
         try:
-            mybase24B.get_vendor_id()
-            self.assertEqual('ABC', mybase24B.vendor_id, "In Type24B vendor ID incorrectly returned")
+            mybase24.get_vendor_id()
+            self.assertEqual('ABC', mybase24.vendor_id, "In Type24B vendor ID incorrectly returned")
         except ValueError:
-            self.assertFalse(mybase24B.valid_item, "In Type24B incorrect Vendor ID not correctly Flagged")
+            self.assertFalse(mybase24.valid_item, "In Type24B incorrect Vendor ID not correctly Flagged")
 
         # now for pre1371_4
         testbits = diction.char_to_binary('ABC0109')
-        mybase24B.payload = diction.make_stream(48, testbits)
+        mybase24.payload = diction.make_stream(48, testbits)
         try:
-            mybase24B.get_vendor_id()
-            self.assertEqual('ABC0109', mybase24B.pre1371_4_vendor_id,
+            mybase24.get_vendor_id()
+            self.assertEqual('ABC0109', mybase24.pre1371_4_vendor_id,
                              "In Type24B pre1371_4 vendor ID incorrectly returned")
         except ValueError:
-            self.assertFalse(mybase24B.valid_item,
+            self.assertFalse(mybase24.valid_item,
                              "In Type24B pre1371_4 incorrect Vendor ID not correctly Flagged")
 
     def test_get_unit_model_code(self):
         # post 1371_4 4 bits 66-69 integer
         # again can only check that correct value returned
-        diction, mystream, mybase24B = self.initialise()
+        diction, mystream, mybase24 = self.initialise()
 
         testbits = '{:04b}'.format(12)
-        mybase24B.payload = diction.make_stream(66, testbits)
+        mybase24.payload = diction.make_stream(66, testbits)
         print('Testing 24.get_sunit_model_code')
 
         try:
-            mybase24B.get_unit_model_code()
-            self.assertEqual(12, mybase24B.unit_model_code,
+            mybase24.get_unit_model_code()
+            self.assertEqual(12, mybase24.unit_model_code,
                              "In Type24B post1371_4 unit model incorrectly returned")
         except ValueError:
-            self.assertFalse(mybase24B.valid_item,
+            self.assertFalse(mybase24.valid_item,
                              "In Type24B post1371_4 incorrect unit model code not correctly Flagged")
 
     def test_get_serial_number(self):
         # bits 70-89 20- bit integer max value 1048575 (7 digits)
         # all that can be done here is to check that value returned matches value set
-        diction, mystream, mybase24B = self.initialise()
+        diction, mystream, mybase24 = self.initialise()
         print('Testing 24.get_serial_number')
 
         testbits = '{:020b}'.format(1038575)
-        mybase24B.payload = diction.make_stream(70, testbits)
+        mybase24.payload = diction.make_stream(70, testbits)
 
         try:
-            mybase24B.get_serial_number()
-            self.assertEqual(1038575, mybase24B.serial_number,
+            mybase24.get_serial_number()
+            self.assertEqual(1038575, mybase24.serial_number,
                              "In Type24B post1371_4 serial number {} incorrectly returned".format(
-                                 mybase24B.serial_number))
+                                 mybase24.serial_number))
         except ValueError:
-            self.assertFalse(mybase24B.valid_item,
+            self.assertFalse(mybase24.valid_item,
                              "In Type24B post1371_4 incorrect serial number not correctly flagged")
 
     def test_get_callsign(self):
-        diction, mystream, mybase24B = self.initialise()
+        diction, mystream, mybase24 = self.initialise()
         print("Testing 24.get_callsign")
 
         # again effectively free text
@@ -2306,11 +2267,11 @@ class TestStatic_data_PartB(TestCase):
             #     print (x, test_bits)
             test_bits = diction.char_to_binary(a)
             test_bits = diction.make_stream(90, test_bits)
-            mybase24B.payload = test_bits
+            mybase24.payload = test_bits
             try:
-                mybase24B.get_callsign()
-                self.assertEqual(a, mybase24B.callsign, "In 24B.get_callsign, value returned "
-                                 + mybase24B.callsign + " not equal to value offered " + a)
+                mybase24.get_callsign()
+                self.assertEqual(a, mybase24.callsign, "In 24B.get_callsign, value returned "
+                                 + mybase24.callsign + " not equal to value offered " + a)
             except RuntimeError:
                 self.assertFalse(True, "Runtime Error in 24B.get_callsign")
 
@@ -2449,6 +2410,7 @@ class TestLong_range_AIS_broadcast_message(TestCase):
         mystream = Payloads.AISStream(psuedo_AIS)
         mytype27 = Payloads.Long_range_AIS_broadcast_message(mystream.binary_payload)
         return diction, mystream, mytype27
+
     def test_get_longitude(self):
         # since weknow that the BasicPosition algorithm for Longitude and Latitude works
         # albeit with a scaling factor of 600000
@@ -2458,19 +2420,15 @@ class TestLong_range_AIS_broadcast_message(TestCase):
         diction, mystream, mytype27 = self.initialise()
 
         for i in {-180.0, 180.0, 0.0, 90.0, 181.0, 182.0}:
-            testbits = '{:018b}'.format(int(i*600.0))
-            mytype27.payload = diction.make_stream(44,testbits)
+            testbits = '{:018b}'.format(int(i * 600.0))
+            mytype27.payload = diction.make_stream(44, testbits)
             try:
-                mytype27.get_27longitude(44,18)
+                mytype27.get_27longitude(44, 18)
                 self.assertEqual(i, mytype27.longitude,
                                  'In TYpe27 get Longitude incorrect value returned')
             except ValueError:
                 self.assertFalse(mytype27.valid_item,
                                  ' In TYpe27 get Longitude incorrect value not flagged')
-
-
-
-
 
     def test_get_latitude(self):
         # since we know that the BasicPosition algorithm for Longitude and Latitude works
@@ -2491,6 +2449,3 @@ class TestLong_range_AIS_broadcast_message(TestCase):
             except ValueError:
                 self.assertFalse(mytype27.valid_item,
                                  ' In TYpe27 get Latitude incorrect value not flagged')
-
-
-

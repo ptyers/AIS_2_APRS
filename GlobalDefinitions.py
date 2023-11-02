@@ -14,9 +14,8 @@ entries in APRS.ini override definitions in this file
 
 
 """
-from AISData import AIS_Data
+
 import Fragment
-import Static24
 import Mapper
 import AVCGAmmsi
 import datetime
@@ -30,25 +29,7 @@ class Global:
 
     #  and an AIS_Data object for later use
 
-    mydata = AIS_Data(
-        "!AIVDM", "1", "1", "", "A",
-        "17P1cP0P0l:eoREbNV4qdOw`0PSA", "0*18\r\n"
-        )
 
-    #  and an array to hold fragmented messages
-    MyFrags = Fragment.FRAGMENT(
-        "9,2,3,4,5,6,7"
-    )  # impossible record never none fragments
-
-    # region Create_Dictionaries
-    #  create a dictionary item to contain STATIC24 items
-    # for the moment create a dummy to show dictionay content
-    dummy24 = Static24.STATIC24(mydata)
-    Type24s = {"dummy": dummy24}
-    # Dictionary to hold a list of fragments
-    # key is Message Number, data is a class FRAGMENT(Talker,FragCount,FragNo,MessID,Channel,Payload,Trailer)
-    FragDict = {}
-    FragDictTTL = 5
     # Time To Live (TTL) for mappings of MMSI to ShipName
     # Entries flushed from the Mapping Dictionary by the do_stats function
     # stored here as seconds - in AIS2APRS.ini entered as minutes

@@ -2,120 +2,118 @@
 #
 
 
-import Static24
+
 import GlobalDefinitions
 from GlobalDefinitions import Global
 from Mapper import MAPPER
-import CNB
+import Payloads
 import SendAPRS
-import BaseStation
 from datetime import datetime
+import logging
+from Payloads import AISStream, AISDictionaries, Fragments
+from Payloads import Basic_Position, Basestation, CNB, Static_data_report, ClassB_position_report
+from Payloads import StaticData, SAR_aircraft_position_report
+from Payloads import Safety_related_broadcast_message, Addressed_safety_related_message, \
+    Long_range_AIS_broadcast_message
 
 
 class AISClass:
-    diagnostic = Global.diagnostic
-    diagnostic2 = Global.diagnostic2
-    diagnostic3 = Global.diagnostic3
 
     def __init__(self):
         # there are somethings common to every ais item
         # Messagetpe, RepeatrIndicator,MMSI
 
+        logging.basicConfig(level=logging.DEBUG)
+
         pass
 
-    def donothing(Type: int, AISObject):
+    def donothing(payload_type: int, aisobject):
         pass
 
-    def Process1239_18(Type: int, AISObject):
+    def Process1239_18(payload_type: int, aisobject):
         """
         AIS Object is an AISData object containing both
          the payload and a binary version of the payload
         """
-        diagnostic = Global.diagnostic
-        diagnostic2 = Global.diagnostic2
-        diagnostic3 = Global.diagnostic3
-        diagnostic2 = False
-        diagnostic3 = False
-        diagnostic = False
 
         MyMap = GlobalDefinitions.Global.MyMap
-        mydata = Global.mydata
+        #mydata = Global.mydata
 
         # TEMPORARY for development
         tcpstream = ""
 
-        if diagnostic3:
-            print("into process1239_18")
+        logging.info("into process1239_18")
 
         try:
-            if diagnostic3:
-                print(" processing type %d class A", Type, AISObject)
 
-            CNB.do_CNB(AISObject)
+            logging.debug("processing type {:d} \n Payload {}".format(payload_type, aisobject))
 
-            if diagnostic2:
-                # print('In Process Classes')
-                if Type == 9:
-                    #  print(" processing type 9
-                    print(
-                        "Type {:d} MMSI {:d} Channel {} Latitude {:06.2f} Longitude {:06.2f} SOG {:03.0f} COG {:03.0f} Altitude {:03.0f}".format(
-                            Type,
-                            AISObject.MMSI,
-                            AISObject.AIS_Channel,
-                            AISObject.Latitude,
-                            AISObject.Longitude,
-                            AISObject.SOG,
-                            AISObject.COG,
-                            AISObject.Altitude,
-                        )
+
+            if payload_type == 9:
+                print(" processing payload_type 9")
+                packet = SAR_aircraft_position_report(aisobject)
+                logging.debug(
+                    "payload_type {:d} MMSI {:d}  Latitude {:06.2f} Longitude {:06.2f} "
+                    " Altitude {} SOG {:03.0f} COG {:03.0f} ".format(
+                        payload_type,
+                        packet.int_mmsi,
+                        packet.latitude,
+                        packet.longitude,
+                        packet.speed_over_ground,
+                        packet.course_over_ground,
+                        packet.altitude
                     )
-                elif Type == 18:
-                    print(
-                        "Type {:d} MMSI {:d} Channel {} Latitude {:06.2f} Longitude {:06.2f} SOG {:03.0f} COG {:03.0f} HDG {:03.0f}".format(
-                            Type,
-                            AISObject.MMSI,
-                            AISObject.AIS_Channel,
-                            AISObject.Latitude,
-                            AISObject.Longitude,
-                            AISObject.SOG,
-                            AISObject.COG,
-                            AISObject.HDG,
-                        )
+                )
+            elif payload_type == 18:
+                print(" processing payload_type 18")
+                packet = ClassB_position_report(aisobject)
+                logging.debug(
+                    "payload_type {:d} MMSI {:d}  Latitude {:06.2f} Longitude {:06.2f} "
+                    "SOG {:03.0f} COG {:03.0f} HDG {:03.0f}".format(
+                        payload_type,
+                        packet.int_mmsi,
+                        packet.latitude,
+                        packet.longitude,
+                        packet.speed_over_ground,
+                        packet.course_over_ground,
+                        packet.true_heading,
                     )
-                else:
-                    print(
-                        "Type {:d} MMSI {:d} Channel {} Latitude {:06.2f} Longitude {:06.2f} SOG {:03.0f} COG {:03.0f} HDG {:03.0f}".format(
-                            Type,
-                            AISObject.MMSI,
-                            AISObject.AIS_Channel,
-                            AISObject.Latitude,
-                            AISObject.Longitude,
-                            AISObject.SOG,
-                            AISObject.COG,
-                            AISObject.HDG,
-                        )
+                )
+            else:
+                print("Processing type 123")
+                packet = CNB(aisobject)
+                logging.debug(
+                    "payload_type {:d} MMSI {:d}  Latitude {:06.2f} Longitude {:06.2f} "
+                    "SOG {:03.0f} COG {:03.0f} HDG {:03.0f}".format(
+                        payload_type,
+                        packet.int_mmsi,
+                        packet.latitude,
+                        packet.longitude,
+                        packet.speed_over_ground,
+                        packet.course_over_ground,
+                        packet.true_heading
                     )
+                )
             try:
-                #  print("Wrote Input Line")
-                if AISObject.String_MMSI in MyMap:
-                    # print("tested for MyMapKey matching MMSI")
-                    if diagnostic:
-                        print(
-                            (
-                                "Substituting MMSI",
-                                AISObject.String_MMSI,
-                                MyMap[AISObject.String_MMSI].Callsign,
-                                MyMap[AISObject.String_MMSI].Name,
-                                MyMap[AISObject.String_MMSI].Destination,
-                            )
+                if packet.mmsi in MyMap:
+                    print("tested for MyMapKey matching MMSI")
+
+                    logging.debug(
+                        (
+                            "Substituting MMSI",
+                            packet.int_mmsi,
+                            MyMap[packet.int_mmsi].Callsign,
+                            MyMap[packet.int_mmsi].Name,
+                            MyMap[packet.int_mmsi].Destination,
                         )
+                    )
                     # if moving from MMSI as Callsign to Name need to kill off MMSI object in APRS
-                    if not MyMap[AISObject.String_MMSI].KillSent:
+                    if not MyMap[packet.int_mmsi].KillSent:
                         try:
                             SendAPRS.SendAPRS(
-                                AISObject.AIS_Payload_ID, AISObject, True, 0
+                                packet.int_mmsi, packet, True, 0
                             )
-                            MyMap[AISObject.String_MMSI].KillSent = True
+                            MyMap[packet.int_mmsi].KillSent = True
                         except Exception as e:
                             raise RuntimeError(
                                 "Error Sending kill APRS in 12349 - Error in SendAPRS",
@@ -123,15 +121,15 @@ class AISClass:
                                 "\r\n",
                             ) from e
 
-                    AISObject.Callsign = MyMap[AISObject.String_MMSI].Callsign
-                    AISObject.Name = MyMap[AISObject.String_MMSI].Name
-                    if diagnostic:
-                        print(
-                            "1239_18 Callsign = ",
-                            AISObject.Callsign,
-                            " 1239_18Name = ",
-                            AISObject.Name,
-                        )
+                    packet.callsign = MyMap[packet.int_mmsi].Callsign
+                    packet.vessel_name = MyMap[packet.int_mmsi].Name
+
+                    logging.debug(
+                        "1239_18 Callsign = ",
+                        packet.callsign,
+                        " 1239_18Name = ",
+                        packet.vessel_name,
+                    )
             except Exception as e:
                 raise RuntimeError(
                     " Error checking MyMap in 12349 ='\
@@ -141,7 +139,7 @@ class AISClass:
                 ) from e
 
             try:
-                SendAPRS.SendAPRS(AISObject.AIS_Payload_ID, AISObject, False, 0)
+                SendAPRS.SendAPRS(payload_type, packet, False, 0)
             except Exception as e:
                 raise RuntimeError(
                     "Error Sending APRS in 12349 - Error in SendAPRS", e, "\r\n"
@@ -149,83 +147,73 @@ class AISClass:
 
         except Exception as e:
             raise RuntimeError(
-                "Exception while processing Type 1, 2 , 3 or 9", e, "\r\n"
+                "Exception while processing payload_type 1, 2 , 3 or 9", e, "\r\n"
             ) from e
 
-    def Process4(self, AISObject):
+    def Process4(self, aisobject):
+
+        print("Processing Type 4")
+
         try:
-            diagnostic = Global.diagnostic
-            diagnostic2 = Global.diagnostic2
-            diagnostic3 = Global.diagnostic3
             MyMap = Global.MyMap
 
-            my_base = BaseStation.BASESTATION(AISObject)
-            if diagnostic3:
-                print(" processing type 4")
-            if diagnostic2:
-                print(
-                    " Base Station {:s} {:s}  {:f} {:f}".format(
-                        AISObject.String_MMSI,
-                        AISObject.AIS_Channel,
-                        AISObject.Latitude,
-                        AISObject.Longitude,
-                    )
+            packet = Basestation(aisobject)
+            logging.info(" processing payload_type 4")
+            logging.debug(
+                " Base Station {:s}   {:f} {:f}".format(
+                    packet.mmsi,
+                    packet.latitude,
+                    packet.longitude,
                 )
+            )
 
-            SendAPRS.SendAPRS(AISObject.AIS_Payload_ID, AISObject, False, 0)
+            SendAPRS.SendAPRS(packet.message_type, packet, False, 0)
 
         except Exception as e:
-            raise RuntimeError("Exception while processing Type4", e, "\r\n") from e
+            raise RuntimeError("Exception while processing payload_type4", e, "\r\n") from e
 
-    def Process5(self, AISObject):
+    def Process5(self, aisobject):
 
-        diagnostic = Global.diagnostic
-        diagnostic2 = Global.diagnostic2
-        diagnostic3 = Global.diagnostic3
-        diagnostic2 = False
+        print("Processing Type 5")
 
-        if diagnostic:
-            print("ínto Process 5")
+        logging.info("ínto Process 5")
 
         try:
-            # print('AISObject,MMSI = ', AISObject.MMSI)
-            # print('AISOJECT Binary', AISObject.AIS_Binary_Payload)
-            my_base = Static24.STATIC24(AISObject)
+            # print('packet,MMSI = ', packet.MMSI)
+            # print('AISOJECT Binary', packet.AIS_Binary_Payload)
+            packet = StaticData(aisobject)
             MyMap = Global.MyMap
-            # print('AISObject,MMSI = ', AISObject.MMSI)
+            # print('packet,MMSI = ', packet.MMSI)
 
-            if diagnostic3:
-                print(
-                    "{:s} {:s} Class A Vessel Named {:s} Callsign {:s} Destination {:s} ShipType {:d}".format(
-                        AISObject.String_MMSI,
-                        AISObject.AIS_Channel,
-                        AISObject.Name,
-                        AISObject.Callsign,
-                        AISObject.Destination,
-                        AISObject.ShipType,
-                    )
+            logging.debug(
+                "{:s}  Class A Vessel Named {:s} Callsign {:s} Destination {:s} Ship_type {:d}".format(
+                    packet.int_mmsi,
+                    packet.Name,
+                    packet.Callsign,
+                    packet.destination,
+                    packet.ship_type
                 )
+            )
 
             #  check if we have a record in the mapping directory for this MMSI
 
-            if AISObject.String_MMSI in MyMap:
+            if packet.int_mmsi in MyMap:
                 # print("tested for MyMapKey matching MMSI")
-                if diagnostic:
-                    print(
-                        "Substituting Type 5 MMSI {:s} Callsign {:s} Name {:s} {Destination {:s}".format(
-                            AISObject.String_MMSI,
-                            MyMap[AISObject.String_MMSI].Callsign,
-                            MyMap[AISObject.String_MMSI].Name,
-                            MyMap[AISObject.String_MMSI].Destination,
-                        )
+                logging.debug(
+                    "Substituting Type 5 MMSI {:s} Callsign {:s} Name {:s} {Destination {:s}".format(
+                        packet.int_mmsi,
+                        MyMap[packet.int_mmsi].Callsign,
+                        MyMap[packet.int_mmsi].Name,
+                        MyMap[packet.int_mmsi].Destination,
                     )
-                    AISObject.Callsign = MyMap[AISObject.String_MMSI].Callsign
-                    AISObject.Name = MyMap[AISObject.String_MMSI].Name
+                )
+                packet.Callsign = MyMap[packet.int_mmsi].Callsign
+                packet.Name = MyMap[packet.int_mmsi].Name
 
-            if AISObject.String_MMSI in MyMap:
+            if packet.int_mmsi in MyMap:
                 #  key/value pair exists
                 #  update its timestamp
-                MyMap[AISObject.String_MMSI].TimeStamp = datetime.now()
+                MyMap[packet.int_mmsi].TimeStamp = datetime.now()
 
             else:
 
@@ -235,34 +223,34 @@ class AISClass:
                 #  for the purpose of the exercise the position of the object is set to the South Pole when killing
                 #  coordinates 90S, 0E
 
-                AISObject.int_latitude = 90 * 600000
-                AISObject.int_longitude = 0
-                SendAPRS.SendAPRS(AISObject.AIS_Payload_ID, AISObject, True, 0)
+                packet.int_latitude = 90 * 600000
+                packet.int_longitude = 0
+                SendAPRS.SendAPRS(packet.message_type, packet, True, 0)
                 mapitem = MAPPER(
-                    AISObject.Callsign, AISObject.Name, AISObject.Destination
+                    packet.Callsign, packet.Name, packet.destination
                 )
 
-                MyMap[AISObject.String_MMSI] = mapitem
+                MyMap[packet.int_mmsi] = mapitem
                 # print("after Add" + xx.Key + " " + xx.Value.Callsign + " " + xx.Value.Callsign)
-                # print("Loading MyMap {0:G} {1:G} {2:G} {3:G}", AISObject.String_MMSI, MyMap[AISObject.String_MMSI].Callsign,
-                #     MyMap[AISObject.String_MMSI].Name, MyMap[AISObject.String_MMSI].Destination)
-                if diagnostic2:
-                    print(
-                        "mapitem = "
-                        + AISObject.String_MMSI
-                        + " "
-                        + mapitem.Callsign
-                        + " "
-                        + mapitem.Name
-                    )
+                # print("Loading MyMap {0:G} {1:G} {2:G} {3:G}", packet.int_mmsi, MyMap[packet.int_mmsi].Callsign,
+                #     MyMap[packet.int_mmsi].Name, MyMap[packet.int_mmsi].Destination)
 
-                    for key in MyMap:
-                        item = MyMap[key]
-                        print(key, item.Callsign, item.Name, item.Destination)
+                logging.debug(
+                    "mapitem = "
+                    + packet.mmsi
+                    + " "
+                    + mapitem.Callsign
+                    + " "
+                    + mapitem.Name
+                )
 
-                    #  on the next position report the new stream will have identity by callsign
-                    #  this mapping is done in the createObject method of class APRS
-            # flush outdated entries from map MMSI to ShipName
+                for key in MyMap:
+                    item = MyMap[key]
+                    logging.debug("{} {} {} {}".format(key, item.Callsign, item.Name, item.Destination))
+
+                #  on the next position report the new stream will have identity by callsign
+                #  this mapping is done in the createObject method of class APRS
+        # flush outdated entries from map MMSI to ShipName
 
             flushMyMap()
 
@@ -270,13 +258,14 @@ class AISClass:
             raise RuntimeError("Exception while processing Type5", e, "\r\n") from e
 
     # region Process14
-    def Process14(self, AISObject):
-        diagnostic = Global.diagnostic
-        diagnostic2 = Global.diagnostic2
-        diagnostic3 = Global.diagnostic3
+    def Process14(self, aisobject):
+
+        print("Processing Type 14")
+
         Bulletin = GlobalDefinitions.Global.Bulletin
         MyMap = GlobalDefinitions.Global.MyMap
 
+        packet = Safety_related_broadcast_message(aisobject)
         diagnostic = False
 
         #  bulletin rolls over mod 10
@@ -285,56 +274,83 @@ class AISClass:
         try:
 
             if diagnostic:
-                print("Bulletin {:d} {:s}".format(Bulletin, AISObject.Safetytext))
+                print("Bulletin {:d} {:s}".format(Bulletin, aisobject.Safetytext))
 
-            SendAPRS.SendAPRS(AISObject.AIS_Payload_ID, AISObject, False, Bulletin)
+            SendAPRS.SendAPRS(packet.message_type, packet, False, Bulletin)
         except Exception as e:
             raise RuntimeError("Exception while processing Type14", e, "\r\n") from e
 
-    def Process24(self, AISObject):
-        diagnostic = Global.diagnostic
-        diagnostic2 = Global.diagnostic2
-        diagnostic3 = Global.diagnostic3
+    def Process24(self, aisobject):
+
+        print("Processing Type 24")
         MyMap = GlobalDefinitions.Global.MyMap
-        Type24s = GlobalDefinitions.Global.Type24s
+        Type24s = Static_data_report.Type24s
         diagnostic = False
         diagnostic2 = False
         diagnostic3 = False
 
-        if diagnostic:
-            print("into process 24 MMSI = ", str(AISObject.ExtractInt(8, 30)))
+
+        packet = Static_data_report(aisobject)
+
+        logging.debug("into process 24 MMSI = " + str(packet.extract_int(8, 30)))
+
+
+        PartType = packet.part_number
+        MMSI = packet.mmsi
+
 
         try:
-            PartType = AISObject.Type24PartNo
-            MMSI = str(AISObject.ExtractInt(8, 30))
-
-            if diagnostic3:
-                print("Looking for MMSI in Type24s", MMSI)
+            logging.debug("Looking for MMSI in Type24s " + MMSI)
             if MMSI in Type24s:
-                try:
-                    if diagnostic:
-                        print(
-                            "Found MMSI in 24s",
-                            MMSI,
-                            Type24s[MMSI].Name,
-                            Type24s[MMSI].Callsign,
-                        )
-                    #  There is an existing type24 record in the dictionary for this MMSI
-                    new24 = Type24s[MMSI]
+
+                # print(
+                #     "Found MMSI in 24s",
+                #     MMSI,
+                #     Type24s[MMSI].vessel_name,
+                #     Type24s[MMSI].callsign
+                # )
+                print(Type24s)
+                #  There is an existing type24 record in the dictionary for this MMSI
+                new24 = Type24s[MMSI]
                     # now update the record with new data
-                    new24.update(AISObject)
+                try:
+                    new24.update(packet)
                     Type24s[MMSI] = new24
-                    if diagnostic:
-                        print(
-                            " After type24s update For MMSI ",
+                    logging.debug(
+                        " After type24s update For MMSI {} {} {}".format(
                             MMSI,
                             Type24s[MMSI].Name,
                             Type24s[MMSI].Callsign,
                         )
+                    )
+                except RuntimeError as e:
+                    raise RuntimeError(
+                        "Exception while processing existing Type 24\r\n"
+                        + "ShipType {:d} Vendor {:s} Model {:d} Callsign {:s} \r\n"
+                        + "DimBow {:d} DimStern {:d} DimPort {:d} DimStartboard {:d}"
+                        + "\r\n MotherMMSI {:d} "
+                        + "Valid {:s}\n\r {:s}\r\n".format(
+                            new24.ShipType,
+                            new24.Vendor,
+                            new24.Model,
+                            new24.Callsign,
+                            new24.Dim2Bow,
+                            new24.Dim2Stern,
+                            new24.Dim2Port,
+                            new24.Dim2Starboard,
+                            new24.MotherMMSI,
+                            new24.Valid_B,
+                            e,
+                        )
+                    ) from e
 
-                    if diagnostic3:
-                        print("ValidA = ", new24.Valid_A, "  ValidB = ", new24.Valid_B)
+                except UnboundLocalError as e:
+                    raise UnboundLocalError( 'Unbound error at line 345 of Process AISClasses', e) from e
+                except AttributeError as e:
+                    raise AttributeError( 'Attribute error at line 345 of Process AISClasses', e) from e
 
+                logging.debug("ValidA = {} ValidB = {}".format(new24.Valid_A, new24.Valid_B))
+                try:
                     if new24.Valid_A and new24.Valid_B:
                         # have a valid composite Type24 record
                         # update the Mapper Directory
@@ -358,7 +374,7 @@ class AISClass:
 
                     # finally flush old entries from the map
                     flushMyMap()
-                except Exception as e:
+                except RuntimeError as e:
                     raise RuntimeError(
                         "Exception while processing existing Type 24\r\n"
                         + "ShipType {:d} Vendor {:s} Model {:d} Callsign {:s} \r\n"
@@ -379,33 +395,41 @@ class AISClass:
                         )
                     ) from e
 
+                except UnboundLocalError as e:
+                    raise UnboundLocalError( 'Unbound error at line 394 of Process AISClasses', e) from e
+                except AttributeError as e:
+                    raise AttributeError( 'Attribute error at line 394 of Process AISClasses', e) from e
+
             else:  # this is a new Type24 MMSI
                 # instantiate a Type24 object and put it into the Type24s Dictionary
                 try:
-                    new24 = Static24.STATIC24(AISObject)
+                    new24 = packet
                     Type24s[MMSI] = new24
-
-                except Exception as e:
+                except RuntimeError as e:
                     raise RuntimeError(
                         "Exception while processing new Type 24\r\n"
                         + "ShipType {:d} Vendor {:s} Model {:d} Callsign {:s} \r\n"
                         + "DimBow {:d} DimStern {:d} DimPort {:d} DimStartboard {:d}\r\n MotherMMSI {:d} "
                         + "Valid {:s}\n\r {:s}\r\n".format(
-                            new24.ShipType,
-                            new24.Vendor,
-                            new24.Model,
-                            new24.Callsign,
-                            new24.Dim2Bow,
-                            new24.Dim2Stern,
-                            new24.Dim2Port,
-                            new24.Dim2Starboard,
-                            new24.MotherMMSI,
-                            new24.Valid_B,
-                            e,
+                            new24.ship_type,
+                            new24.vendor_id,
+                            new24.unit_model_code,
+                            new24.callsign,
+                            new24.dim_to_bow,
+                            new24.dim_to_stern,
+                            new24.dim_to_port,
+                            new24.dim_to_stbd,
+                            new24.mothership_mmsi,
+
+                            e
                         )
                     ) from e
+                except UnboundLocalError as e:
+                    raise UnboundLocalError('Unbound error at line 400 of Process AISClasses', e) from e
+                except AttributeError as e:
+                    raise AttributeError( 'Attribute error at line 400 of Process AISClasses', e) from e
         except Exception as e:
-            raise RuntimeError("Exception while processing Type 24", e, "\r\n") from e
+            raise RuntimeError("Exception while processing Type 24", e) from e
 
 
 def update24(MMSI, MyMap, new24):

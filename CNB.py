@@ -7,8 +7,8 @@ from AISData import AIS_Data
 # CNB is Common Navigation Block
 
 
-def do_CNB(AISObject):
-    # AISObject is the encoded payload string received in message types 1,2,3 - 168 bits usually
+def do_CNB(aisobject):
+    # aisobject is the encoded payload string received in message types 1,2,3 - 168 bits usually
     # it is an AISData object and passed from the main program through calls by reference
     # HOPEFULLY changes made to it here will be reflected in the original
     # TO BE CONFIRMED
@@ -49,20 +49,20 @@ def do_CNB(AISObject):
     MyMap = Global.MyMap
 
     if diagnostic3:
-        print("into CNB payload_id =   ", AISObject.AIS_Payload_ID)
-        # print('entering CNB Binary payload = ' , bin(AISObject.AIS_Binary_Payload))
+        print("into CNB payload_id =   ", aisobject.AIS_Payload_ID)
+        # print('entering CNB Binary payload = ' , bin(aisobject.AIS_Binary_Payload))
     # first the repeat indicator uper 2 bits of second 6 bit nibble
 
-    AISObject.RepeatIndicator = AISObject.Binary_Item(6, 2)
+    aisobject.RepeatIndicator = aisobject.Binary_Item(6, 2)
     if diagnostic3:
-        print("got repeat indicator = ", AISObject.RepeatIndicator)
+        print("got repeat indicator = ", aisobject.RepeatIndicator)
         pass
 
     # now bits 8-37 the MMSI - character positions 1 to 6
-    AISObject.get_string_MMSI(AISObject.Binary_Item(8, 30))
+    aisobject.get_string_MMSI(aisobject.Binary_Item(8, 30))
 
     if diagnostic3:
-        print("got MMSI = ", AISObject.MMSI)
+        print("got MMSI = ", aisobject.MMSI)
         pass
     # Console.WriteLine(" MMSI = " + p_mmsi)
 
@@ -71,39 +71,39 @@ def do_CNB(AISObject):
     p_urot = 0
     p_ulong = 0
 
-    # switch (AISObject.AIS_Payload_ID)
+    # switch (aisobject.AIS_Payload_ID)
     # again use a function called via dictionary to replace the switch
-    # switch(AISObject.AIS_Payload_ID)
+    # switch(aisobject.AIS_Payload_ID)
 
     Dict123_9_18 = {1: do123, 2: do123, 3: do123, 9: do9, 18: do18}
-    doswitch(AISObject.AIS_Payload_ID, AISObject, Dict123_9_18)
+    doswitch(aisobject.AIS_Payload_ID, aisobject, Dict123_9_18)
 
 
-def doswitch(payload, AISObject, switchdict):
-    # replaces a switch uses switchdict to determine which function to execute woth arguments payload and AISObject
-    # print('payload ', payload, ' AISObject ',AISObject )
+def doswitch(payload, aisobject, switchdict):
+    # replaces a switch uses switchdict to determine which function to execute woth arguments payload and aisobject
+    # print('payload ', payload, ' aisobject ',aisobject )
     if payload in switchdict:
-        return switchdict[payload](AISObject)
+        return switchdict[payload](aisobject)
     else:
         raise ValueError("Function to handle payload_ID unknown")
     pass
 
 
-def do123(AISObject):
-    AISObject.set_NavStatus(AISObject.Binary_Item(38, 4))
+def do123(aisobject):
+    aisobject.set_NavStatus(aisobject.Binary_Item(38, 4))
     # now rate of turn
     # the defproperty p_rot is kept as a signed integer32
     # this will require filling to the left for negative values given that the parameter is 8 bits long, bit 8 sign bit
     # extracted from  6 bits of char position 7 and upper 2  bits of char position 8
 
     # if bit 0 is 1 then we have a negative value (twos complement)
-    p_urot = AISObject.Binary_Item(42, 8)
+    p_urot = aisobject.Binary_Item(42, 8)
     if p_urot > 128:
-        AISObject.set_int_ROT(int(p_urot - 256))
+        aisobject.set_int_ROT(int(p_urot - 256))
     else:
-        AISObject.set_int_ROT(int(p_urot))
+        aisobject.set_int_ROT(int(p_urot))
         #            Console.WriteLine(" Rate of Turn = ", + p_rot)
-    AISObject.set_SOG(AISObject.Binary_Item(50, 10))
+    aisobject.set_SOG(aisobject.Binary_Item(50, 10))
     #            Console.WriteLine("SOG = ", p_sog )
 
     # sometings are common between 123 and 9

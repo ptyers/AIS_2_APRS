@@ -126,7 +126,7 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int):
 
 def domyswitch(p, args, secondarg, switchdic):
     # replaces a switch uses switchdict to determine which function to execute
-    # with arguments payload and AISObject
+    # with arguments payload and aisobject
     if p in switchdic:
         return switchdic[p](args, secondarg)
     else:

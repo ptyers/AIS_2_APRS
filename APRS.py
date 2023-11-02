@@ -1,6 +1,7 @@
 import datetime
 import MyPreConfigs
 import GlobalDefinitions
+import logging
 
 
 class APRS:
@@ -171,19 +172,16 @@ class APRS:
         _speed = format(speed, "03d")
 
     def CreateObjectPosition(self, kill: bool, mydata) -> str:
-        diagnostic = GlobalDefinitions.Global.diagnostic
-        diagnostic2 = GlobalDefinitions.Global.diagnostic2
-        diagnostic3 = GlobalDefinitions.Global.diagnostic3
 
         statuschar = ""
         typechar = "s"
         tablechar = "\\"  # single \
 
-        self._mmsi = mydata.String_MMSI
+        self._mmsi = mydata.mmsi
         isAVCGA = mydata.isAVCGA
 
-        if diagnostic3 and kill:
-            print("supposedly killing ", mydata.String_MMSI)
+        if kill:
+            logging.debug("supposedly killing {}  ".format(mydata.mmsi))
 
         """# FOR TESTING
         #############################################
@@ -206,6 +204,7 @@ class APRS:
         else:
             statuschar = "_"
             _callsign = self._mmsi
+
 
         if self._name == "" or kill:
             Xcallsign = self._mmsi
@@ -237,6 +236,7 @@ class APRS:
         if self._mmsi[0:3] in _tablecharoption:
             tablechar = _tablecharoption[self._mmsi[0:3]]
 
+
         #  and finally cater for AVCGA vessels - transmit these as valid position reports
         #
         if isAVCGA:
@@ -261,17 +261,20 @@ class APRS:
         Symbol Table Character = index into symbol table = {Ship = 's', SAR Aircraft = '^',
         Emergency  = '!', Nav Mark = 'N', CoastGuard = 'C'}
         Where we have a callsign append MMSI to name field (truncate to 43 if necessary)
+        
+        
         """
-        if Xcallsign[0:8] != mydata.String_MMSI:
+        if Xcallsign[0:8] != mydata.mmsi:
             # strip trailing spaces off name/callsign
             while self._name[:-1] == " " and len(self._name) > 1:
                 self.name = self._name[0:-2]
                 print(self._name, len(self._name))
             while self._callsign[:-1] == " " and len(self._callsign) > 1:
                 self._callsign = self._callsign[0:-2]
-            self.txname = (self._name + " " + mydata.String_MMSI + " " + self.Callsign)[
+            self.txname = (self._name + " " + mydata.mmsi + " " + self._callsign)[
                 0:42
             ]
+
         message = (
             self._relaystation
             + ">APU25N,TCPIP*:;"
@@ -287,25 +290,26 @@ class APRS:
             + self._speed
             + self.txname
             + "\n"
+                )
+
+        logging.debug(
+            "in CreateObject with kill tcpbytes \n"
+            + self._relaystation
+            + ">APU25N,TCPIP*:;"
+            + Xcallsign
+            + statuschar
+            + timestamp
+            + self._latitude
+            + tablechar
+            + self._longitude
+            + typechar
+            + self._course
+            + "/"
+            + self._speed
+            + self.txname
+            + "\n"
         )
-        if diagnostic3 and kill:
-            print(
-                "in CreateObject with kill tcpbytes \n"
-                + self._relaystation
-                + ">APU25N,TCPIP*:;"
-                + Xcallsign
-                + statuschar
-                + timestamp
-                + self._latitude
-                + tablechar
-                + self._longitude
-                + typechar
-                + self._course
-                + "/"
-                + self._speed
-                + self.txname
-                + "\n"
-            )
+
         return message
 
     def CreateBasePosition(self) -> str:

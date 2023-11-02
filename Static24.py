@@ -58,65 +58,65 @@ class STATIC24:
 
     """
 
-    def __init__(self, AISObject):
-        # initialise a collection of parameters presumably held in the AISObject
+    def __init__(self, aisobject):
+        # initialise a collection of parameters presumably held in the aisobject
         # first
         # print('Instantiating Type 24')
-        # AISObject.print_AIS()
-        if AISObject._Payload_ID == 5:
+        # aisobject.print_AIS()
+        if aisobject._Payload_ID == 5:
             if GlobalDefinitions.Global.diagnostic3:
                 print(
-                    "ín 5 AISObject Binary",
-                    len(AISObject.AIS_Binary_Payload),
+                    "ín 5 aisobject Binary",
+                    len(aisobject.AIS_Binary_Payload),
                     " ",
-                    AISObject.AIS_Binary_Payload,
+                    aisobject.AIS_Binary_Payload
                 )
             # first stuff related to a Type 5 (Static and Voyage RElated)
-            AISObject.Version = AISObject.ExtractInt(38, 2)
-            AISObject.IMO = AISObject.ExtractInt(40, 30)
-            AISObject.Callsign = self.get_string(AISObject.AIS_Binary_Payload, 70, 42)
-            AISObject.Name = self.get_string(AISObject.AIS_Binary_Payload, 112, 120)
-            AISObject.ShipType = AISObject.ExtractInt(232, 8)
-            AISObject.Dim2Bow = AISObject.ExtractInt(240, 9)
-            AISObject.Dim2Stern = AISObject.ExtractInt(249, 9)
-            AISObject.Dim2Port = AISObject.ExtractInt(258, 6)
-            AISObject.Dim2StarBoard = AISObject.ExtractInt(264, 6)
-            AISObject.PositionFix = AISObject.ExtractInt(270, 4)
-            AISObject.ETAMonth = AISObject.ExtractInt(274, 4)
-            AISObject.ETADay = AISObject.ExtractInt(278, 5)
-            AISObject.ETAHour = AISObject.ExtractInt(283, 5)
-            AISObject.ETAMinute = AISObject.ExtractInt(288, 6)
-            AISObject.Draught = AISObject.ExtractInt(294, 8)
-            AISObject.Destination = self.get_string(
-                AISObject.AIS_Binary_Payload, 302, 120
+            aisobject.Version = aisobject.ExtractInt(38, 2)
+            aisobject.IMO = aisobject.ExtractInt(40, 30)
+            aisobject.Callsign = self.get_string(aisobject.AIS_Binary_Payload, 70, 42)
+            aisobject.Name = self.get_string(aisobject.AIS_Binary_Payload, 112, 120)
+            aisobject.ShipType = aisobject.ExtractInt(232, 8)
+            aisobject.Dim2Bow = aisobject.ExtractInt(240, 9)
+            aisobject.Dim2Stern = aisobject.ExtractInt(249, 9)
+            aisobject.Dim2Port = aisobject.ExtractInt(258, 6)
+            aisobject.Dim2StarBoard = aisobject.ExtractInt(264, 6)
+            aisobject.PositionFix = aisobject.ExtractInt(270, 4)
+            aisobject.ETAMonth = aisobject.ExtractInt(274, 4)
+            aisobject.ETADay = aisobject.ExtractInt(278, 5)
+            aisobject.ETAHour = aisobject.ExtractInt(283, 5)
+            aisobject.ETAMinute = aisobject.ExtractInt(288, 6)
+            aisobject.Draught = aisobject.ExtractInt(294, 8)
+            aisobject.Destination = self.get_string(
+                aisobject.AIS_Binary_Payload, 302, 120
             )
-            AISObject.DTE = AISObject.ExtractInt(422, 1)
+            aisobject.DTE = aisobject.ExtractInt(422, 1)
 
-        if AISObject._Payload_ID == 24:
+        if aisobject._Payload_ID == 24:
             # now we update the objrct just created -
             # whether part A or part B will be chcked in update()
-            self.update(AISObject)
+            self.update(aisobject)
 
-    def update(self, AISObject):
+    def update(self, aisobject):
         # update the Static24 object with data from the AIS stream
         # Type 24 can come as either TypeA or TypeB (0 or 1 in bits38-39)
-        if AISObject.ExtractInt(38, 2) == 0:  # Type A
+        if aisobject.ExtractInt(38, 2) == 0:  # Type A
 
-            self.p_name = self.get_string(AISObject.AIS_Binary_Payload, 40, 120)
+            self.p_name = self.get_string(aisobject.AIS_Binary_Payload, 40, 120)
             self.p_valid_a = True  # indicates we have had valid part A data
 
         else:  # Type B
 
-            self.p_type = AISObject.ExtractInt(40, 8)
-            self.p_vendor = self.get_string(AISObject.AIS_Binary_Payload, 48, 18)
-            self.p_model = AISObject.ExtractInt(66, 4)
-            self.p_serial = AISObject.ExtractInt(70, 20)
-            self.p_call = self.get_string(AISObject.AIS_Binary_Payload, 90, 42)
-            self.p_d2bow = AISObject.ExtractInt(132, 9)
-            self.p_d2stern = AISObject.ExtractInt(141, 9)
-            self.p_d2port = AISObject.ExtractInt(150, 6)
-            self.p_d2starboard = AISObject.ExtractInt(156, 6)
-            self.p_mother = AISObject.ExtractInt(132, 30)
+            self.p_type = aisobject.ExtractInt(40, 8)
+            self.p_vendor = self.get_string(aisobject.AIS_Binary_Payload, 48, 18)
+            self.p_model = aisobject.ExtractInt(66, 4)
+            self.p_serial = aisobject.ExtractInt(70, 20)
+            self.p_call = self.get_string(aisobject.AIS_Binary_Payload, 90, 42)
+            self.p_d2bow = aisobject.ExtractInt(132, 9)
+            self.p_d2stern = aisobject.ExtractInt(141, 9)
+            self.p_d2port = aisobject.ExtractInt(150, 6)
+            self.p_d2starboard = aisobject.ExtractInt(156, 6)
+            self.p_mother = aisobject.ExtractInt(132, 30)
             self.p_valid_b = True  # indicates we have had valid part A data
 
     def get_string(self, Binarystring, sstart, length) -> str:

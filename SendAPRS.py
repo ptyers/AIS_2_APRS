@@ -3,33 +3,32 @@ import GlobalDefinitions
 from datetime import datetime
 from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR, SOCK_DGRAM
 from APRS import APRS
+from Payloads import CNB
 
 
 # region SendAPRS
 
 
 def SendAPRS(p, mydata, kill: bool, Bulletin: int):
-    diagnostic = GlobalDefinitions.Global.diagnostic
-    diagnostic2 = GlobalDefinitions.Global.diagnostic2
-    diagnostic3 = GlobalDefinitions.Global.diagnostic3
-    diagnostic3 = False
+
+    print('into sendAPRS with message type {} '.format(mydata.message_type))
 
     #  takes analysed AIS stream and at periodic intervals sends to APRS server
     tcpbytes = bytearray("", "utf-8")
     try:
         myaprs = APRS(
-            mydata.String_MMSI,
-            mydata.Latitude,
-            mydata.Longitude,
-            mydata.COG,
-            mydata.SOG,
-            mydata.Name,
-            mydata.isAVCGA,
+            mydata.mmsi,
+            mydata.latitude,
+            mydata.longitude,
+            mydata.course_over_ground,
+            mydata.speed_over_ground,
+            mydata.vessel_name,
+            mydata.isAVCGA
         )
 
-        myaprs.MMSI = mydata.String_MMSI
-        if len(mydata.Callsign) > 0:
-            myaprs.Callsign = mydata.Callsign
+        myaprs.MMSI = mydata.mmsi
+        if len(mydata.callsign) > 0:
+            myaprs.Callsign = mydata.callsign
 
     except Exception as e:
         raise RuntimeError("Error creating myaprs in SendAPRS", e) from e
@@ -71,10 +70,10 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int):
     #            if ((mydata.Latitude < 91) && (mydata.Longitude < 181))  #  only send valid lat/long to server
     try:
 
-        if mydata.Callsign == "":
-            xcallsign = mydata.String_MMSI
+        if mydata.callsign == "":
+            xcallsign = mydata.mmsi
         else:
-            xcallsign = mydata.Callsign
+            xcallsign = mydata.callsign
 
         tcpbytes = thisswitch[p]((mydata, myaprs), Bulletin, kill)
 
@@ -98,10 +97,12 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int):
 
 
 def donothing():
+    #print('In SendAPRS.donothing')
     pass
 
 
 def doposition(args, dummy: int, kill: bool):
+    #print('In SendAPORS.doposition')
     try:
         mydata = args[0]
         myaprs = args[1]
@@ -117,6 +118,7 @@ def doposition(args, dummy: int, kill: bool):
 
 
 def do4(args, dumbull: int, dummy: bool):
+    #'In SendAPORS.do4')
     try:
         # print(myaprs.CreateObjectPosition())
         args1, args2 = args
@@ -129,6 +131,7 @@ def do4(args, dumbull: int, dummy: bool):
 
 
 def do14(args, Bulletin: int, dummy: bool):
+    #print('In SendAPORS.do14')
     try:
         tcpbytes = bytearray(args.CreateSafetyMessage(Bulletin), "utf-8")
 
@@ -139,6 +142,7 @@ def do14(args, Bulletin: int, dummy: bool):
 
 
 def do5_24(args, dumbull: int, kill: bool):
+    #print('In SendAPORS.do5_24')
     try:
         # APRS myaprs = new APRS(mydata.String_MMSI, mydata.Latitude, mydata.Longitude, mydata.COG, mydata.SOG, "")
         args1, args2 = args
@@ -155,6 +159,7 @@ def do5_24(args, dumbull: int, kill: bool):
 
 
 def QueueAPRS(Callsign: str, tcpbytes):
+    #print('In SendAPORS.QueueAPRS')
     #  queues APRS text streams deleting duplicates
     #  uses dictionary ServerQueue to hold APRS byte steam keyed on the Callsign field
     #
@@ -221,6 +226,7 @@ def Do_diag_print(DiagBool, diagstr):
 
 
 def TransmitAPRS(tcpstream):
+    #print('In SendAPORS.TransmitAPRS')
     diagnostic = GlobalDefinitions.Global.diagnostic
     diagnostic2 = GlobalDefinitions.Global.diagnostic2
     diagnostic3 = GlobalDefinitions.Global.diagnostic3

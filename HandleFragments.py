@@ -99,7 +99,7 @@ def handle_fragments(payload):
         for x in ExtractedFrags:
             logging.debug("fragno {} Fragment {} ".format(int(x), ExtractedFrags[x]))
 
-        """ If YES find fragment 1 and create AISObject"""
+        """ If YES find fragment 1 and create aisobject"""
 
         try:
             aisfields = ExtractedFrags["1"]
@@ -108,7 +108,7 @@ def handle_fragments(payload):
                 "No fragment 1 in supposed full set of fragment", e
             ) from e
         logging.debug("creating AIS record myAIS")
-        # create an AISObject from Fragment 1
+        # create an aisobject from Fragment 1
         myAIS = AISData.AIS_Data(
             aisfields[0],
             aisfields[1],
@@ -215,7 +215,7 @@ def handle_fragments(payload):
         logging.debug("post cleanup length Global.FragDict = ", len(Global.FragDict))
         xyzzy.clear()
 
-    """' return AISObject or NONE"""
+    """' return aisobject or NONE"""
 
     if success:
         # print(myAIS.AIS_Binary_Payload[0:37])

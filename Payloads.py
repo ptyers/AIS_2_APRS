@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import logging
-from GlobalDefinitions import Global
+# from GlobalDefinitions import Global
 import struct
 import sys
 from AISDictionary import AISDictionaries
@@ -14,20 +14,22 @@ Base Class is Payload all other classes inherit from this
 
 
 class Payload:
-    # fields
-    message_type: int
-    repeat_indicator: int
-    mmsi: str
-    longitude: float
-    latitude: float
-    fix_quality: bool = False
-    raim_flag: bool = 0  # default not in use
-    radio_status: int = 0  # Not implemented
-    payload: str  # binary payload
-    valid_item: bool
 
     def __init__(self, p_payload: str):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+
+        # fields
+        message_type: int
+        repeat_indicator: int
+        mmsi: str
+        longitude: float
+        latitude: float
+        fix_quality: bool = False
+        raim_flag: bool = False  # default not in use
+        radio_status: int = 0  # Not implemented
+        payload: str  # binary payload
+        valid_item: bool
+
         # p_payload is binary_payload string
         self.payload = p_payload
 
@@ -37,6 +39,7 @@ class Payload:
             raise RuntimeError("Invalid Message Type not in 1-27")
 
         self.mmsi = self.create_mmsi()
+        self.int_mmsi = int(self.mmsi)
 
         self.repeat_indicator = self.binary_item(6, 2)
         if not (0 <= self.repeat_indicator <= 3):
@@ -215,7 +218,7 @@ class Payload:
         if not (-180.0 <= self.longitude <= 181.0):
             # print("error in get_longitude value returned ", self.longitude)
             self.valid_item = False
-            raise ValueError
+            raise ValueError("error in get_longitude value returned {}".format(self.longitude))
 
     def get_latitude(self, startpos: int, length: int = 27):
         # longitude is in various positions in differing blocks
@@ -225,7 +228,7 @@ class Payload:
         if not (-90.0 <= self.latitude <= 91.0):
             # print("error in get_latitude value returned ", self.latitude)
             self.valid_item = False
-            raise ValueError
+            raise ValueError("error in get_latitude value returned {} ".format(self.latitude))
 
     def signed_binary_item(self, startpos: int, blength: int) -> int:
         '''
@@ -315,23 +318,27 @@ class Payload:
 
 
 class Basic_Position(Payload):
-    # basse class from mwhich CNB, Class B Aid to Nav objects will inherit
-
-    speed_over_ground: float
-    course_over_ground: float
-    true_heading: int
-    time_stamp: int
-    ship_type: int  # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
-    vessel_name: str
-    ship_type: int  # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
-    dim_to_bow: int
-    dim_to_stern: int
-    dim_to_port: int
-    dim_to_stbd: int
-    ais_version: int = 0  # enumerated normally 0, 1-3 future editions
+    # basse class from which CNB, Class B Aid to Nav objects will inherit
 
     def __init__(self, p_payload):
+
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
+
+        self.speed_over_ground: float = 0.0
+        self.course_over_ground: float = 360.0
+        self.true_heading: int = 511
+        self.time_stamp: int = 0
+        self.ship_type: int  # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
+        self.vessel_name: str = ''
+        self.ship_type: int  # enumerated see dictionary (eventually ) 0-99 but garbage not uncommen
+        self.dim_to_bow: int = 0.0
+        self.dim_to_stern: int = 0.0
+        self.dim_to_port: int = 0.0
+        self.dim_to_stbd: int = 0.0
+        self.ais_version: int = 0  # enumerated normally 0, 1-3 future editions
+        self.callsign: str = ''
+        self.isAVCGA = False
+
         super().__init__(p_payload)
 
         # very little initiation done in this class just provides routines for use in CNB, Static, Class B
@@ -383,7 +390,7 @@ class Basic_Position(Payload):
             self.valid_item = False
             errstr: str = 'In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval)
             # logging.error(errstr)
-            raise ValueError
+            raise ValueError('In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval))
 
     def get_tru_head(self, position: int, length: int) -> None:
         '''
@@ -398,13 +405,16 @@ class Basic_Position(Payload):
         '''
 
         itru = self.binary_item(128, 9)
+        # if self.message_type == 18:
+        #     itru = 511
         if 0 <= itru <= 359 or itru == 511:
             self.true_heading = itru
         else:
             self.valid_item = False
-            errstr: str = '{:d}'.format(itru)
-            # logging.error('In get_tru_head - value outside range 0-359 or != 511 : ' + errstr)
-            raise ValueError
+            errstr: str = '{:d} from MMSI {} with payload\n{}'.format(itru, self.mmsi, self.payload)
+            logging.error('In get_tru_head - value outside range 0-359 or != 511 : ' + errstr)
+            self.true_heading = 511
+            raise ValueError('In get_tru_head - value outside range 0-359 or != 511 : ' + errstr)
 
     def get_timestamp(self, position: int, length: int) -> None:
         '''
@@ -432,7 +442,7 @@ class Basic_Position(Payload):
         else:
             self.valid_item = False
             # logging.error('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
-            raise ValueError
+            raise ValueError('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
 
     def get_vessel_name(self, position: int, length: int) -> None:
         '''
@@ -568,18 +578,8 @@ class Basic_Position(Payload):
 class CNB(Basic_Position):
     # additional fields
 
-    navigation_status: int
-    rate_of_turn: float
-    # rate of turn has 3 special values
-    # 1000.0 - No turn Indication available
-    # 1005 turning right at more than 5 degrees/ 30 seconds
-    # -1005.0 turning leftat more than 5 degrees/ 30 seconds
-    # otherwise range is -708.0 t0 708.0 degrees per minute - negetive left, positivew right
-    raw_rate_of_turn: int
-    position_accuracy: bool
-    maneouver_indicator: int
-
     def __init__(self, p_payload: str):
+
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
         self.get_CNB_nav_status()
@@ -593,10 +593,20 @@ class CNB(Basic_Position):
         self.getCNB_timestamp()
         self.get_man_indic()
         self.getfix(60)
+        self.vessel_name = ''
+        self.isAVCGA = False
+        self.callsign = ''
+        self.raw_rate_of_turn: int = 128
+        self.position_accuracy: bool = False
+        self.maneouver_indicator: int = 0
 
-        logging.basicConfig(level=logging.CRITICAL)
-
-        pass
+        self.navigation_status: int
+        self.rate_of_turn: float = 1000.0  # not available
+        # rate of turn has 3 special values
+        # 1000.0 - No turn Indication available
+        # 1005 turning right at more than 5 degrees/ 30 seconds
+        # -1005.0 turning leftat more than 5 degrees/ 30 seconds
+        # otherwise range is -708.0 t0 708.0 degrees per minute - negetive left, positivew right
 
     def __repr__(self):
         return (f'{self.__class__.__name__}\n'
@@ -714,26 +724,29 @@ class CNB(Basic_Position):
         # maneouver indicator. 0-2. Bits 143-144
 
         intval = self.binary_item(143, 2)
+        # if self.message_type == 18:
+        #     intval = 0
         if 0 <= intval <= 2:
             self.maneouver_indicator = intval
         else:
             self.valid_item = False
-            errstr: str = '{:d}'.format(intval)
-            # logging.error('In CNB.get_man indicator - value outside range 0-2' + errstr)
-            raise ValueError
+            errstr: str = '{:d} for MMSI {} with payload \n{}'.format(intval, self.mmsi, self.payload)
+            logging.error('In CNB.get_man indicator - value outside range 0-2 ' + errstr)
+            self.maneouver_indicator = 0
+            raise ValueError('In CNB.get_man indicator - value outside range 0-2 ' + errstr)
 
 
 class Basestation(Basic_Position):
     # base station report - Type 4
 
     # items specific to base station
-    year: int
-    month: int
-    day: int
-    hour: int
-    minute: int
-    second: int
-    EPFD_type: int
+    # year: int
+    # month: int
+    # day: int
+    # hour: int
+    # minute: int
+    # second: int
+    # EPFD_type: int
 
     def __init__(self, p_payload: str):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
@@ -747,6 +760,11 @@ class Basestation(Basic_Position):
         self.get_Base_EPFD()
         self.getfix(78)
         self.getRAIMflag(148)
+        self.course_over_ground = ''
+        self.speed_over_ground = ''
+        self.vessel_name = ''
+        self.isAVCGA = False
+        self.callsign = ''
 
     def __repr__(self):
         return (f'{self.__class__.__name__}\n'
@@ -1472,7 +1490,6 @@ class ClassB_position_report(Basic_Position):
     message22_flag: bool  # If 1, unit can accept a channel assignment via Message Type 22.
 
     def __init__(self, p_payload):
-        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
 
         self.get_cs_unit()
@@ -1480,6 +1497,7 @@ class ClassB_position_report(Basic_Position):
         self.get_band_flag()
         self.get_message22_flag()
         self.getfix(56)
+        self.isAVCGA = False
 
     def __repr__(self):
         return (f'{self.__class__.__name__}\n'
@@ -1498,6 +1516,7 @@ class ClassB_position_report(Basic_Position):
                 f'Band Flag:           {self.band_flag}\n'
                 f'Message22 Flag:      {self.message22_flag}\n'
                 f'RAIM status:         {self.raim_flag}\n'
+                f'is AVCGA:             {self.isAVCGA}\n'
                 )
 
     def get_cs_unit(self):
@@ -1844,14 +1863,89 @@ class Static_data_report(Basic_Position):
 
     '''
 
-    part_number: int  # determines whether a "Part A"or "Part B" packet
+    # region Create_Dictionaries
+    #  create a dictionary item to contain STATIC24 items
+    # for the moment create a dummy to show dictionary content
+
+    Type24s = {}  # content will be key mmsi, data will be Static_data_report item
 
     def __init__(self, p_payload):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
+        self.part_number: int  # determines whether a "Part A"or "Part B" packet
+        self.vendor_id: str
+        self.pre1371_4_vendor_id: str
+        self.unit_model_code: int
+        self.callsign: str
+        self.mothership_mmsi: str
+        self.ship_type: int
+
         self.payload = p_payload
         self.create_mmsi()
         self.get_part_number()
+        if self.part_number == 0:  # Part A
+            self.get_24_vessel_name()
+        else:  # Part B non auxilliry
+            self.get_24_ship_type()
+            self.get_vendor_id()
+            self.get_unit_model_code()
+            self.get_serial_number()
+            self.get_callsign()
+            if self.mmsi[0:2] != '98':
+                self.get_24_dim_to_bow()
+                self.get_24_dim_to_stern()
+                self.get_24_dim_to_port()
+                self.get_24_dim_to_stbd()
+                self.mothership_mmsi = ''
+            else:
+                self.get_mothership_mmsi()
+                self.dim_to_bow = 0.0
+                self.dim_to_stern = 0.0
+                self.dim_to_port = 0.0
+                self.dim_to_stbd = 0.0
+
+    def __repr__(self):
+        repstring = ''
+        repstring = f'{self.__class__.__name__}\n' \
+                    f'Message Type:         {self.message_type}\n' \
+                    f'Repeat Indicator:     {self.repeat_indicator}\n' \
+                    f'MMSI:                 {self.mmsi}\n' \
+                    f'Part_number:    {self.part_number}\n' \
+                    f'Vessel Name:          {self.vessel_name}\n'
+
+        if self.mmsi[0:2] == '98':
+            repstring = repstring + f'{self.__class__.__name__}\n' \
+                                    f'Message Type:         {self.message_type}\n' \
+                                    f'Repeat Indicator:     {self.repeat_indicator}\n' \
+                                    f'MMSI:                 {self.mmsi}\n' \
+                                    f'Part_number:          {self.part_number}\n' \
+                                    f'Ship Type :           {self.ship_type}\n' \
+                                    f'Vendor ID:            {self.vendor_id}\n' \
+                                    f'Pre1371_4_Vendor ID:  {self.pre1371_4_vendor_id}\n' \
+                                    f'Unit Model Code:      {self.unit_model_code}\n' \
+                                    f'Serial Number:        {self.serial_number}\n' \
+                                    f'Callsign:             {self.callsign}\n' \
+                                    f'Mothership MMSI:      {self.mothership_mmsi}\n'
+
+        else:
+            repstring = repstring + \
+                        f'{self.__class__.__name__}\n' \
+                        f'Message Type:         {self.message_type}\n' \
+                        f'Repeat Indicator:     {self.repeat_indicator}\n' \
+                        f'MMSI:                 {self.mmsi}\n' \
+                        f'Part_number:          {self.part_number}\n' \
+                        f'Ship Type :           {self.ship_type}\n' \
+                        f'Vendor ID:            {self.vendor_id}\n' \
+                        f'Pre1371_4_Vendor ID:  {self.pre1371_4_vendor_id}\n' \
+                        f'Unit Model Code:      {self.unit_model_code}\n' \
+                        f'Serial Number:        {self.serial_number}\n' \
+                        f'Callsign:             {self.callsign}\n' \
+                        f'Dim to Bow:           {self.dim_to_bow}\n' \
+                        f'Dim to Stern:         {self.dim_to_stern}\n' \
+                        f'Dim to Port:          {self.dim_to_port}\n' \
+                        f'Dim to Stbd:          {self.dim_to_stbd}\n'
+
+        return repstring
 
     def get_part_number(self):
         self.part_number = self.binary_item(38, 2)
@@ -1861,121 +1955,8 @@ class Static_data_report(Basic_Position):
             self.valid_item = False
             raise ValueError
 
-
-class Static_data_PartA(Static_data_report):
-    '''
-    # to be implemented
-    # type 24
-    Equivalent of a Type 5 message for ships using Class B equipment.
-    Also used to associate an MMSI with a name on either class A or class B equipment.
-
-    A "Type 24" may be in part A or part B format; According to the standard,
-    parts A and B are expected to be broadcast in adjacent pairs;
-    '''
-
-    part_number: int  # determines whether a "Part A"or "Part B" packet
-
-    def __init__(self, p_payload):
-        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
-        super().__init__(p_payload)
-
-        self.get_24_vessel_name()
-        pass
-
-    def __repr__(self):
-        return (f'{self.__class__.__name__}\n'
-                f'Message Type:         {self.message_type}\n'
-                f'Repeat Indicator:     {self.repeat_indicator}\n'
-                f'MMSI:                 {self.mmsi}\n'
-                f'Part_number:    {self.part_number}\n'
-                f'Vessel Name:          {self.vessel_name}\n'
-                )
-
     def get_24_vessel_name(self):
         self.get_vessel_name(40, 120)
-
-
-class Static_data_PartB(Static_data_report):
-    '''
-    # to be implemented
-    # type 24
-    Equivalent of a Type 5 message for ships using Class B equipment.
-    Also used to associate an MMSI with a name on either class A or class B equipment.
-
-    A "Type 24" may be in part A or part B format; According to the standard,
-    parts A and B are expected to be broadcast in adjacent pairs;
-
-    Interpretation of the 30 bits 132-162 in Part B is variable.
-    If the MMSI at 8-37 is that of an auxiliary craft,
-    the entry is taken to refer to a small attached auxiliary vessel
-    and these 30 bits are read as the MMSI of the mother ship.
-    Otherwise the 30 bits describe vessel dimensions as in Message Type 5.
-
-    According to [MMSI], an MMSI is associated with an auxiliary craft when it is of the form 98XXXYYYY, where
-    (1) the '98' in positions 1 and 2 is required to designate an auxiliary craft,
-    (2) the digits XXX in the 3, 4 and 5 positions are the MID
-    (the three-digit country code as described in [ITU-MID])
-    and
-    (3) YYYY is any decimal literal from 0000 to 9999.
-
-    '''
-
-    vendor_id: str
-    pre1371_4_vendor_id: str
-    unit_model_code: int
-    callsign: str
-    mothership_mmsi: str
-
-    def __init__(self, p_payload):
-        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
-        super().__init__(p_payload)
-
-        self.get_24_ship_type()
-        self.get_vendor_id()
-        self.get_unit_model_code()
-        self.get_serial_number()
-        self.get_callsign()
-        self.get_24_dim_to_bow()
-        self.get_24_dim_to_stern()
-        self.get_24_dim_to_port()
-        self.get_24_dim_to_stbd()
-        self.get_mothership_mmsi()
-
-        pass
-
-    def __repr__(self):
-        if self.mmsi[0:2] == '98':
-            return (f'{self.__class__.__name__}\n'
-                    f'Message Type:         {self.message_type}\n'
-                    f'Repeat Indicator:     {self.repeat_indicator}\n'
-                    f'MMSI:                 {self.mmsi}\n'
-                    f'Part_number:          {self.part_number}\n'
-                    f'Ship Type :           {self.ship_type}\n'
-                    f'Vendor ID:            {self.vendor_id}\n'
-                    f'Pre1371_4_Vendor ID:  {self.pre1371_4_vendor_id}\n'
-                    f'Unit Model Code:      {self.unit_model_code}\n'
-                    f'Serial Number:        {self.serial_number}\n'
-                    f'Callsign:             {self.callsign}\n'
-                    f'Mothership MMSI:      {self.mothership_mmsi}\n'
-                    )
-        else:
-            return (
-                f'{self.__class__.__name__}\n'
-                f'Message Type:         {self.message_type}\n'
-                f'Repeat Indicator:     {self.repeat_indicator}\n'
-                f'MMSI:                 {self.mmsi}\n'
-                f'Part_number:          {self.part_number}\n'
-                f'Ship Type :           {self.ship_type}\n'
-                f'Vendor ID:            {self.vendor_id}\n'
-                f'Pre1371_4_Vendor ID:  {self.pre1371_4_vendor_id}\n'
-                f'Unit Model Code:      {self.unit_model_code}\n'
-                f'Serial Number:        {self.serial_number}\n'
-                f'Callsign:             {self.callsign}\n'
-                f'Dim to Bow:           {self.dim_to_bow}\n'
-                f'Dim to Stern:         {self.dim_to_stern}\n'
-                f'Dim to Port:          {self.dim_to_port}\n'
-                f'Dim to Stbd:          {self.dim_to_stbd}\n'
-            )
 
     def get_24_ship_type(self):
         # ship type described in AISDictionaries
@@ -2092,15 +2073,10 @@ class Fragments:
     #       Timeout set in Global_Parameters
     #
 
-    # current_time: datetime
-    # payload: str
-    # mmnsi: str
-    # f_no: int
-    # f_count: int
-    # messid: int
-    # data: tuple
-    # success: bool
-    # new_bin_payload: str
+    # Dictionary to hold a list of fragments
+    # key is Message Number, data is a class FRAGMENT(Talker,FragCount,FragNo,MessID,Channel,Payload,Trailer)
+    FragDict = {}
+    FragDictTTL = 5
 
     def __init__(self, binary_payload: str, fragment_count: int, fragment_number: int, message_id: int):
 
@@ -2134,27 +2110,27 @@ class Fragments:
     def put_frag_in_dict(self, merge: bool = False):
         # create a dictionary key comprising fragment_number and message_id
         key = str(self.messid) + ',' + str(self.f_no)
-        Global.FragDict.update({key: self.data})
-        logging.debug('In Fragment.put_frag_in_dict dictionary  = ', Global.FragDict)
-        # print('In Fragment.put_frag_in_dict dictionary  = ', Global.FragDict)
+        Fragments.FragDict.update({key: self.data})
+        logging.debug('In Fragment.put_frag_in_dict dictionary  = ', Fragments.FragDict)
+        # print('In Fragment.put_frag_in_dict dictionary  = ', Fragments.FragDict)
 
         # having put the fragment into the dictionary we need to check if we can amalgemate fragments
 
         if merge:
-            self. success, self.new_bin_payload = self.match_fragments(key)
+            self.success, self.new_bin_payload = self.match_fragments(key)
 
     def match_fragments(self, key: str) -> tuple:
-        # pass through Global.Fragdict looking for identical keys
+        # pass through Fragments..Fragdict looking for identical keys
         # look for common message ids, strip off the fragment number from the key passed in
         inkey = key.split(',')[0]
-        #print("entering match frags ",key, inkey)
+        # print("entering match frags ",key, inkey)
         self.success = False
         fraglist = {}
-        for fkey, data in Global.FragDict.items():
-            #print("inkey, fkey, data, ",inkey, fkey, data)
-            #print("matching ", fkey.split(',')[0], inkey, (fkey.split(',')[0] == inkey))
+        for fkey, data in Fragments.FragDict.items():
+            # print("inkey, fkey, data, ",inkey, fkey, data)
+            # print("matching ", fkey.split(',')[0], inkey, (fkey.split(',')[0] == inkey))
             if fkey.split(',')[0] == inkey:
-                #print('in match frags getting Fragdict entries ', inkey, fkey.split(',')[0], data)
+                # print('in match frags getting Fragdict entries ', inkey, fkey.split(',')[0], data)
                 fno = data[1]
                 pload = data[2]
                 self.f_count = data[0]
@@ -2162,29 +2138,29 @@ class Fragments:
 
             #
             # now while we are parsing dictionary clean out stale records
-            if (datetime.utcnow() - data[3]).total_seconds() > Global.FragDictTTL:
+            if (datetime.utcnow() - data[3]).total_seconds() > Fragments.FragDictTTL:
                 logging.info('In Fragments.match_records deleting outdated record ', fkey, data)
-                #print('In Fragments.match_records deleting outdated record ', fkey, data)
-                Global.FragDict.pop(fkey)
+                # print('In Fragments.match_records deleting outdated record ', fkey, data)
+                Fragments.FragDict.pop(fkey)
 
         # how many records did we find?
 
         nr_recs = len(fraglist)
-        #print('len fraglist', nr_recs, fraglist)
+        # print('len fraglist', nr_recs, fraglist)
 
         # compare this with the number of fragments expected
         new_bin_payload = ''
-        #print('nr recs fcount', nr_recs, self.f_count)
+        # print('nr recs fcount', nr_recs, self.f_count)
         if nr_recs == self.f_count:
             # got requisite number of fragments
             # get fragments in order
             for fnumber in range(1, nr_recs + 1):
-                #print("amagamating new_bin_payload, fnumber, fraglist[fnumber]",new_bin_payload, fnumber, fraglist[fnumber] )
+                # print("amagamating new_bin_payload, fnumber, fraglist[fnumber]",new_bin_payload, fnumber, fraglist[fnumber] )
                 new_bin_payload = new_bin_payload + fraglist[fnumber]
-                #print('new payload ', new_bin_payload)
+                # print('new payload ', new_bin_payload)
                 # and flush the fragment records from Global.Fragdict
-                #print('deleting ', inkey + ',' + str(fnumber) )
-                Global.FragDict.pop(inkey + ',' + str(fnumber))
+                # print('deleting ', inkey + ',' + str(fnumber) )
+                Fragments.FragDict.pop(inkey + ',' + str(fnumber))
             self.success = True
         else:
             # not got all bits yet
@@ -2196,26 +2172,26 @@ class Fragments:
 class AISStream:
     # comprises the entire AIS message as received
 
-    packet_id: str
-    fragment_count: int
-    fragment_number: int
-    message_id: int  # may be null
-    channel: str
-    payload: str
-    binary_payload: str
-    binary_payload_length: int
-    byte_payload: bytearray
-    byte_payload_length: int
-    trailer: str
-    valid_message: bool
-    message_type: int  # only used to validate payload
-
     def __init__(self, input: str):
 
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
 
         self.valid_message = True
         self.split_string(input)
+
+        self.packet_id: str
+        self.fragment_count: int
+        self.fragment_number: int
+        self.message_id: int  # may be null
+        self.channel: str
+        self.payload: str
+        self.binary_payload: str
+        self.binary_payload_length: int
+        self.byte_payload: bytearray
+        self.byte_payload_length: int
+        self.trailer: str
+        self.valid_message: bool
+        self.message_type: int  # only used to validate payload
 
         # only if crude validation passed continue
         if self.valid_message:
@@ -2226,6 +2202,20 @@ class AISStream:
             # before we return the stream will be crudely validated
 
             self.validate_stream()
+
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}\n'
+            f'Packet ID:            {self.packet_id}\n'
+            f'Fragment Count:       {self.fragment_count}\n'
+            f'Fragment Number:      {self.fragment_number}\n'
+            f'Message ID :          {self.message_id}\n'
+            f'Channel:              {self.channel}\n'
+            f'Payload:              {self.payload}\n'
+            f'Valid Message:        {self.valid_message}\n'
+            f'Message Type:         {self.message_type}\n'
+            f'Binary Payload:       {self.binary_payload}\n'
+        )
 
     def split_string(self, stream: str):
         self.valid_message = True
