@@ -16,7 +16,8 @@ entries in APRS.ini override definitions in this file
 """
 
 import Fragment
-import Mapper
+#import Mapper
+import Map
 import AVCGAmmsi
 import datetime
 from queue import Queue
@@ -38,8 +39,9 @@ class Global:
     #  and another dictionary which holds mappings from MMSI to Callsign,Name,Destination,Type
     #  thgis is used by the APRS stream generators to replace MMSI by callsign and to put Name in the comments field
     # again create a dummy to show content
-    dummymap = Mapper.MAPPER("name", "callsign", "destination")
-    MyMap = {}
+
+    MyMap = Map.Map()
+    Themap = MyMap.Themap
     #  Dictionary holding list of AVCGA vessels and their MMSI
     # again a dummy to show content keyed om MMSI
     # only facilities with MMSI are held
@@ -64,9 +66,8 @@ class Global:
 
     """
     dummyAVCGA = AVCGAmmsi.AVCGAMMSI("list of strings")
-    AVCGADict = {}
 
-    #          #  Dictionary used to hold APRS text stream prior to sending to server
+    #  Dictionary used to hold APRS text stream prior to sending to server
     ServerQueue = {}
     #
     # and another dictionary of valid Serial port speeds
@@ -172,7 +173,7 @@ class Global:
     # operation will continue having dumped whatever record caused grief
 
 
-def main(self):
+def main():
     pass
 
 

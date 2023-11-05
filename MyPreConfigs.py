@@ -10,6 +10,7 @@ from configparser import ConfigParser
 from datetime import datetime
 from ProcessAVCGAList import ProcessAVCGAList
 import pathlib
+import APRS
 
 
 class MyPreConfigs:
@@ -63,12 +64,13 @@ class MyPreConfigs:
         GlobalDefinitions.Global.ServerPeriod = int(
             cfg.get("operation", "ServerPeriod")
         )
+        APRS._relay_station = cfg.get("operation", "Station")
         GlobalDefinitions.Global.inport = self.stripquotes(
             cfg.get("operation", "InwardPort")
         )
         GlobalDefinitions.Global.WebPort = int(cfg.get("operation", "WebPort"))
         GlobalDefinitions.Global.localshipplotter = ipaddress.ip_address(
-            "192.168.80.24"
+            "192.168.80.124"
         )
         # entry in ini file for MappingTTL is in MINUTES not Seconds
         GlobalDefinitions.Global.MappingTTL = (

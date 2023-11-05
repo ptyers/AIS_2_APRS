@@ -1,4 +1,5 @@
 import logging
+import time
 
 import GetUDP
 import GetSerial
@@ -37,6 +38,9 @@ and finally start up a thread to report statistics communicating by yet another 
 
 
 def main():
+
+    logging.basicConfig(level=logging.ERROR, filename="error.log")
+
     inqueue = Global.inputqueue
     #outqueue = Global.outputqueue
     Statsqueue = Global.Statsqueue
@@ -117,40 +121,50 @@ def main():
             # now the guts of processing the incoming AIS Data
             # have an  encoded string break it down
             if not processed and current_ais.valid_message:
+                try:
+                    """
+                    We now have a payload, a payload_id
+                    can start to parse the payload
+                    no case statement in python
+                    use a dictionay matching payload_id to function to do the parse
+                    """
+                    # do whatever function is necessary
+                    # calls do_function
+                    # the value parameter will probably need tweaking depending on the payload_id
+                    # most times it will be either payload or binary_payload I think
+
+                    # print('Checking for fragments ', aisfields[1],myAIS.AIS_FragCount)
+                    # TEMPORARY ######throw away fragmented packets
+                    if current_ais.fragment_count == 1:
+                        try:
+                            # print('doing stuff nonfragmented pasyload id =',myAIS.AIS_Payload_ID)
+                            do_function(current_ais.message_type, current_ais.binary_payload)
+                            processed = True
+                        except Exception as e:
+                            raise Exception('Main line 136 ', e) from e
+                    else:
+                        # now handle the fragments
+                        # function will return True when fragments have been merged
+                        # declare stream to be a fragment
+
+                        current_frag = Fragments(current_ais.binary_payload,current_ais.fragment_count,
+                                                     current_ais.fragment_number, current_ais.message_id)
+                        try:
+                            current_frag.put_frag_in_dict(True)
+                        except Exception as e:
+                            raise Exception('Main line 149 ', e) from e
+                        if current_frag.success:
+                            current_ais.binary_payload = current_frag.new_bin_payload
+                            current_ais.message_type = int(current_ais.binary_payload[0:6], 2)
+                            do_function(current_ais.message_type, current_ais.binary_payload)
+                            Processed = True
 
 
-
-
-                """
-                We now have a payload, a payload_id
-                can start to parse the payload
-                no case statement in python
-                use a dictionay matching payload_id to function to do the parse
-                """
-                # do whatever function is necessary
-                # calls do_function
-                # the value parameter will probably need tweaking depending on the payload_id
-                # most times it will be either payload or binary_payload I think
-
-                # print('Checking for fragments ', aisfields[1],myAIS.AIS_FragCount)
-                # TEMPORARY ######throw away fragmented packets
-                if current_ais.fragment_count == 1:
-                    # print('doing stuff nonfragmented pasyload id =',myAIS.AIS_Payload_ID)
-                    do_function(current_ais.message_type, current_ais.binary_payload)
-                    processed = True
+                except Exception as e:
+                    raise Exception('Main line 124-160', e) from e
                 else:
-                    # now handle the fragments
-                    # function will return True when fragments have been merged
-                    # declare stream to be a fragment
-                    current_frag = Fragments(current_ais.binary_payload,current_ais.fragment_count,
-                                             current_ais.fragment_number, current_ais.message_id)
-                    current_frag.put_frag_in_dict(True)
-                    if current_frag.success:
-                        current_ais.binary_payload = current_frag.new_bin_payload
-                        do_function(current_ais.message_type, current_ais.binary_payload)
-                        Processed = True
-            else:
-                pass  # wait for next record
+                    pass  # wait for next record
+
 
             if not Statsqueue.empty():
                 do_stats()
@@ -163,11 +177,16 @@ def main():
             print('Keyboard Interrupt occurred - ending threads and exiting')
             GlobalDefinitions.Global.CloseDown = True
             GlobalDefinitions.Global._keepgoing = False
+            time.sleep(10)
             sys.exit()
+
+        except AttributeError as e:
+            print("Restarting processes after Attribute exception\r\n", e)
+            #logging.error("Restarting processes after Attribute exception", stack_info=True)
 
         except Exception as e:
             print("Restarting processes after exception\r\n", e)
-            logging.error("Restarting processes after exception", stack_info=True)
+            #logging.error("Restarting processes after Unknown exception", stack_info=True)
 
             processed = True
             if not Global.Production:
@@ -268,11 +287,8 @@ def do_function(keyword, aisobject: AISStream):
         else:
             c_keyword = type(keyword)
             Errmess = (
-                Errmess + "Function to handle payload_ID " + c_keyword + "  unknown"
-            )
-
-        print(Errmess + "\nAIS Data PayLoad is\n" + aisobject.AIS_Payload)
-        logging.debug(Errmess + "\nAIS Data PayLoad is\n" + aisobject.AIS_Payload)
+                Errmess + "Function to handle payload_ID " + c_keyword + "  unknown" )
+        logging.debug(Errmess + "\nAIS Data PayLoad is\n" + aisobject.payload)
         return None
 
 

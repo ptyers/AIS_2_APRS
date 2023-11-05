@@ -1,7 +1,8 @@
 import datetime
 import MyPreConfigs
-import GlobalDefinitions
+#import GlobalDefinitions
 import logging
+from Payloads import Static_data_report
 
 
 class APRS:
@@ -10,18 +11,9 @@ class APRS:
     #  defines APRS actions and parameters
     #  based on APRS Protocol Reference - Protocol Version 1.0.1
     #
-    # region Private Properties
-    _longitude = ""
-    _latitude = ""
-    _course = ""
-    _speed = ""
-    _mmsi = ""
-    _name = ""
-    _callsign = ""
-    _comment = " "
-    _safetytext = ""
-    _isavcga = False
-    _relaystation = GlobalDefinitions.Global.Station
+    _relay_station: str = 'CG722'
+
+
 
     # region Public Properties
 
@@ -93,26 +85,20 @@ class APRS:
         comment: str,
         IsAVCGA: int,
         **kwargs
-    ):
+                ):
 
-        if GlobalDefinitions.Global.diagnostic2:
-            print("APRS send MMSI detail {}  comment {:s}".format(mmsi, comment))
-        _mmsi = mmsi
-        self._latitude = self.ConvertLatitude(latitude)
-        self._longitude = self.ConvertLongitude(longitude)
-        self._relaystation = GlobalDefinitions.Global.Station
+        self._longitude = ""
+        self._latitude = ""
+        self._course = ""
+        self._speed = ""
+        self._mmsi = ""
+        self._name = ""
+        self._callsign = ""
+        self._comment = " "
+        self._safetytext = ""
+        self._isavcga = False
 
-        if not (comment == ""):
-            if len(comment) > 43:
-                _comment = comment[0:43]
-            else:
-                _comment = comment
-        else:
-            comment = ""
-        self._isavcga = IsAVCGA
 
-    # endregion
-    # region Public Methods
     def ConvertLongitude(self, longitude: float) -> str:
 
         #  takes in a float and converts to APRS format
@@ -172,164 +158,172 @@ class APRS:
         _speed = format(speed, "03d")
 
     def CreateObjectPosition(self, kill: bool, mydata) -> str:
+        try:
+            statuschar = ""
+            typechar = "s"
+            tablechar = "\\"  # single \
 
-        statuschar = ""
-        typechar = "s"
-        tablechar = "\\"  # single \
+            self._mmsi = mydata.mmsi
+            isAVCGA = mydata.isAVCGA
 
-        self._mmsi = mydata.mmsi
-        isAVCGA = mydata.isAVCGA
+            if kill:
+                logging.debug("supposedly killing {}  ".format(mydata.mmsi))
 
-        if kill:
-            logging.debug("supposedly killing {}  ".format(mydata.mmsi))
 
-        """# FOR TESTING
-        #############################################
-        print(
-            'FOR TESTING Object Posaition\r\nMMSI = {}\r\ncallsign = {}\r\nmsAVCGA= {}' \
-            .format(self._mmsi,  self._callsign, bool(isAVCGA)))
+            try:
+                if not kill:
+                    statuschar = "*"
+                    if self._mmsi in Static_data_report.T24Records:
+                        record,time = Static_data_report.T24Records[self._mmsi]
+                        if record['vessel_mame'] != '':
+                            self.name = record['vessel_mame']
+                        if record['callsign'] != '':
+                            self.callsign = record['callsign']
+                    if self._name != "":
+                        self._comment = self._name + " " + self._mmsi + " " + self._callsign
+                        self.callsign = self._name
+                        # add the mmsi to the comment field
+                    else:
+                        self._callsign = self._mmsi
 
-        ##############################################
-        """
+                else:
+                    statuschar = "_"
+                    _callsign = self._mmsi
+            except Exception as e:
+                raise Exception('APRS.CreateObjectPosition line 197', e) from e
 
-        if not kill:
-            statuschar = "*"
-            if self._name != "":
-                self._comment = self._name + " " + self._mmsi + " " + self._callsign
-                self.callsign = self._name
-                # add the mmsi to the comment field
+
+            if self._name == "" or kill:
+                Xcallsign = self._mmsi
             else:
-                self._callsign = self._mmsi
+                Xcallsign = self._name
 
-        else:
-            statuschar = "_"
-            _callsign = self._mmsi
+            while len(Xcallsign) < 9:  # for reasons of compatibility with APRS standard
+                #  callsign must be fixed 9 chars if doing object reporting
+                Xcallsign = Xcallsign + " "
 
+            #  allowance for callsign exceeding 9 chars
+            Xcallsign = Xcallsign[0:9]
 
-        if self._name == "" or kill:
-            Xcallsign = self._mmsi
-        else:
-            Xcallsign = self._name
+            #  now cater for special types
+            _typecharoption = {"111": "^", "974": "!"}
+            _tablecharoption = {"974": "/"}
 
-        while len(Xcallsign) < 9:  # for reasons of compatibility with APRS standard
-            #  callsign must be fixed 9 chars if doing object reporting
-            Xcallsign = Xcallsign + " "
-
-        #  allowance for callsign exceeding 9 chars
-        Xcallsign = Xcallsign[0:9]
-
-        #  now cater for special types
-        _typecharoption = {"111": "^", "974": "!"}
-        _tablecharoption = {"974": "/"}
-
-        """
-                case "111":  #  SAR aircraft   typechar = "^"
-                {
-                case "970":  #  AIS SART
-                case "972":  #  MOB
-                case "974":  #  EPIRB
-                 } tablechar = "/" typechar = "."
-                default:
             """
-        if self._mmsi[0:3] in _typecharoption:
-            typechar = _typecharoption[self._mmsi[0:3]]
-        if self._mmsi[0:3] in _tablecharoption:
-            tablechar = _tablecharoption[self._mmsi[0:3]]
+                    case "111":  #  SAR aircraft   typechar = "^"
+                    {
+                    case "970":  #  AIS SART
+                    case "972":  #  MOB
+                    case "974":  #  EPIRB
+                     } tablechar = "/" typechar = "."
+                    default:
+                """
+            if self._mmsi[0:3] in _typecharoption:
+                typechar = _typecharoption[self._mmsi[0:3]]
+            if self._mmsi[0:3] in _tablecharoption:
+                tablechar = _tablecharoption[self._mmsi[0:3]]
 
 
-        #  and finally cater for AVCGA vessels - transmit these as valid position reports
-        #
-        if isAVCGA:
-            typechar = "C"  # Coastguard Vessel might be an 'L' modified table
+            #  and finally cater for AVCGA vessels - transmit these as valid position reports
+            #
+            if isAVCGA:
+                typechar = "C"  # Coastguard Vessel might be an 'L' modified table
 
-        #  creates position report for object with time stamp
-        thetime = datetime.datetime.utcnow()
-        # string timestamp = thetime.Day.ToString("0#") +
-        # thetime.Hour.ToString("0#") +
-        # thetime.Minute.ToString("0#") + "z"
-        timestamp = thetime.strftime("%d%H%Mz")
-        """
-        Format of APRS information block is like
-            For Object report (where APRSDataIdentifier = ';')
-            CG722>APU25N,TCPIP*,<ThisStation>:<APRSDataIdentifier><callsign><StatusChar><Timestamp>
-            <latitude(8.2){S/N}><SymbolTable Identifier><Longitude(9.2){E/W}<SymbolTable Character>
-            <Course(3.0)>"/"<Speed(3.0)><CommentField(generally Name)>\r
+            #  creates position report for object with time stamp
+            thetime = datetime.datetime.utcnow()
+            # string timestamp = thetime.Day.ToString("0#") +
+            # thetime.Hour.ToString("0#") +
+            # thetime.Minute.ToString("0#") + "z"
+            timestamp = thetime.strftime("%d%H%Mz")
+            """
+            Format of APRS information block is like
+                For Object report (where APRSDataIdentifier = ';')
+                CG722>APU25N,TCPIP*,<ThisStation>:<APRSDataIdentifier><callsign><StatusChar><Timestamp>
+                <latitude(8.2){S/N}><SymbolTable Identifier><Longitude(9.2){E/W}<SymbolTable Character>
+                <Course(3.0)>"/"<Speed(3.0)><CommentField(generally Name)>\r
+    
+    
+            StatusChar = {Live Object = '*', Kill Object = '_'}
+            Symbol Table Identifier = {Primary Symbol Table = '/', Secondary Symbol Table = '\'}
+            Symbol Table Character = index into symbol table = {Ship = 's', SAR Aircraft = '^',
+            Emergency  = '!', Nav Mark = 'N', CoastGuard = 'C'}
+            Where we have a callsign append MMSI to name field (truncate to 43 if necessary)
+            
+            
+            """
+            if Xcallsign[0:8] != mydata.mmsi:
+                # strip trailing spaces off name/callsign
+                while self._name[:-1] == " " and len(self._name) > 1:
+                    self.name = self._name[0:-2]
+                    #print(self._name, len(self._name))
+                while self._callsign[:-1] == " " and len(self._callsign) > 1:
+                    self._callsign = self._callsign[0:-2]
 
+                self.txname = (self._name + " " + mydata.mmsi + " " + self._callsign)[
+                    0:42
+                ]
 
-        StatusChar = {Live Object = '*', Kill Object = '_'}
-        Symbol Table Identifier = {Primary Symbol Table = '/', Secondary Symbol Table = '\'}
-        Symbol Table Character = index into symbol table = {Ship = 's', SAR Aircraft = '^',
-        Emergency  = '!', Nav Mark = 'N', CoastGuard = 'C'}
-        Where we have a callsign append MMSI to name field (truncate to 43 if necessary)
-        
-        
-        """
-        if Xcallsign[0:8] != mydata.mmsi:
-            # strip trailing spaces off name/callsign
-            while self._name[:-1] == " " and len(self._name) > 1:
-                self.name = self._name[0:-2]
-                print(self._name, len(self._name))
-            while self._callsign[:-1] == " " and len(self._callsign) > 1:
-                self._callsign = self._callsign[0:-2]
-            self.txname = (self._name + " " + mydata.mmsi + " " + self._callsign)[
-                0:42
-            ]
+            message = (
+                APRS._relay_station
+                + ">APU25N,TCPIP*:;"
+                + Xcallsign
+                + statuschar
+                + timestamp
+                + self._latitude
+                + tablechar
+                + self._longitude
+                + typechar
+                + self._course
+                + "/"
+                + self._speed
+                + self.txname
+                + "\n"
+                    )
 
-        message = (
-            self._relaystation
-            + ">APU25N,TCPIP*:;"
-            + Xcallsign
-            + statuschar
-            + timestamp
-            + self._latitude
-            + tablechar
-            + self._longitude
-            + typechar
-            + self._course
-            + "/"
-            + self._speed
-            + self.txname
-            + "\n"
-                )
+            logging.debug(
+                "in CreateObject with kill tcpbytes \n"
+                + APRS._relay_station
+                + ">APU25N,TCPIP*:;"
+                + Xcallsign
+                + statuschar
+                + timestamp
+                + self._latitude
+                + tablechar
+                + self._longitude
+                + typechar
+                + self._course
+                + "/"
+                + self._speed
+                + self.txname
+                + "\n"
+            )
 
-        logging.debug(
-            "in CreateObject with kill tcpbytes \n"
-            + self._relaystation
-            + ">APU25N,TCPIP*:;"
-            + Xcallsign
-            + statuschar
-            + timestamp
-            + self._latitude
-            + tablechar
-            + self._longitude
-            + typechar
-            + self._course
-            + "/"
-            + self._speed
-            + self.txname
-            + "\n"
-        )
-
-        return message
+            return message
+        except Exception as e:
+            raise Exception('CreateObjectPosition', e) from e
 
     def CreateBasePosition(self) -> str:
         #  creates position report for base station (symbol triangle) with time stamp
-        thetime = datetime.datetime.utcnow()
-        # string timestamp = thetime.Day.ToString("0#") + thetime.Hour.ToString("0#") + thetime.Minute.ToString("0#") + "z"
-        timestamp = thetime.strftime("%d%H%Mz")
-        message = (
-            self._relaystation
-            + ">APU25N,TCPIP*:;"
-            + self._mmsi
-            + "*"
-            + timestamp
-            + self._latitude
-            + "\\"
-            + self._longitude
-            + "L"
-            + "\n"
-        )
-        return message
+        try:
+            thetime = datetime.datetime.utcnow()
+            # string timestamp = thetime.Day.ToString("0#") + thetime.Hour.ToString("0#") + thetime.Minute.ToString("0#") + "z"
+            timestamp = thetime.strftime("%d%H%Mz")
+            message = (
+                APRS._relay_station
+                + ">APU25N,TCPIP*:;"
+                + self._mmsi
+                + "*"
+                + timestamp
+                + self._latitude
+                + "\\"
+                + self._longitude
+                + "L"
+                + "\n"
+            )
+            return message
+        except Exception as e:
+            logging.error('CreateBasePosition' + str(e), stack_info=True)
+            raise Exception('CreateBasePosition', e) from e
 
     """
     def CreatePosition(self) -> str:
@@ -345,36 +339,40 @@ class APRS:
     """
 
     def CreateSafetyMessage(self, Bulletin: int) -> str:
-        message = ""
-        #  create a bulletin frame
-        message = ""
-        if self._safetytext != "":
-            while len(self._safetytext) > 67:
-                self._safetytext = self._safetytext[0, 66]
+        try:
+            message = ""
+            #  create a bulletin frame
+            message = ""
+            if self._safetytext != "":
+                while len(self._safetytext) > 67:
+                    self._safetytext = self._safetytext[0, 66]
+                    message = (
+                        message
+                        + APRS._relay_station
+                        + ">APU25N,TCPIP*::BLN"
+                        + str(Bulletin)
+                        + "     :"
+                        + self._safetytext
+                        + "\n"
+                    )
+                    self._safetytext = self._safetytext[67:]
+                    Bulletin += 1
+                    Bulletin = Bulletin % 10
+
                 message = (
                     message
-                    + self._relaystation
+                    + APRS._relay_station
                     + ">APU25N,TCPIP*::BLN"
                     + str(Bulletin)
                     + "     :"
                     + self._safetytext
                     + "\n"
                 )
-                self._safetytext = self._safetytext[67:]
-                Bulletin += 1
-                Bulletin = Bulletin % 10
 
-            message = (
-                message
-                + self._relaystation
-                + ">APU25N,TCPIP*::BLN"
-                + str(Bulletin)
-                + "     :"
-                + self._safetytext
-                + "\n"
-            )
-
-        return message
+            return message
+        except Exception as e:
+            logging.error('In CreateSafetyMessage \n' + str(e), stack_info=True)
+            raise Exception('CreateSafetyMessage', e) from e
 
 
 def main(self):

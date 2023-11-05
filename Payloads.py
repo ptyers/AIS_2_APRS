@@ -212,23 +212,25 @@ class Payload:
 
     def get_longitude(self, startpos: int, length: int = 28):
         # longitude is in various positions in differing blocks
-        self.longitude = float(self.signed_binary_item(startpos, length)) / 600000
+        self.longitude = round(float(self.signed_binary_item(startpos, length)) / 600000, 3)
 
         # validation
         if not (-180.0 <= self.longitude <= 181.0):
             # print("error in get_longitude value returned ", self.longitude)
             self.valid_item = False
-            raise ValueError("error in get_longitude value returned {}".format(self.longitude))
+            raise ValueError("error in get_longitude value returned "
+                             "{} for mmsi {} \n payload \n {} ".format(self.longitude, self.mmsi, self.payload))
 
     def get_latitude(self, startpos: int, length: int = 27):
         # longitude is in various positions in differing blocks
         x = self.signed_binary_item(startpos, length)
-        self.latitude = float(self.signed_binary_item(startpos, length)) / 600000
+        self.latitude = round(float(self.signed_binary_item(startpos, length)) / 600000, 3)
         # validation
         if not (-90.0 <= self.latitude <= 91.0):
             # print("error in get_latitude value returned ", self.latitude)
             self.valid_item = False
-            raise ValueError("error in get_latitude value returned {} ".format(self.latitude))
+            raise ValueError("error in get_latitude value returned {} "
+                             "for mmsi {} \n payload \n {} ".format(self.latitude, self.mmsi, self.payload))
 
     def signed_binary_item(self, startpos: int, blength: int) -> int:
         '''
@@ -390,7 +392,8 @@ class Basic_Position(Payload):
             self.valid_item = False
             errstr: str = 'In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval)
             # logging.error(errstr)
-            raise ValueError('In CNB.get_COG - value outside range 0-360 ' + '{:d}'.format(intval))
+            raise ValueError('In CNB.get_COG - value outside range 0-360 '
+                             '{:d} for mmsi {}\npayload\n{}'.format(intval, self.mmsi, self.payload))
 
     def get_tru_head(self, position: int, length: int) -> None:
         '''
@@ -411,7 +414,7 @@ class Basic_Position(Payload):
             self.true_heading = itru
         else:
             self.valid_item = False
-            errstr: str = '{:d} from MMSI {} with payload\n{}'.format(itru, self.mmsi, self.payload)
+            errstr: str = '{:d} from MMSI {} with payload \n {}'.format(itru, self.mmsi, self.payload)
             logging.error('In get_tru_head - value outside range 0-359 or != 511 : ' + errstr)
             self.true_heading = 511
             raise ValueError('In get_tru_head - value outside range 0-359 or != 511 : ' + errstr)
@@ -442,7 +445,8 @@ class Basic_Position(Payload):
         else:
             self.valid_item = False
             # logging.error('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
-            raise ValueError('In CNB.get_timestamp - value outside range 0-63 ' + str(intval))
+            raise ValueError('In CNB.get_timestamp - value outside range 0-63 for mmsi '
+                             '{}\npayload\n{}'.format(intval, self.mmsi, self.payload))
 
     def get_vessel_name(self, position: int, length: int) -> None:
         '''
@@ -1199,6 +1203,8 @@ class SAR_aircraft_position_report(Basic_Position):
         self.get_time_stamp()
         self.get_dte()
         self.get_assigned()
+        self.get_latitude(89,27)
+        self.get_longitude(61, 28)
 
     def __repr__(self):
 
@@ -1867,7 +1873,10 @@ class Static_data_report(Basic_Position):
     #  create a dictionary item to contain STATIC24 items
     # for the moment create a dummy to show dictionary content
 
-    Type24s = {}  # content will be key mmsi, data will be Static_data_report item
+    Type24s = {}  # content will be key mmsi, data will be ( Static_data_report item, Update_time)
+    T24Records = {}  # a collection of TYpe 24 records keyed on mmsi,
+
+    # data element will be a dictionary of all T24 attributes
 
     def __init__(self, p_payload):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
@@ -1879,73 +1888,152 @@ class Static_data_report(Basic_Position):
         self.callsign: str
         self.mothership_mmsi: str
         self.ship_type: int
+        self.t24data_item = {}
+        # create an empty data element which will be modified by later actions
+        self.t24data_item.update({'mmsi': '000000000'})
+        self.t24data_item.update({'part_no': '0'})
+        self.t24data_item.update({'vessel_name': ''})
+        self.t24data_item.update({'ship_type': 0})
+        self.t24data_item.update({'vendor_id': ''})
+        self.t24data_item.update({'pre1371_4_vendor_id': ''})
+        self.t24data_item.update({'unit_model_code': 0})
+        self.t24data_item.update({'serial_number': 0})
+        self.t24data_item.update({'callsign': ''})
+        self.t24data_item.update({'dim_to_bow': 0})
+        self.t24data_item.update({'dim_to_stern': 0})
+        self.t24data_item.update({'dim_to_port': 0})
+        self.t24data_item.update({'dim_to_stbd': 0})
+        self.t24data_item.update({'mothership_mmsi': ''})
 
-        self.payload = p_payload
-        self.create_mmsi()
-        self.get_part_number()
-        if self.part_number == 0:  # Part A
-            self.get_24_vessel_name()
-        else:  # Part B non auxilliry
-            self.get_24_ship_type()
-            self.get_vendor_id()
-            self.get_unit_model_code()
-            self.get_serial_number()
-            self.get_callsign()
-            if self.mmsi[0:2] != '98':
-                self.get_24_dim_to_bow()
-                self.get_24_dim_to_stern()
-                self.get_24_dim_to_port()
-                self.get_24_dim_to_stbd()
-                self.mothership_mmsi = ''
-            else:
-                self.get_mothership_mmsi()
-                self.dim_to_bow = 0.0
-                self.dim_to_stern = 0.0
-                self.dim_to_port = 0.0
-                self.dim_to_stbd = 0.0
+        try:
+            if len(Static_data_report.T24Records) == 0:
+            # create a dummy entry in the T24Record Dictionary
+            # should only happen once on initial instantiation of a TYpe 24 Record
+                Static_data_report.T24Records.update({'000000000': self.t24data_item})
+        except Exception as e:
+            raise Exception('line 1901 ', e) from e
+        try:
+            if len(Static_data_report.Type24s) == 0:  # initialise the TYpe24s dictionary as well
+                Static_data_report.Type24s.update({'000000000': ('', '')})  # {mmsi: (vessel_name, callsign)}
+        except Exception as e:
+            raise Exception('line 1908 ', e) from e
+
+        try:
+            self.payload = p_payload
+            self.create_mmsi()
+            self.t24data_item.update({'mmsi': self.mmsi})
+            self.get_part_number()
+            self.t24data_item.update({'part_no': self.part_number})
+        except Exception as e:
+            raise Exception('line 1914 ', e) from e
+        try:
+            if self.part_number == 0:  # Part A
+                try:
+                    self.get_24_vessel_name()
+                    if self.vessel_name != '':
+                        self.t24data_item.update({'vessel_name': self.vessel_name})
+                except Exception as e:
+                    raise Exception('Payloads.Type24 line 1929', e) from e
+
+            else:  # Part B non auxilliary
+                try:
+                    self.get_24_ship_type()
+                    self.t24data_item.update({'ship_type': self.ship_type})
+                except Exception as e:
+                    raise Exception('Payloads.Type24 line 1937', e) from e
+                try:
+                    self.get_vendor_id()
+                    if self.vendor_id != self.t24data_item['vendor_id']:
+                        self.t24data_item.update({'vendor_id': self.vendor_id})
+                except Exception as e:
+                    raise Exception('Payloads.Type24 line 1936', e) from e
+                try:
+                    if self.pre1371_4_vendor_id != self.t24data_item['pre1371_4_vendor_id']:
+                        self.t24data_item.update({'pre1371_4_vendor_id': self.pre1371_4_vendor_id})
+                except Exception as e:
+                    raise Exception('Payloads.Type24 line 1939', e) from e
+                try:
+                    self.get_unit_model_code()
+                    if self.unit_model_code != self.t24data_item['unit_model_code']:
+                        self.t24data_item.update({'unit_model_code': self.unit_model_code})
+                except Exception as e:
+                    raise Exception('Payloads.Type24 line 1942', e) from e
+                try:
+                    self.get_serial_number()
+                    if self.serial_number != self.t24data_item['serial_number']:
+                        self.t24data_item.update({'serial_number': self.serial_number})
+                except Exception as e:
+                    raise Exception('Payloads.Type24 line 1946', e) from e
+                try:
+                    self.get_callsign()
+                    if self.callsign != self.t24data_item['callsign']:
+                        self.t24data_item.update({'callsign': self.callsign})
+                except Exception as e:
+                    raise Exception('Payloads.Type24 line 1950', e) from e
+                try:
+
+                    if self.mmsi[0:2] != '98':
+                        try:
+                            self.get_24_dim_to_bow()
+                            if self.dim_to_bow != self.t24data_item['dim_to_bow']:
+                                self.t24data_item.update({'dim_to_bow': self.dim_to_bow})
+                        except Exception as e:
+                            raise Exception('Payloads.Type24 line 1957', e) from e
+                        try:
+                            self.get_24_dim_to_stern()
+                            if self.dim_to_stern != self.t24data_item['dim_to_stern']:
+                                self.t24data_item.update({'dim_to_stern': self.dim_to_stern})
+                        except Exception as e:
+                            raise Exception('Payloads.Type24 line 1961', e) from e
+                        try:
+                            self.get_24_dim_to_port()
+                            if self.dim_to_port != self.t24data_item['dim_to_port']:
+                                self.t24data_item.update({'dim_to_port': self.dim_to_port})
+                        except Exception as e:
+                            raise Exception('Payloads.Type24 line 1965', e) from e
+                        try:
+                            self.get_24_dim_to_stbd()
+                            if self.dim_to_stbd != self.t24data_item['dim_to_stbd']:
+                                self.t24data_item.update({'dim_to_stbd': self.dim_to_stbd})
+                        except Exception as e:
+                            raise Exception('Payloads.Type24 line 1969', e) from e
+                except Exception as e:
+                    raise Exception('Payloads.Type24 line 1954-1978', e) from e
+
+                else:
+                    self.get_mothership_mmsi()
+                    if self.mothership_mmsi != self.t24data_item['mothership_mmsi']:
+                        self.t24data_item.update({'mothership_mmsi': self.mothership_mmsi})
+        except KeyError as e:
+            raise KeyError('line Payloads.1927 ' + str(e))
+        except Exception as e:
+            raise Exception('line payloads.1927 ' + str(e))
+        try:
+            Static_data_report.T24Records.update({self.mmsi: (self.t24data_item, datetime.now())})
+        except KeyError as e:
+            raise KeyError('line Payloads.1966 ' + str(e))
+        except Exception as e:
+            raise Exception('line payloads.1966 ' + str(e))
 
     def __repr__(self):
-        repstring = ''
-        repstring = f'{self.__class__.__name__}\n' \
-                    f'Message Type:         {self.message_type}\n' \
-                    f'Repeat Indicator:     {self.repeat_indicator}\n' \
-                    f'MMSI:                 {self.mmsi}\n' \
-                    f'Part_number:    {self.part_number}\n' \
-                    f'Vessel Name:          {self.vessel_name}\n'
-
-        if self.mmsi[0:2] == '98':
-            repstring = repstring + f'{self.__class__.__name__}\n' \
-                                    f'Message Type:         {self.message_type}\n' \
-                                    f'Repeat Indicator:     {self.repeat_indicator}\n' \
-                                    f'MMSI:                 {self.mmsi}\n' \
-                                    f'Part_number:          {self.part_number}\n' \
-                                    f'Ship Type :           {self.ship_type}\n' \
-                                    f'Vendor ID:            {self.vendor_id}\n' \
-                                    f'Pre1371_4_Vendor ID:  {self.pre1371_4_vendor_id}\n' \
-                                    f'Unit Model Code:      {self.unit_model_code}\n' \
-                                    f'Serial Number:        {self.serial_number}\n' \
-                                    f'Callsign:             {self.callsign}\n' \
-                                    f'Mothership MMSI:      {self.mothership_mmsi}\n'
-
-        else:
-            repstring = repstring + \
-                        f'{self.__class__.__name__}\n' \
-                        f'Message Type:         {self.message_type}\n' \
-                        f'Repeat Indicator:     {self.repeat_indicator}\n' \
-                        f'MMSI:                 {self.mmsi}\n' \
-                        f'Part_number:          {self.part_number}\n' \
-                        f'Ship Type :           {self.ship_type}\n' \
-                        f'Vendor ID:            {self.vendor_id}\n' \
-                        f'Pre1371_4_Vendor ID:  {self.pre1371_4_vendor_id}\n' \
-                        f'Unit Model Code:      {self.unit_model_code}\n' \
-                        f'Serial Number:        {self.serial_number}\n' \
-                        f'Callsign:             {self.callsign}\n' \
-                        f'Dim to Bow:           {self.dim_to_bow}\n' \
-                        f'Dim to Stern:         {self.dim_to_stern}\n' \
-                        f'Dim to Port:          {self.dim_to_port}\n' \
-                        f'Dim to Stbd:          {self.dim_to_stbd}\n'
-
-        return repstring
+        return (
+            f'{self.__class__.__name__}\n'
+            f'Message Type:         {self.message_type}\n'
+            f"MMSI:                 {self.t24data_item['mmsi']}\n"
+            f"Part_number:          {self.t24data_item['part_number']}\n"
+            f"Vessel Name:          {self.t24data_item['vessel_name']}\n"
+            f"Ship Type :           {self.t24data_item['ship_type']}\n"
+            f"Vendor ID:            {self.t24data_item['vendor_id']}\n"
+            f"Pre1371_4_Vendor ID:  {self.t24data_item['pre1371_4_vendor']}\n"
+            f"Unit Model Code:      {self.t24data_item['unit_model_code']}\n"
+            f"Serial Number:        {self.t24data_item['serial_number']}\n"
+            f"Callsign:             {self.t24data_item['callsign']}\n"
+            f"Dim to Bow:           {self.t24data_item['dim_to_bow']}\n"
+            f"Dim to Stern:         {self.t24data_item['dim_to_stern']}\n"
+            f"Dim to Port:          {self.t24data_item['dim_to_port']}\n"
+            f"Dim to Stbd:          {self.t24data_item['dim_to_stbd']}\n"
+            f"Mothership MMSI:      {self.t24data_item['mothership_mmsi']}\n"
+        )
 
     def get_part_number(self):
         self.part_number = self.binary_item(38, 2)
@@ -2126,6 +2214,8 @@ class Fragments:
         # print("entering match frags ",key, inkey)
         self.success = False
         fraglist = {}
+        fragdel = []    # list of fragments tro be deleted from FragDict
+
         for fkey, data in Fragments.FragDict.items():
             # print("inkey, fkey, data, ",inkey, fkey, data)
             # print("matching ", fkey.split(',')[0], inkey, (fkey.split(',')[0] == inkey))
@@ -2138,12 +2228,24 @@ class Fragments:
 
             #
             # now while we are parsing dictionary clean out stale records
-            if (datetime.utcnow() - data[3]).total_seconds() > Fragments.FragDictTTL:
-                logging.info('In Fragments.match_records deleting outdated record ', fkey, data)
-                # print('In Fragments.match_records deleting outdated record ', fkey, data)
-                Fragments.FragDict.pop(fkey)
+            try:
+                if (datetime.utcnow() - data[3]).total_seconds() > Fragments.FragDictTTL:
+                    logging.debug('In Fragments.match_records deleting '
+                                  'outdated record {} {}'.format(fkey, data))
+                    for i in range(1, int(data[0] + 1)):
+                        fragdel.append(fkey.split(',')[0] + ',' + str(i))
+            except Exception as e:
+                logging.error('Payloads.Fragments creating deletion listline 2189 ',stack_info=True)
 
+
+        # zap stale records
+        for fkey in fragdel:
+            try:
+                Fragments.FragDict.pop(fkey)
+            except KeyError as e:
+                pass # ignore records that probably dont exist if matching has worked
         # how many records did we find?
+
 
         nr_recs = len(fraglist)
         # print('len fraglist', nr_recs, fraglist)
@@ -2155,12 +2257,14 @@ class Fragments:
             # got requisite number of fragments
             # get fragments in order
             for fnumber in range(1, nr_recs + 1):
-                # print("amagamating new_bin_payload, fnumber, fraglist[fnumber]",new_bin_payload, fnumber, fraglist[fnumber] )
                 new_bin_payload = new_bin_payload + fraglist[fnumber]
-                # print('new payload ', new_bin_payload)
-                # and flush the fragment records from Global.Fragdict
-                # print('deleting ', inkey + ',' + str(fnumber) )
-                Fragments.FragDict.pop(inkey + ',' + str(fnumber))
+
+                # and flush the fragment records from Global.Fragdict)
+                try:
+                    Fragments.FragDict.pop(inkey + ',' + str(fnumber))
+                except KeyError:
+                    pass
+
             self.success = True
         else:
             # not got all bits yet
@@ -2268,6 +2372,7 @@ class AISStream:
             logging.debug('In AISStream - messbyte = ' + '{:0d}'.format(messbyte))
             if not (1 <= messbyte <= 27):
                 # logging.error('In AISStream.split_string - invalid message+type ' + str_split[5])
+                self.message_type = 30
                 self.valid_message = False
             else:
                 self.message_type = messbyte
@@ -2423,3 +2528,13 @@ class AISStream:
             return False
 
         # then check self.self.fragment_count
+
+
+
+def main():
+    pass
+
+
+if __name__ == 'main':
+    main()
+

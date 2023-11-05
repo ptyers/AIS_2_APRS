@@ -11,6 +11,7 @@ from dns import resolver
 from socket import socket, AF_INET, SOCK_STREAM
 import GlobalDefinitions
 from SendAPRS import do_print_server_address
+from Map import Map, MapItem
 
 
 class NoLoggingWSGIRequestHandler(WSGIRequestHandler):
@@ -184,6 +185,16 @@ class Statistics:
         resp = resp + "</table>" + self._station_response_tail
         yield resp.encode("utf-8")
 
+
+        print('Uptime : {} UDP Frames Received {} Serial Frames Received {} APRS Frames Sent {}'
+            .format(
+            uptime_c,
+            Global.Statistics["Nr_UDP_Frames_RX"],
+            Global.Statistics["Nr_Serial_Frames_RX"],
+            Global.Statistics["Nr_APRS_TX"]
+                )
+            )
+
     def do_stations(self, environ, start_response):
         start_response("200 OK", [("Content-type", "text/html")])
         params = environ["params"]
@@ -214,16 +225,17 @@ class Statistics:
         Rowsperpage = 20
         columncount = 0
         resp = self._ship_response + "<tr>"
-        if len(Global.MyMap) > 0:
+        if len(Map.Themap) > 0:
 
-            for key in Global.MyMap:
+            for key in Map.Themap:
+                #print('Ships - Map ', key, Map.Themap[key])
                 if columncount > 5:
                     resp = resp + "</td><tr>"
                     columncount = 0
                 resp = resp + "\n<td>{Vessel}</td><td>{MMSI}</td><td>{Call}</td><td></td>".format(
-                    Vessel=Global.MyMap[key].Name,
+                    Vessel=Map.Themap[key].vessel_name,
                     MMSI=key,
-                    Call=Global.MyMap[key].Callsign,
+                    Call=Map.Themap[key].callsign,
                 )
                 columncount += 1
 
@@ -235,9 +247,6 @@ class Statistics:
         params = environ["params"]
         resp = self._hello_response.format(name=params.get("name"))
         yield resp.encode("utf-8")
-
-    def __init__(self):
-        pass
 
     def loopstats(self):
 
@@ -269,7 +278,7 @@ class Statistics:
 
         except Exception as e:
             print("Error - No valid APRS Server available\n%s", e)
-            logging.CRITICAL("Error - No valid APRS Server available\n%s", e)
+            logging.error("Error - No valid APRS Server available")
             GlobalDefinitions.Global.CloseDown = True
 
         httpd.serve_forever()
