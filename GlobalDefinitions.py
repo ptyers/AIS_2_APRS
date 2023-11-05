@@ -15,14 +15,12 @@ entries in APRS.ini override definitions in this file
 
 """
 
-import Fragment
 #import Mapper
 import Map
 import AVCGAmmsi
 import datetime
 from queue import Queue
 import sys
-from threading import Thread
 
 
 class Global:

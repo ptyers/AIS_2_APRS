@@ -1,5 +1,5 @@
 import MyPreConfigs
-import NewBinaryManips
+from archive import NewBinaryManips
 import AISData
 
 f = open(MyPreConfigs.AISFileName, "r")

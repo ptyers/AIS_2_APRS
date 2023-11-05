@@ -5,16 +5,12 @@
 import GlobalDefinitions
 import Map
 from GlobalDefinitions import Global
-from Mapper import MAPPER
-import Payloads
 import SendAPRS
 from datetime import datetime
 import logging
-from Payloads import AISStream, AISDictionaries, Fragments
-from Payloads import Basic_Position, Basestation, CNB, Static_data_report, ClassB_position_report
+from Payloads import Basestation, CNB, Static_data_report, ClassB_position_report
 from Payloads import StaticData, SAR_aircraft_position_report
-from Payloads import Safety_related_broadcast_message, Addressed_safety_related_message, \
-    Long_range_AIS_broadcast_message
+from Payloads import Safety_related_broadcast_message
 
 
 class AISClass:

@@ -7,16 +7,13 @@ import GlobalDefinitions
 from GetFileData import FileData
 import Process_AIS_Classes
 import sys
-import datetime
 import MyPreConfigs
 from GlobalDefinitions import Global
 from threading import Thread
 import Statistics
 import logging
-from Payloads import AISStream, AISDictionaries,  Fragments
-from Payloads import Basic_Position, Basestation, CNB, Static_data_report
-from Payloads import StaticData, SAR_aircraft_position_report
-from Payloads import Safety_related_broadcast_message, Addressed_safety_related_message,Long_range_AIS_broadcast_message
+from Payloads import AISStream, Fragments
+
 
 
 """

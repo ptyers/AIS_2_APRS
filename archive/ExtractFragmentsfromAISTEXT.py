@@ -2,8 +2,8 @@
 
 
 def main(self):
-    f = open("AISdatastream.txt", "r")
-    out = open("FragmentsStream.txt", "w")
+    f = open("../AISdatastream.txt", "r")
+    out = open("../FragmentsStream.txt", "w")
 
     while True:
         try:

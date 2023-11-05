@@ -1,9 +1,9 @@
 # extracts all type 24 (and since we grag fragments probanly type 5) records from the arc hived AISdatastream.txt file
 # creates anew file Type24data.txt
 #
-f = open("AISdatastream.txt", "r")
+f = open("../AISdatastream.txt", "r")
 
-s24 = open("Type24data.txt", "w")
+s24 = open("../Type24data.txt", "w")
 string24 = ""
 fields = []
 while True:

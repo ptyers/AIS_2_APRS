@@ -2,7 +2,7 @@ from unittest import TestCase
 from  AISData import AIS_Data
 from AISDictionary import AISDictionaries
 import logging
-import HandleFragments
+from archive import HandleFragments
 
 
 class Test(TestCase):
