@@ -271,6 +271,7 @@ class AISDictionaries:
         returnstring = ''
         #print('in char to binary input =', character)
         for sglchar in character:
+            print(f'input char {sglchar} output nibble {self.char_to_nibble(sglchar)}')
             returnstring = returnstring + self.char_to_nibble(sglchar)
 
         return returnstring

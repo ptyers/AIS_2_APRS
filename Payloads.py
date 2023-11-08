@@ -16,7 +16,6 @@ Base Class is Payload all other classes inherit from this
 class Payload:
 
     def __init__(self, p_payload: str):
-        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
 
         # fields
         message_type: int
@@ -146,7 +145,7 @@ class Payload:
             raise RuntimeError("Request to extract more bits {} {} which overrun end of binary payload "
                                "{}".format(startpos, blength, len(self.payload)))
         reqbits = self.payload[startpos:startpos + blength]
-        logging.debug('in Binary Item  reqbits = ', type(reqbits), ' value reqbits =', reqbits)
+        logging.debug('in Binary Item  reqbits = {} value reqbits = {}'.format( type(reqbits), reqbits))
         if len(reqbits) != 0:
             return int(reqbits, 2)
         else:
@@ -979,7 +978,7 @@ class StaticData(Basic_Position):
             sets StaticData.imo_number
         '''
         try:
-            self.intimo = self.binary_item(46, 30)
+            self.intimo = self.binary_item(40, 30)
             self.imo_number = '{:07d}'.format(self.intimo)
         except RuntimeError:
             self.imo_number = '0000000'
@@ -987,12 +986,12 @@ class StaticData(Basic_Position):
 
         # little validation can be done here other than that number less equal 9999999
 
-        if self.intimo <= 9999999:
+        if  self.intimo >= 9999999:
             self.imo_number = '{:07d}'.format(self.intimo)
             self.valid_item = False
-            # logging.error("In Static.get_imo_number found value greater than 99999999 - {:d}".format(self.intimo))
-            self.imo_number = '0000000'
-            raise ValueError
+            logging.error("In Static.get_imo_number found value greater than 99999999 - {:07d}".format(self.intimo))
+            self.imo_number = '9999999'
+
 
     def get_callsign(self) -> None:
         '''
@@ -1002,9 +1001,17 @@ class StaticData(Basic_Position):
         '''
         try:
             self.callsign = self.extract_text(70, 42)
+
+            while self.callsign[len(self.callsign) - 1] == '@':
+                if len(self.callsign) > 1:
+                    self.callsign = self.callsign[0:len(self.callsign) - 1]
+                else:
+                    self.callsign = ''
+                    break
+
         except RuntimeError:
             self.callsign = 'NoCall '
-            # logging.error("In Static.get_callsign Runtime error")
+            logging.error("In Static.get_callsign Runtime error")
 
     def get_Static_vessel_name(self):
         self.get_vessel_name(112, 120)
@@ -1035,7 +1042,7 @@ class StaticData(Basic_Position):
         self.eta_month = self.binary_item(274, 4)
         # can possibly return > 12 - if so set to 0 default
         if self.eta_month > 12:
-            # logging.error("In Static.get_eta>month value returned greater than 12")
+            logging.error("In Static.get_eta>month value returned greater than 12")
             self.eta_month = 0
 
     def get_eta_day(self) -> None:
@@ -1053,12 +1060,12 @@ class StaticData(Basic_Position):
         # and that for 30 day months day < 31
 
         if self.eta_month == 2 and self.eta_day > 29:
-            # logging.error("In Static.get_eta_day february day set > 29")
+            logging.error("In Static.get_eta_day february day set > 29")
             self.valid_item = False
             raise ValueError
 
         if self.eta_month in [4, 6, 9, 11] and self.eta_day > 30:
-            # logging.error("In Static.get_eta_day 30 day month day set > 30")
+            logging.error("In Static.get_eta_day 30 day month day set > 30")
             self.valid_item = False
             self.eta_day = 0
             raise ValueError
@@ -1074,14 +1081,14 @@ class StaticData(Basic_Position):
         try:
             self.eta_hour = self.binary_item(283, 5)
         except RuntimeError:
-            # logging.error("In Static.get_eta_hour got run time error")
+            logging.error("In Static.get_eta_hour got run time error")
             self.eta_hour = 24
 
         # 5 bits can get values above 24 will be flagged and reset to 24 the default
 
         if not (0 <= self.eta_hour <= 24):
             self.eta_hour = 24
-            # logging.error("In Static.get_eta_hour value outside range 0-24")
+            logging.error("In Static.get_eta_hour value outside range 0-24")
             raise ValueError
 
     def get_eta_minute(self) -> None:
@@ -1096,14 +1103,14 @@ class StaticData(Basic_Position):
         try:
             self.eta_minute = self.binary_item(288, 6)
         except RuntimeError:
-            # logging.error("In Static.get_eta_minute got run time error")
+            logging.error("In Static.get_eta_minute got run time error")
             self.eta_minute = 60
 
         # 5 bits can get values above 60 will be flagged and reset to 24 the default
 
         if not (0 <= self.eta_minute <= 60):
             self.eta_minute = 60
-            # logging.error("In Static.get_eta_minute value outside range 0-60")
+            logging.error("In Static.get_eta_minute value outside range 0-60")
             raise ValueError
 
     def get_draught(self) -> None:
@@ -1116,7 +1123,7 @@ class StaticData(Basic_Position):
         try:
             self.draught = round(float(self.binary_item(294, 8)) / 10.0, 1)
         except RuntimeError:
-            # logging.error("In Static.draught Runtime error")
+            logging.error("In Static.draught Runtime error")
             self.draught = 0.0
 
     def get_destination(self) -> None:
@@ -1132,17 +1139,27 @@ class StaticData(Basic_Position):
         :return:
             sets StaticData.eta_minute
         '''
-        if 421 > self.maxpayloadlen:
-            # will need to truncate the call to Extract String
-            self.destination = self.extract_text(302, self.maxpayloadlen - 302)
-        else:
-            self.destination = self.extract_text(302, 120)
+        try:
+            if 421 > self.maxpayloadlen:
+                # will need to truncate the call to Extract String
+                self.destination = self.extract_text(302, self.maxpayloadlen - 302)
+            else:
+                self.destination = self.extract_text(302, 120)
 
-        while self.destination[len(self.destination) - 1] == '@':
-            self.destination = self.destination[0:len(self.destination) - 1]
+            while self.destination[len(self.destination) - 1] == '@':
+                if len(self.destination) > 1:
+                    self.destination = self.destination[0:len(self.destination) - 1]
+                else:
+                    self.destination = ''
+                    break
+        except Exception as e:
+            logging.error('In Payload.Type5 get_destination maxpayloadlen {} payload length {}\n{}'
+                          .format(self.maxpayloadlen, len(self.destination), str(e)),stack_info=True)
+            raise Exception('In Payload.Type5 get_destination', e) from e
 
 
 class Binary_addressed_message(Payload):
+    # Type 6
     # to be implemented
 
     def __init__(self, p_payload):
@@ -1152,6 +1169,7 @@ class Binary_addressed_message(Payload):
 
 
 class Binary_acknowledge(Payload):
+    # Type 7
     # to be implemented
 
     def __init__(self, p_payload):
@@ -1161,6 +1179,7 @@ class Binary_acknowledge(Payload):
 
 
 class Binary_broadcast_message(Payload):
+    # TYpe 8
     # to be implemented
 
     def __init__(self, p_payload):
@@ -1278,6 +1297,7 @@ class SAR_aircraft_position_report(Basic_Position):
 
 
 class UTC_date_enquiry(Payload):
+    # Type 10
     # to be implemented
 
     def __init__(self, p_payload):
@@ -1285,6 +1305,7 @@ class UTC_date_enquiry(Payload):
 
 
 class UTC_date_response(Payload):
+    # TYpe 11
     # to be implemented
 
     def __init__(self, p_payload):
@@ -1295,6 +1316,7 @@ class UTC_date_response(Payload):
 
 class Addressed_safety_related_message(Payload):
     '''
+        Type 12
         Pragmatic note:
         On [AISHUB] the actual content of these messages is highly variable,
         ranging from fairly plain English ("PLEASE REPORT TO JOBOURG TRAFFIC CHANNEL 13")
@@ -1383,6 +1405,7 @@ class Addressed_safety_related_message(Payload):
 
 
 class Safety_related_acknowledgement(Payload):
+    # TYpe 13
     # to be implemented
 
     def __init__(self, p_payload):
@@ -1393,6 +1416,7 @@ class Safety_related_acknowledgement(Payload):
 
 class Safety_related_broadcast_message(Payload):
     '''
+        Type 14
         Pragmatic note:
         On [AISHUB] the actual content of these messages is highly variable,
         ranging from fairly plain English ("PLEASE REPORT TO JOBOURG TRAFFIC CHANNEL 13")
@@ -1445,15 +1469,26 @@ class Safety_related_broadcast_message(Payload):
         while text_length % 6 != 0:
             text_length -= 1
 
-        # going to make assumption that the safety_text runs from bit 72 to the end of the binary payload
+        # going to make assumption that the safety_text runs from bit 40 to the end of the binary payload
 
         self.safety_text = self.extract_text(40, text_length)
+        logging.debug(f'In Payloads.BroadcastSAfety create safety text = {self.safety_text}')
 
         while self.safety_text[len(self.safety_text) - 1] == '@':
             self.safety_text = self.safety_text[0:len(self.safety_text) - 1]
 
 
 class Interrogation(Payload):
+    # TYpe 15
+    # to be implemented
+
+    def __init__(self, p_payload):
+        super().__init__(p_payload)
+
+        pass
+
+class Assignment_Mode_Command(Payload):
+    # TYpe 16
     # to be implemented
 
     def __init__(self, p_payload):
@@ -1463,6 +1498,7 @@ class Interrogation(Payload):
 
 
 class DGNS_broadcast_binary_message(Payload):
+    # TYpe 17
     # to be implemented
 
     def __init__(self, p_payload):
@@ -1473,6 +1509,7 @@ class DGNS_broadcast_binary_message(Payload):
 
 class ClassB_position_report(Basic_Position):
     '''
+    Type 18
     A less detailed report than types 1-3 for vessels using Class B transmitters. 
     Omits navigational status and rate of turn. 
     Fields are encoded as in the common navigation block. 168 bits total.
@@ -1529,7 +1566,7 @@ class ClassB_position_report(Basic_Position):
         self.cs_unit = self.get_flag_bit(141)
 
     def get_display_flag(self):
-        self.display_flagdi = self.get_flag_bit(142)
+        self.display_flag = self.get_flag_bit(142)
 
     def get_band_flag(self):
         self.band_flag = self.get_flag_bit(144)
@@ -1572,7 +1609,6 @@ class Extende_ClassB_position_report(Basic_Position):
     '''
 
     def __init__(self, p_payload):
-        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
 
         self.get_CLB_SOG()
@@ -1674,6 +1710,7 @@ class Data_link_management_message(Payload):
 
 class Aid_to_navigation_report(Basic_Position):
     '''
+    Type 21
     Identification and location message to be emitted by aids to navigation such as buoys and lighthouses.
 
     This message is unusual in that it varies in length depending on the presence and size of the Name Extension field.
@@ -1891,7 +1928,7 @@ class Static_data_report(Basic_Position):
         self.t24data_item = {}
         # create an empty data element which will be modified by later actions
         self.t24data_item.update({'mmsi': '000000000'})
-        self.t24data_item.update({'part_no': '0'})
+        self.t24data_item.update({'partr_number': '0'})
         self.t24data_item.update({'vessel_name': ''})
         self.t24data_item.update({'ship_type': 0})
         self.t24data_item.update({'vendor_id': ''})
@@ -1923,7 +1960,7 @@ class Static_data_report(Basic_Position):
             self.create_mmsi()
             self.t24data_item.update({'mmsi': self.mmsi})
             self.get_part_number()
-            self.t24data_item.update({'part_no': self.part_number})
+            self.t24data_item.update({'partr_number': self.part_number})
         except Exception as e:
             raise Exception('line 1914 ', e) from e
         try:
@@ -2020,11 +2057,11 @@ class Static_data_report(Basic_Position):
             f'{self.__class__.__name__}\n'
             f'Message Type:         {self.message_type}\n'
             f"MMSI:                 {self.t24data_item['mmsi']}\n"
-            f"Part_number:          {self.t24data_item['part_number']}\n"
+            f"Part_number:          {self.t24data_item['partr_number']}\n"
             f"Vessel Name:          {self.t24data_item['vessel_name']}\n"
             f"Ship Type :           {self.t24data_item['ship_type']}\n"
             f"Vendor ID:            {self.t24data_item['vendor_id']}\n"
-            f"Pre1371_4_Vendor ID:  {self.t24data_item['pre1371_4_vendor']}\n"
+            f"Pre1371_4_Vendor ID:  {self.t24data_item['pre1371_4_vendor_id']}\n"
             f"Unit Model Code:      {self.t24data_item['unit_model_code']}\n"
             f"Serial Number:        {self.t24data_item['serial_number']}\n"
             f"Callsign:             {self.t24data_item['callsign']}\n"
@@ -2078,6 +2115,12 @@ class Static_data_report(Basic_Position):
 
     def get_callsign(self):
         self.callsign = self.extract_text(90, 42)
+        while self.callsign[len(self.callsign) - 1] == '@':
+            if len(self.callsign) > 1:
+                self.callsign = self.callsign[0:len(self.callsign) - 1]
+            else:
+                self.callsign = ''
+                break
 
     def get_24_dim_to_bow(self):
         self.get_dim_to_bow(132, 9)
@@ -2199,7 +2242,7 @@ class Fragments:
         # create a dictionary key comprising fragment_number and message_id
         key = str(self.messid) + ',' + str(self.f_no)
         Fragments.FragDict.update({key: self.data})
-        logging.debug('In Fragment.put_frag_in_dict dictionary  = ', Fragments.FragDict)
+        logging.debug('In Fragment.put_frag_in_dict dictionary  = {}'.format( Fragments.FragDict))
         # print('In Fragment.put_frag_in_dict dictionary  = ', Fragments.FragDict)
 
         # having put the fragment into the dictionary we need to check if we can amalgemate fragments
@@ -2278,8 +2321,6 @@ class AISStream:
 
     def __init__(self, input: str):
 
-        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
-
         self.valid_message = True
         self.split_string(input)
 
@@ -2295,17 +2336,31 @@ class AISStream:
         self.byte_payload_length: int
         self.trailer: str
         self.valid_message: bool
-        self.message_type: int  # only used to validate payload
+        self.message_type: int = 0  # only used to validate payload
 
         # only if crude validation passed continue
         if self.valid_message:
             # now create the string form binary_payload
-            self.create_binary_payload()  # now create the string form binary_payload
-            self.create_bytearray_payload()  # not currently used but for future usage
+            try:
+                self.create_binary_payload()  # now create the string form binary_payload
+            except Exception as e:
+                raise Exception('Exception in CreateStream.create_binary_payload', e) from e
+            try:
+                self.create_bytearray_payload()  # not currently used but for future usage
+            except Exception as e:
+                raise Exception('Exception in CreateStream.create_bytearray_payload', e) from e
             #
             # before we return the stream will be crudely validated
 
+            # define message_type
+            if self.fragment_number == 1:
+                self.message_type = int(self.binary_payload[0:6], 2)
+            else:
+                self.message_type = 30
+        try:
             self.validate_stream()
+        except Exception as e:
+            raise Exception('Exception in CreateStream.validate_stream', e) from e
 
     def __repr__(self):
         return (
@@ -2322,25 +2377,28 @@ class AISStream:
         )
 
     def split_string(self, stream: str):
-        self.valid_message = True
-        str_split: list = stream.split(',')
+        try:
+            self.valid_message = True
+            str_split: list = stream.split(',')
 
-        if (str_split[0] == '!AIVDM') or (str_split[0] == '!AIVDO'):
-            self.packet_id = str_split[0]
-        else:
-            # logging.error("In AISStream - packet_type not in AIVDM or AIVDO " + str_split[0])
-            self.valid_message = False
+            if (str_split[0] == '!AIVDM') or (str_split[0] == '!AIVDO'):
+                self.packet_id = str_split[0]
+            else:
+                # logging.error("In AISStream - packet_type not in AIVDM or AIVDO " + str_split[0])
+                self.valid_message = False
+        except Exception as e:
+            raise Exception('In Create Stream.split string checking packet_type AIVDM/AIVDO', e) from e
 
         try:
             self.fragment_count = int(str_split[1])
         except ValueError:
-            # logging.error("In AISStream - fragment count not numeric " + str_split[1])
+            logging.error("In AISStream - fragment count not numeric {}".format(  str_split[1]))
             self.fragment_count = 0
             self.valid_message = False
         try:
             self.fragment_number = int(str_split[2])
         except ValueError:
-            # logging.error("In AISStream - fragment number not numeric " + str_split[2])
+            logging.error("In AISStream - fragment number not numeric {}".format( str_split[2]))
             self.fragment_number = 0
             self.valid_message = False
         try:
@@ -2351,13 +2409,13 @@ class AISStream:
                 # null message_id
                 self.message_id = 0
         except ValueError:
-            # logging.error("In AISStream - message_id not numeric " + str_split[3])
+            logging.error("In AISStream - message_id not numeric {}".format(str_split[3]))
             self.message_id = 0
             self.valid_message = False
 
         self.channel = str_split[4]
         if self.channel not in ['A', 'B', '1', '2']:
-            # logging.error('In AISStream.split_string - invalid channel ' + str_split[4])
+            logging.error('In AISStream.split_string - invalid channel {}'.format(str_split[4]))
             self.valid_message = False
 
         self.payload = str_split[5]
@@ -2367,17 +2425,25 @@ class AISStream:
 
         # only applies for packet where fragment_number = 1, for other packets ignored
         if self.fragment_number == 1:
-            # grab first six bits - by shifting right the bits related to repeat indicator
-            messbyte: int = self.m_to_int(self.payload[0])
-            logging.debug('In AISStream - messbyte = ' + '{:0d}'.format(messbyte))
-            if not (1 <= messbyte <= 27):
-                # logging.error('In AISStream.split_string - invalid message+type ' + str_split[5])
-                self.message_type = 30
-                self.valid_message = False
-            else:
-                self.message_type = messbyte
-
-        self.trailer = str_split[6]
+            try:
+                # grab first six bits - by shifting right the bits related to repeat indicator
+                messbyte: int = self.m_to_int(self.payload[0])
+                logging.debug('In AISStream - messbyte = ' + '{:0d}'.format(messbyte))
+                if not (1 <= messbyte <= 27):
+                    logging.error('In AISStream.split_string - invalid message+type {}'
+                                  .format(str_split[5]), stack_info=True)
+                    self.message_type = 30
+                    self.valid_message = False
+                else:
+                    self.message_type = messbyte
+            except Exception as e:
+                logging.error('Exception In CreateStream processing actual payload single fragment',
+                              stack_info=True)
+                raise Exception('In CreateStream processing actual payload single fragment', e) from e
+        try:
+            self.trailer = str_split[6]
+        except Exception as e:
+            raise Exception('Exception in CreateStream.split_string', e) from e
 
     def create_binary_payload(self) -> None:
         # based on using a supersized string rather than bytearray
@@ -2385,149 +2451,161 @@ class AISStream:
         # print("ïnput payload "+ p_payload)
         #
         # define a null string
-        _abinary_payload = ''
-        _byte_payload = bytearray()
-        _byte_payload.extend(self.payload.encode())
-        # print('bytearray version of payload\n', _byte_payload,
-        #       '\nhex version\n', _byte_payload.hex(),
-        #       '\nfrom \n',p_payload)
+        try:
+            _abinary_payload = ''
+            _byte_payload = bytearray()
+            _byte_payload.extend(self.payload.encode())
+            # print('bytearray version of payload\n', _byte_payload,
+            #       '\nhex version\n', _byte_payload.hex(),
+            #       '\nfrom \n',p_payload)
 
-        for i in range(0, len(self.payload)):
-            # print('in create binary payload ', len(p_payload), i)
-            # iterate through the string payload masking to lower 6 bits
-            xchar = self.payload[i]
+            for i in range(0, len(self.payload)):
+                # print('in create binary payload ', len(p_payload), i)
+                # iterate through the string payload masking to lower 6 bits
+                xchar = self.payload[i]
 
-            nibble = self.m_to_int(xchar) & 0x3F  # ensures only 6 bits presented
-            # print(xchar, nibble, p_payload[i], i, len(p_payload))
+                nibble = self.m_to_int(xchar) & 0x3F  # ensures only 6 bits presented
+                # print(xchar, nibble, p_payload[i], i, len(p_payload))
 
-            logging.debug('nibble', bin(nibble))
+                logging.debug('nibble{}'.format(bin(nibble)))
 
-            # now append the nibble to the stream
-            _abinary_payload = _abinary_payload + format(nibble, '06b')
+                # now append the nibble to the stream
+                _abinary_payload = _abinary_payload + format(nibble, '06b')
 
-        _binary_payload = _abinary_payload
+            _binary_payload = _abinary_payload
 
-        # print(_abinary_payload)
+            # print(_abinary_payload)
 
-        self.binary_payload = _abinary_payload
+            self.binary_payload = _abinary_payload
+        except Exception as e:
+            raise Exception('Exception in CreateStream.create_binary_payload', e) from e
+
 
     def create_bytearray_payload(self) -> tuple:
         # based on using a supersized string rather than bytearray
         #
         printdiag = False
         #
-        # define a null bytearray
-        _byte_payload = bytearray()
-        # convert from str to the bytearray
-        _byte_payload.extend(self.payload.encode())
-        # print('bytearray version of payload\n', _byte_payload,
-        #       '\nhex version\n', _byte_payload.hex(),
-        #       '\nfrom \n',p_payload)
+        try:
+            # define a null bytearray
+            _byte_payload = bytearray()
+            # convert from str to the bytearray
+            _byte_payload.extend(self.payload.encode())
+            # print('bytearray version of payload\n', _byte_payload,
+            #       '\nhex version\n', _byte_payload.hex(),
+            #       '\nfrom \n',p_payload)
 
-        newbytes = bytearray()
-        _binlength = len(self.payload)
-        for i in range(0, len(self.payload)):
-            if printdiag:
-                print('in create binary payload ', len(self.payload), i)
-            # iterate through the string payload masking to lower 6 bits
-            thebyte: int = int(_byte_payload[i])
-            thebyte = thebyte - 48
-            if thebyte > 40:
-                newbytes.extend((thebyte - 8).to_bytes(1, "big"))
-            else:
-                newbytes.extend(thebyte.to_bytes(1, "big"))
+            newbytes = bytearray()
+            _binlength = len(self.payload)
+            for i in range(0, len(self.payload)):
+                if printdiag:
+                    print('in create binary payload ', len(self.payload), i)
+                # iterate through the string payload masking to lower 6 bits
+                thebyte: int = int(_byte_payload[i])
+                thebyte = thebyte - 48
+                if thebyte > 40:
+                    newbytes.extend((thebyte - 8).to_bytes(1, "big"))
+                else:
+                    newbytes.extend(thebyte.to_bytes(1, "big"))
 
-        # now repack the bytearray as a string of 6 bit nibbles
-        _byte_payload = bytearray()
+            # now repack the bytearray as a string of 6 bit nibbles
+            _byte_payload = bytearray()
 
-        # need to keep track of the 8 bit byte into which we are putting the nibble part
-        #  (splits across bytes generally)
-        # for each 4 nibbles 3 output bytes will be created.
-        #
-        outbyte = 0
+            # need to keep track of the 8 bit byte into which we are putting the nibble part
+            #  (splits across bytes generally)
+            # for each 4 nibbles 3 output bytes will be created.
+            #
+            outbyte = 0
 
-        for innibble in range(_binlength):
-            # use modulas to keep track of where we are in sequence
-            ii = innibble % 4
+            for innibble in range(_binlength):
+                # use modulas to keep track of where we are in sequence
+                ii = innibble % 4
 
-            match ii:
-                case 0:
-                    # mask to 6 bits and shift to MSB of outbyte
-                    _byte = (newbytes[innibble] & 0x3F) << 2
-                    _byte_payload.extend(struct.pack("B", (newbytes[innibble] & 0x3F) << 2))
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
-                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                match ii:
+                    case 0:
+                        # mask to 6 bits and shift to MSB of outbyte
+                        _byte = (newbytes[innibble] & 0x3F) << 2
+                        _byte_payload.extend(struct.pack("B", (newbytes[innibble] & 0x3F) << 2))
+                        logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                      "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
 
-                case 1:
-                    # mask to 2 MSB and put them into outbyte
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
-                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
-                    _byte_payload[outbyte] = ((newbytes[innibble] & 0x30) >> 4) + _byte_payload[outbyte]
-                    # now put 4 LSB into MSB of next outbyte
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
-                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
-                    outbyte += 1
-                    _byte = (newbytes[innibble] & 0x0F) << 4
-                    _byte_payload.extend(struct.pack("B", _byte))
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
-                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                    case 1:
+                        # mask to 2 MSB and put them into outbyte
+                        logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                      "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                        _byte_payload[outbyte] = ((newbytes[innibble] & 0x30) >> 4) + _byte_payload[outbyte]
+                        # now put 4 LSB into MSB of next outbyte
+                        logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                      "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                        outbyte += 1
+                        _byte = (newbytes[innibble] & 0x0F) << 4
+                        _byte_payload.extend(struct.pack("B", _byte))
+                        logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                      "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
 
-                case 2:
-                    # mask  four MSB, move to lower bits  of outbyte
-                    _byte_payload[outbyte] = ((newbytes[innibble] & 0x3F) >> 2) + _byte_payload[outbyte]
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
-                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
-                    outbyte += 1
-                    # put 2 LSB into MSB of next outbyte
-                    _byte_payload.extend(struct.pack("B", (newbytes[innibble] & 0x03) << 6))
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
-                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                    case 2:
+                        # mask  four MSB, move to lower bits  of outbyte
+                        _byte_payload[outbyte] = ((newbytes[innibble] & 0x3F) >> 2) + _byte_payload[outbyte]
+                        logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                      "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                        outbyte += 1
+                        # put 2 LSB into MSB of next outbyte
+                        _byte_payload.extend(struct.pack("B", (newbytes[innibble] & 0x03) << 6))
+                        logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                      "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
 
-                case 3:
-                    # put 6 MSBbits into LSB of next outbyte
-                    _byte_payload[outbyte] = ((newbytes[innibble] & 0x3F)) + _byte_payload[outbyte]
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
-                                  "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
-                    outbyte += 1
+                    case 3:
+                        # put 6 MSBbits into LSB of next outbyte
+                        _byte_payload[outbyte] = ((newbytes[innibble] & 0x3F)) + _byte_payload[outbyte]
+                        logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                                      "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
+                        outbyte += 1
 
-                case _:
-                    _byte_payload = bytearray()
-                    _binlength = 0
-                    raise RuntimeError("error in selecting bytes in create_bytearray_payload")
+                    case _:
+                        _byte_payload = bytearray()
+                        _binlength = 0
+                        raise RuntimeError("error in selecting bytes in create_bytearray_payload")
 
-        logging.debug(_byte_payload.hex())
-        self.byte_payload = _byte_payload
+            logging.debug('{}'.format(_byte_payload.hex()))
+            self.byte_payload = _byte_payload
+        except Exception as e:
+            raise Exception('Exception in CreateStream.create_byte_array_payload', e) from e
 
     def m_to_int(self, parameter: str) -> int:
         # takes in a encoded string of variable length and returns positive integer
-        my_int: int
-        my_byte = ord(parameter)
-        # print(len(parameter), ' ', my_byte)
+        try:
+            my_int: int
+            my_byte = ord(parameter)
+            # print(len(parameter), ' ', my_byte)
 
-        if len(parameter) == 1:
-            my_int = int(my_byte)
-            # need to mask off the upper 2 bits
+            if len(parameter) == 1:
+                my_int = int(my_byte)
+                # need to mask off the upper 2 bits
 
-            if (my_int - 48) > 40:
-                my_int = my_int - 56
+                if (my_int - 48) > 40:
+                    my_int = my_int - 56
+                else:
+                    my_int = my_int - 48
+
+                # print('myint ', my_int, ' binary myint ', bin(my_int))
             else:
-                my_int = my_int - 48
-
-            # print('myint ', my_int, ' binary myint ', bin(my_int))
-        else:
-            print("multiple characters not yet handled in m_to_int\r\n", sys.exc_info()[0])
-            raise RuntimeError('In m_to_int\r\n')
-            # multi character integer values are made up of 6 bit "bytes"
-            # in either signed or unsigned versions
-        return my_int
+                print("multiple characters not yet handled in m_to_int\r\n", sys.exc_info()[0])
+                raise RuntimeError('In m_to_int\r\n')
+                # multi character integer values are made up of 6 bit "bytes"
+                # in either signed or unsigned versions
+            return my_int
+        except Exception as e:
+            raise Exception('Exception in CreateStream.m_to_int', e) from e
 
     def validate_stream(self) -> bool:
+        try:
 
-        # first check packet_id
-        if self.packet_id != '!AIVDM' and self.packet_id != '!AIVDO':
-            return False
-
-        # then check self.self.fragment_count
+            # first check packet_id
+            if self.packet_id != '!AIVDM' and self.packet_id != '!AIVDO':
+                self.valid_message = False
+                return False
+        except Exception as e:
+            raise Exception('Exception in CreateStream.validate_stream')
 
 
 

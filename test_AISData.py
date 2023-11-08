@@ -101,7 +101,7 @@ class TestAIS_Data(TestCase):
             for i in range(len(self.binpay)):
                 self.ostring = self.ostring + "{:08b}".format(self.binpay[i])
 
-            logging.debug("character version of bytearray\n", self.ostring)
+            logging.debug("character version of bytearray\n{}".format( self.ostring))
             testpay = payload[5]
             for ij in range(len(testpay)):
                 self.testpay = AISDictionaries.makebinpayload(dict, self.testpay, testpay[ij])
@@ -200,11 +200,11 @@ class TestAIS_Data(TestCase):
             startpos: int = 8 + rndstrt * 6
             blklen = rndlen * 6
 
-            logging.debug("DEBUG binary_payload from which string will be extracted\n",
-                          mydata.get_AIS_Binary_Payload())
+            logging.debug("DEBUG binary_payload from which string will be extracted\n{}"
+            .format(mydata.get_AIS_Binary_Payload()))
 
             outstr = mydata.ExtractString(startpos, rndlen * 6)
-            logging.debug('Extracted string ', outstr)
+            logging.debug('Extracted string {}'.format( outstr))
 
             self.assertEqual(rndtext, outstr, "Failed in Extract_String")
 

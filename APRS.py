@@ -1,8 +1,7 @@
 import datetime
-import MyPreConfigs
-#import GlobalDefinitions
+# import GlobalDefinitions
 import logging
-from Payloads import Static_data_report
+from Payloads import Static_data_report, Payload, Addressed_safety_related_message, Safety_related_broadcast_message
 
 
 class APRS:
@@ -12,8 +11,6 @@ class APRS:
     #  based on APRS Protocol Reference - Protocol Version 1.0.1
     #
     _relay_station: str = 'CG722'
-
-
 
     # region Public Properties
 
@@ -27,7 +24,6 @@ class APRS:
             self._course = ""
             raise TypeError("Course must be string")
 
-
     def get_Speed(self):
         return self._speed
 
@@ -37,7 +33,6 @@ class APRS:
         else:
             self._speed = ""
             raise TypeError("Speed must be string")
-
 
     def get_Name(self):
         return self._name
@@ -49,7 +44,6 @@ class APRS:
             self._name = ""
             raise TypeError("Name must be string")
 
-
     def get_Callsign(self):
         return self._callsign
 
@@ -59,7 +53,6 @@ class APRS:
         else:
             self._callsign = ""
             raise TypeError("Callsign must be string")
-
 
     def get_MMSI(self):
         return self._callsign
@@ -71,21 +64,20 @@ class APRS:
             self._mmsi = "Unknown"
             raise TypeError("Callsign must be string")
 
-
     # endregion
     # endregion
     # region Constructors
     def __init__(
-        self,
-        mmsi: str,
-        latitude: float,
-        longitude: float,
-        heading: float,
-        speed: float,
-        comment: str,
-        IsAVCGA: int,
-        **kwargs
-                ):
+            self,
+            mmsi: str,
+            latitude: float,
+            longitude: float,
+            heading: float,
+            speed: float,
+            comment: str,
+            IsAVCGA: int,
+            **kwargs
+    ):
 
         self._longitude = ""
         self._latitude = ""
@@ -97,7 +89,6 @@ class APRS:
         self._comment = " "
         self._safetytext = ""
         self._isavcga = False
-
 
     def ConvertLongitude(self, longitude: float) -> str:
 
@@ -122,10 +113,10 @@ class APRS:
         minutes = int(minutes_f)
         decimals = int(((minutes_f - minutes) * 100.0))
         return (
-            format(degrees, "03d")
-            + format(minutes, "02d")
-            + "."
-            + format(decimals, "02d")
+                format(degrees, "03d")
+                + format(minutes, "02d")
+                + "."
+                + format(decimals, "02d")
         )
 
     def ConvertLatitude(self, latitude: float) -> str:
@@ -148,16 +139,16 @@ class APRS:
         minutes = int(minutes_f)
         decimals = int(((minutes_f - minutes) * 100.0))
         return (
-            format(degrees, "02d")
-            + format(minutes, "02d")
-            + "."
-            + format(decimals, "02d")
+                format(degrees, "02d")
+                + format(minutes, "02d")
+                + "."
+                + format(decimals, "02d")
         )
 
     def ConvertSpeed(self, speed: int):
         _speed = format(speed, "03d")
 
-    def CreateObjectPosition(self, kill: bool, mydata) -> str:
+    def CreateObjectPosition(self, kill: bool, mydata: Payload) -> str:
         try:
             statuschar = ""
             typechar = "s"
@@ -169,12 +160,11 @@ class APRS:
             if kill:
                 logging.debug("supposedly killing {}  ".format(mydata.mmsi))
 
-
             try:
                 if not kill:
                     statuschar = "*"
                     if self._mmsi in Static_data_report.T24Records:
-                        record,time = Static_data_report.T24Records[self._mmsi]
+                        record, time = Static_data_report.T24Records[self._mmsi]
                         if record['vessel_mame'] != '':
                             self.name = record['vessel_mame']
                         if record['callsign'] != '':
@@ -191,7 +181,6 @@ class APRS:
                     _callsign = self._mmsi
             except Exception as e:
                 raise Exception('APRS.CreateObjectPosition line 197', e) from e
-
 
             if self._name == "" or kill:
                 Xcallsign = self._mmsi
@@ -222,7 +211,6 @@ class APRS:
                 typechar = _typecharoption[self._mmsi[0:3]]
             if self._mmsi[0:3] in _tablecharoption:
                 tablechar = _tablecharoption[self._mmsi[0:3]]
-
 
             #  and finally cater for AVCGA vessels - transmit these as valid position reports
             #
@@ -255,48 +243,46 @@ class APRS:
                 # strip trailing spaces off name/callsign
                 while self._name[:-1] == " " and len(self._name) > 1:
                     self.name = self._name[0:-2]
-                    #print(self._name, len(self._name))
+                    # print(self._name, len(self._name))
                 while self._callsign[:-1] == " " and len(self._callsign) > 1:
                     self._callsign = self._callsign[0:-2]
 
                 self.txname = (self._name + " " + mydata.mmsi + " " + self._callsign)[
-                    0:42
-                ]
+                              0:42
+                              ]
 
             message = (
-                APRS._relay_station
-                + ">APU25N,TCPIP*:;"
-                + Xcallsign
-                + statuschar
-                + timestamp
-                + self._latitude
-                + tablechar
-                + self._longitude
-                + typechar
-                + self._course
-                + "/"
-                + self._speed
-                + self.txname
-                + "\n"
-                    )
+                    APRS._relay_station
+                    + ">APU25N,TCPIP*:;"
+                    + Xcallsign
+                    + statuschar
+                    + timestamp
+                    + self._latitude
+                    + tablechar
+                    + self._longitude
+                    + typechar
+                    + self._course
+                    + "/"
+                    + self._speed
+                    + self.txname
+                    + "\n"
+            )
 
             logging.debug(
-                "in CreateObject with kill tcpbytes \n"
-                + APRS._relay_station
-                + ">APU25N,TCPIP*:;"
-                + Xcallsign
-                + statuschar
-                + timestamp
-                + self._latitude
-                + tablechar
-                + self._longitude
-                + typechar
-                + self._course
-                + "/"
-                + self._speed
-                + self.txname
-                + "\n"
-            )
+                "in CreateObject with kill tcpbytes \n>APU25N,TCPIP*:;{}{}{}{}{}{}{}{}{}/{}{}\n".format(
+                    APRS._relay_station,
+                    Xcallsign,
+                    statuschar,
+                    timestamp,
+                    self._latitude,
+                    tablechar,
+                    self._longitude,
+                    typechar,
+                    self._course,
+                    self._speed,
+                    self.txname
+
+                ))
 
             return message
         except Exception as e:
@@ -309,16 +295,16 @@ class APRS:
             # string timestamp = thetime.Day.ToString("0#") + thetime.Hour.ToString("0#") + thetime.Minute.ToString("0#") + "z"
             timestamp = thetime.strftime("%d%H%Mz")
             message = (
-                APRS._relay_station
-                + ">APU25N,TCPIP*:;"
-                + self._mmsi
-                + "*"
-                + timestamp
-                + self._latitude
-                + "\\"
-                + self._longitude
-                + "L"
-                + "\n"
+                    APRS._relay_station
+                    + ">APU25N,TCPIP*:;"
+                    + self._mmsi
+                    + "*"
+                    + timestamp
+                    + self._latitude
+                    + "\\"
+                    + self._longitude
+                    + "L"
+                    + "\n"
             )
             return message
         except Exception as e:
@@ -338,40 +324,59 @@ class APRS:
         return message
     """
 
-    def CreateSafetyMessage(self, Bulletin: int) -> str:
+    def CreateSafetyMessage(self, Bulletin: int, mydata: Payload) -> str:
         try:
-            message = ""
-            #  create a bulletin frame
-            message = ""
-            if self._safetytext != "":
-                while len(self._safetytext) > 67:
-                    self._safetytext = self._safetytext[0, 66]
-                    message = (
-                        message
-                        + APRS._relay_station
-                        + ">APU25N,TCPIP*::BLN"
-                        + str(Bulletin)
-                        + "     :"
-                        + self._safetytext
-                        + "\n"
-                    )
-                    self._safetytext = self._safetytext[67:]
-                    Bulletin += 1
-                    Bulletin = Bulletin % 10
+            # myaprs = APRS(mydata.mmsi, 0.0, 0.0, 0.0, 0.0, 'Safety', 0)
+            logging.debug(f'entering create safety message Type = {mydata.message_type}')
+            if mydata.message_type == 14:
+                my14: Safety_related_broadcast_message = mydata
+                self._safetytext = my14.safety_text
+                logging.debug(f'Inside type 14 process self._safety_text = {self._safetytext}')
+                #  create a bulletin frame
+                self.message = ""
+                while self._safetytext != "":
+                    logging.debug(f'length safetytext {len(self._safetytext)}')
+                    while len(self._safetytext) > 67:
 
-                message = (
-                    message
-                    + APRS._relay_station
-                    + ">APU25N,TCPIP*::BLN"
-                    + str(Bulletin)
-                    + "     :"
-                    + self._safetytext
-                    + "\n"
-                )
+                        self.bulltext = self._safetytext[0:66]
+                        logging.debug(f'where safetytext > 67 bulltext = {self.bulltext}')
+                        self.message = self.message + (f'{APRS._relay_station}>APU25N,TCPIP*'
+                                                       f'::BLN{str(Bulletin)}     :{self.bulltext}\n')
+                        if len(self._safetytext) > 67:
+                            self._safetytext = self._safetytext[66:]
+                        Bulletin += 1
+                        Bulletin = Bulletin % 10
 
-            return message
+                    logging.debug(f'where safetytext < 67 self.safetytext = {self._safetytext}')
+                    self.message = self.message + (f'{APRS._relay_station}>APU25N,TCPIP*::BLN'
+                                                   f'{str(Bulletin)}     :{self._safetytext}\n')
+                    self._safetytext = ''
+            elif mydata.message_type == 12:
+                my12: Addressed_safety_related_message = mydata
+                logging.debug('processing type 12 ')
+                self.message = ''
+                self._safetytext = my12.safety_text
+                if self._safetytext != "":
+                    while self._safetytext != "":
+                        while len(self._safetytext) > 67:
+                            self.bulltext = self._safetytext[0:66]
+
+                            while len(my12.destination_mmsi) < 9:  # this should be redundant but in case
+                                my12.destination_mmsi = my12.destination_mmsi + ' '
+
+                            self.message = self.message + (f'{APRS._relay_station}>APU25N,TCPIP*'
+                                                           f':{my12.destination_mmsi}:{self.bulltext}\n')
+                            self._safetytext = self._safetytext[66:]
+                            Bulletin += 1
+                            Bulletin = Bulletin % 10
+
+                        self.message = self.message + (f'{APRS._relay_station}>APU25N,TCPIP*'
+                                                       f':{my12.destination_mmsi}:{self._safetytext}\n')
+                        self._safetytext = ''
+
+            return self.message
         except Exception as e:
-            logging.error('In CreateSafetyMessage \n' + str(e), stack_info=True)
+            logging.error(f'In CreateSafetyMessage \n{str(e)}', stack_info=True)
             raise Exception('CreateSafetyMessage', e) from e
 
 

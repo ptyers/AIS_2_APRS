@@ -299,10 +299,10 @@ class TestPayload(TestCase):
             rndtext = testtext[rndstrt:rndstrt + rndlen]
             blklen = rndlen * 6
 
-            logging.debug("DEBUG binary_payload from which string will be extracted\n",
-                          mystream.binary_payload)
+            logging.debug("DEBUG binary_payload from which string will be extracted\n{}"
+            .format(mystream.binary_payload))
             outstr = mypayload.extract_string(rndstrt * 6 + 8, rndlen * 6)
-            logging.debug('Extracted string ', outstr)
+            logging.debug('Extracted string {}'.format( outstr))
 
             self.assertEqual(rndtext, outstr, "In Payload - Failed in Extract_String")
 
@@ -1188,7 +1188,6 @@ class TestStaticData(TestCase):
 
     def initialise(self):
 
-        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         diction = AISDictionaries()
         # the stream offered here is valid but the mystream.payload , mypayload.payload
         #  and/or mystream.binary_payload will be overwritten during testing
@@ -1220,8 +1219,9 @@ class TestStaticData(TestCase):
         # returns a string of binary payload
         # incorporating a string of bit count length equivalent to integer value value presented
         #
-        intstring: str = '{:0' + '{:d}'.format(bitcount) + 'b'.format(testval)
-        return self.make_stream(preamlen=prteamleng, testbits=intstring)
+        formatter = "'{:0" + '{:d}'.format(bitcount) + "b}'"
+        intstring: str = formatter.format(testval)
+        return self.make_stream(preamlen=prteamleng, testbits=intstring.strip("'"))
 
     def test_get_ais_version(self):
         # given current specification little can be tested here
@@ -1243,12 +1243,12 @@ class TestStaticData(TestCase):
         # little can be tested here its only a 7 digit identifier and effectively free text
         # 30 bit field can returm greater than 7 digits check for this
 
-        for i in [0, 11, 123, 1234, 12345, 123456, 1234567, 9999999, 12345678]:
+        for i in [0, 11, 123, 1234, 12345, 123456, 1234567, 9999999, 10000000]:
             testbits = self.make_binary_stream(40, i, 30)
             mystatic.payload = testbits
             try:
                 mystatic.get_imo_number()
-                self.assertEqual(i, mystatic.imo_number,
+                self.assertEqual('{:07d}'.format(i), mystatic.imo_number,
                                  "In Static.get_imo_number value returned " + mystatic.imo_number +
                                  ' does not match value offered {:d}'.format(i))
             except RuntimeError:

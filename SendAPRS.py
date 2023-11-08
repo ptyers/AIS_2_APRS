@@ -16,7 +16,8 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int):
     #  takes analysed AIS stream and at periodic intervals sends to APRS server
     tcpbytes = bytearray("", "utf-8")
     try:
-        myaprs = APRS(
+        if p not in [12, 14]:
+            myaprs = APRS(
             mydata.mmsi,
             mydata.latitude,
             mydata.longitude,
@@ -24,7 +25,19 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int):
             mydata.speed_over_ground,
             mydata.vessel_name,
             mydata.isAVCGA
-        )
+                            )
+        else:
+            myaprs = APRS(
+                mydata.mmsi,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                'Safety',
+                0
+            )
+
+
 
         myaprs.MMSI = mydata.mmsi
         if len(mydata.callsign) > 0:
@@ -47,16 +60,16 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int):
         9: doposition,
         10: donothing,
         11: donothing,
-        12: donothing,
+        12: do14,
         13: donothing,
         14: do14,
         15: donothing,
         16: donothing,
         17: donothing,
         18: doposition,
-        19: donothing,
+        19: doposition,
         20: donothing,
-        21: donothing,
+        21: doposition,
         22: donothing,
         23: donothing,
         24: do5_24,
@@ -98,13 +111,13 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int):
 
 
 
-def donothing():
+def donothing(args, dummy: int, kill: bool):
     #print('In SendAPRS.donothing')
     pass
 
 
 def doposition(args, dummy: int, kill: bool):
-    #print('In SendAPORS.doposition')
+    #print('In SendAPRS.doposition')
     try:
         mydata = args[0]
         myaprs = args[1]
@@ -136,7 +149,8 @@ def do4(args, dumbull: int, dummy: bool):
 def do14(args, Bulletin: int, dummy: bool):
     #print('In SendAPORS.do14')
     try:
-        tcpbytes = bytearray(args.CreateSafetyMessage(Bulletin), "utf-8")
+        mydata, myaprs = args
+        tcpbytes = bytearray(myaprs.CreateSafetyMessage(Bulletin, mydata), "utf-8")
 
         return tcpbytes
 

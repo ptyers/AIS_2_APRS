@@ -90,14 +90,14 @@ def do_123() -> str:
     binary_payload = binary_payload + '000000'
     # setting Maneouver Indicator to 0
     binary_payload = binary_payload + '00'
-    # setting RAIM Flag to 0, preffiling spare bit
+    # setting RAIM Flag to 0, prefiling spare bit
     binary_payload = binary_payload + '0000'
     # setting Radio Status to all zero
     binary_payload = binary_payload + '0000000000000000000'
 
     # veracity check print out payload length
     print("Having created Type 123 fields payload length expected 168 got ", len(binary_payload))
-    if len(binary_payload) != 169:
+    if len(binary_payload) != 168:
         print("ERROR wrong length")
 
     return binary_payload
@@ -108,24 +108,61 @@ def longlat() -> tuple:
     if len(longitude) == 0:
         longitude = '147'
     print("longitude ", longitude)
-    if not (-180 <= int(longitude) <= 180):
+    if not (-180 <= float(longitude) <= 180):
         print("Error longitude must be between -180 and 180 set to 147.0")
         longitude = '147.0'
 
     intlongitude = int(float(longitude) * 600000)
-    binlong = '{:028b}'.format(intlongitude)
+    print(f'intlongitude {intlongitude}')
+    if intlongitude < 0:
+        binlong = '{:028b}'.format(abs(intlongitude))
+        binlong = twos_comp_negation(binlong, 28)
+    else:
+        binlat = '{:028b}'.format(intlongitude)
 
     latitude = input('Enter latitude decimal +ve North, -ve South = ')
     if len(latitude) == 0:
         latitude = '38'
-    if not (-90 <= int(latitude) <= 90):
+    if not (-90 <= float(latitude) <= 90):
         print("Error longitude must be between -180 and 180 set to -38.5")
-        longitude = '-38.5'
+        lattitude = '-38.5'
     intlatitude = int(float(latitude) * 600000)
-    binlat = '{:027b}'.format(intlatitude)
+    print(f'intllattitude {intlatitude}')
+    if intlatitude < 0:
+        binlat = '{:027b}'.format(abs(intlatitude))
+        binlat = twos_comp_negation(binlat, 27)
+    else:
+        binlat = '{:027b}'.format(intlatitude)
+
 
     return binlong, binlat
 
+def twos_comp_negation(binstring: str, length: int) -> str:
+    # exor the incoming positive representation on a bit by bit basis
+    #
+    outstring = ''
+    for i in range(0,length):
+        if binstring[i] == '1':
+            outstring = outstring + '0'
+        else:
+            outstring = outstring + '1'
+    # now have inverted string need to add 1
+    binstring = ''
+    carry = '1'
+    for i in range(0, length):
+        char = outstring[(length-i-1):][0]
+        if outstring[(length-i-1):][0] == '1' and carry == '1':
+            # we need to reset bit and carry
+            binstring = '0' + binstring
+            carry = '1'
+        elif outstring[(length-i-1):][0] == '0' and carry == '1':
+            # found a zero bit can just put the carry in it
+            binstring = '1' + binstring
+            carry = '0'
+        else:
+            binstring = outstring[(length-i-1):][0] + binstring
+
+    return binstring
 
 def do_4() -> str:
     # now create a binary payload for Base Station, this will be encoded as a last step
@@ -379,19 +416,21 @@ def do_12() -> str:
     # set retransmit flag to 0 and add spare bit
     binary_payload = binary_payload + '0' + '0'
 
-    text = input("Enter SAfety Text - max 156 chars upper case")
-    if len(text) == 0 or len(text) > 156:
+    text = input("Enter Safety Text - max 156 chars upper case")
+    if len(text) == 0:
         text = 'INVALID TEXT'
+    elif len(text) > 156:
+        text = text[0:156]
 
     while len(text) < 50:
         text = text + '@'
 
-    text = text.upper()[0:50]
+    text = text.upper()[0:]
     binary_payload = binary_payload + diction.char_to_binary(text)
 
     # veracity check print out payload length
-    print("Having created Type 4 fields payload length expected 372 got ", len(binary_payload))
-    if len(binary_payload) != 372:
+    print(f'Having created Type 4 fields payload length expected {(72 + len(text)*6)} got {len(binary_payload)}')
+    if len(binary_payload) != (72 + len(text)*6):
         print("ERROR wrong length")
 
     return binary_payload
@@ -408,25 +447,26 @@ def do_14() -> str:
         mmsi = '503123456'
     binary_payload = binary_payload + '{:030b}'.format(int(mmsi))
 
-    # set sequence number to 0
-    binary_payload = binary_payload + '00'
-
     # set  spare bits
     binary_payload = binary_payload + '00'
 
-    text = input("Enter SAfety Text - max 161 chars upper case")
-    if len(text) == 0 or len(text) > 161:
+    text = input("Enter Safety Text - max 156 chars upper case\n")
+    if len(text) == 0 :
         text = 'INVALID TEXT'
+    elif len(text) > 161:
+        print('Truncating text to limit of 161 chars')
+        text = text[0:161]
 
     while len(text) < 50:
         text = text + '@'
 
-    text = text.upper()[0:50]
+    text = text.upper()[0:]
+    print(f'text input = {text}')
     binary_payload = binary_payload + diction.char_to_binary(text)
 
     # veracity check print out payload length
-    print("Having created Type 4 fields payload length expected 342 got ", len(binary_payload))
-    if len(binary_payload) != 342:
+    print(f"Having created Type 14 fields payload length expected {41+len(text)*6} got {len(binary_payload)}" )
+    if len(binary_payload) != (41+len(text)*6):
         print("ERROR wrong length")
 
     return binary_payload
@@ -878,21 +918,29 @@ def do_27():
     if len(longitude) == 0:
         longitude = '147'
     print("longitude ", longitude)
-    if not (-180 <= int(longitude) <= 180):
+    if not (-180 <= float(longitude) <= 180):
         print("Error longitude must be between -180 and 180 set to 147.0")
         longitude = '147.0'
 
     intlongitude = int(float(longitude) * 600)
-    binlong = '{:018b}'.format(intlongitude)
+    if intlongitude < 0:
+        binlong = '{:018b}'.format(abs(intlongitude))
+        binlong = twos_comp_negation(binlong, 18)
+    else:
+        binlat = '{:018b}'.format(intlongitude)
 
     latitude = input('Enter latitude decimal +ve North, -ve South = ')
     if len(latitude) == 0:
         latitude = '38'
-    if not (-90 <= int(latitude) <= 90):
+    if not (-90 <= float(latitude) <= 90):
         print("Error longitude must be between -180 and 180 set to -38.5")
         longitude = '-38.5'
     intlatitude = int(float(latitude) * 600)
-    binlat = '{:017b}'.format(intlatitude)
+    if intlatitude < 0:
+        binlat = '{:017b}'.format(abs(intlatitude))
+        binlat = twos_comp_negation(binlat, 17)
+    else:
+        binlat = '{:017b}'.format(intlatitude)
 
     binary_payload = binary_payload + binlong + binlat
     print("len long, lat", len(binlong), len(binlat))
@@ -984,6 +1032,8 @@ def main():
         binpayload = do_24()
     elif int(payload_type) == 27:
         binpayload = do_27()
+
+    print(f'{binpayload}\n{fragmentcount}\n{fragmentnumber}\n{messageid}\n{channelid}\n')
 
     AISString = do_encode(binpayload, fragmentcount, fragmentnumber, messageid, channelid) + ',0*5'
 

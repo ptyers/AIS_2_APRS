@@ -612,7 +612,7 @@ class AIS_Data:
         diagnostic4 = False
 
 
-        logging.debug('ïn AIS_Data.m_setup encoded string = ', Encoded_String)
+        logging.debug('ïn AIS_Data.m_setup encoded string = {}'.format(Encoded_String))
 
         try:
             # under c# discrete_items would be a string array,
@@ -655,11 +655,13 @@ class AIS_Data:
                         print("Error in extracting payload", sys.exc_info()[0])
                         raise
 
-                    logging.debug('in m_setup _Frag = ', self._Frag,
-                                  '\r\n_Frag_no = ', self._Fragno,
-                                  '\r\n_channel = ', self._channel,
-                                  '\r\n_payload = ', self._payload
-                                  )
+                    logging.debug('in m_setup _Frag = {}\r\n_Frag_no = {}\r\n_channel = {}\r\n_payload = {}'
+                                  .format(
+                                self._Frag,
+                                    self._Fragno,
+                                    self._channel,
+                                    self._payload
+                                  ))
 
                 else:
                     print("Insufficient fields in string " + Encoded_String, sys.exc_info()[0])
@@ -667,7 +669,7 @@ class AIS_Data:
 
                 intid: int = self.m_to_int(self._payload[0])  # payload type
                 self.set_AIS_Payload_ID(intid)  # payload type)
-                logging.debug('in m_setup_Payload_ID = ', self._Payload_ID)
+                logging.debug('in m_setup_Payload_ID = {}'.format( self._Payload_ID))
                 self._binary_payload, self._binary_length = (
                     self.create_binary_payload(self._payload))  # binary form of payload
 
@@ -678,7 +680,7 @@ class AIS_Data:
                 # _byte_payload = AIS_Data.create_bytearray_payload(self._payload)
                 # self._binary_length = len(_byte_payload)
 
-                logging.debug('in m_setup_binary_Payload = ', self._binary_payload)
+                logging.debug('in m_setup_binary_Payload = {}'.format( self._binary_payload))
 
                 # if message type is 14 we need to create the safety message text
                 #
@@ -740,7 +742,7 @@ class AIS_Data:
         immsi = self.Binary_Item(startpos, length)
         smmsi = "{:09d}".format(immsi)
         # string mmsi derived from immsi
-        logging.debug(" return string MMSI = " + smmsi)
+        logging.debug(" return string MMSI = {}".format( smmsi))
         return immsi, smmsi
 
     def set_mmsi(self, value: int):
@@ -1426,7 +1428,7 @@ class AIS_Data:
         # then convert the slice to int using int(string,2)
 
         reqbits = self._binary_payload[startpos:startpos + blength]
-        logging.debug('in Binary Item type reqbits = ', type(reqbits), ' value reqbits =', reqbits)
+        logging.debug('in Binary Item type reqbits = {} value reqbits = {}'.format( type(reqbits), reqbits))
         if len(reqbits) != 0:
             return int(reqbits, 2)
         else:
@@ -1454,7 +1456,7 @@ class AIS_Data:
             nibble = self.m_to_int(xchar) & 0x3F  # ensures only 6 bits presented
             #print(xchar, nibble, p_payload[i], i, len(p_payload))
 
-            logging.debug('nibble', bin(nibble))
+            logging.debug('nibble {}'.format(bin(nibble)))
 
             # now append the nibble to the stream
             _abinary_payload = _abinary_payload + format(nibble, '06b')
@@ -1511,38 +1513,38 @@ class AIS_Data:
                     # mask to 6 bits and shift to MSB of outbyte
                     _byte = (newbytes[innibble] & 0x3F) << 2
                     _byte_payload.extend(struct.pack("B", (newbytes[innibble] & 0x3F) << 2))
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " 
                                   "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
 
                 case 1:
                     # mask to 2 MSB and put them into outbyte
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " 
                                   "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
                     _byte_payload[outbyte] = ((newbytes[innibble] & 0x30) >> 4) + _byte_payload[outbyte]
                     # now put 4 LSB into MSB of next outbyte
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " 
                                   "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
                     outbyte += 1
                     _byte = (newbytes[innibble] & 0x0F) << 4
                     _byte_payload.extend(struct.pack("B", _byte))
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " 
                                   "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
 
                 case 2:
                     # mask  four MSB, move to lower bits  of outbyte
                     _byte_payload[outbyte] = ((newbytes[innibble] & 0x3F) >> 2) + _byte_payload[outbyte]
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " 
                                   "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
                     outbyte += 1
                     # put 2 LSB into MSB of next outbyte
                     _byte_payload.extend(struct.pack("B", (newbytes[innibble] & 0x03) << 6))
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " 
                                   "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
 
                 case 3:
                     # put 6 MSBbits into LSB of next outbyte
                     _byte_payload[outbyte] = ((newbytes[innibble] & 0x3F)) + _byte_payload[outbyte]
-                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " +
+                    logging.debug("nibble {} input byte {:08b}  output byte number {} output byte content " 
                                   "{:08b}".format(innibble, newbytes[innibble], outbyte, _byte_payload[outbyte]))
                     outbyte += 1
 
@@ -1551,7 +1553,7 @@ class AIS_Data:
                     _binlength = 0
                     raise RuntimeError("error in selecting bytes in create_bytearray_payload")
 
-        logging.debug(_byte_payload.hex())
+        logging.debug('{}'.format(_byte_payload.hex()))
         return _byte_payload, len(_byte_payload)
 
     def m_to_int2(self, parameter: str) -> int:

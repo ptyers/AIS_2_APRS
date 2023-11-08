@@ -5,15 +5,17 @@ import GetUDP
 import GetSerial
 import GlobalDefinitions
 from GetFileData import FileData
-import Process_AIS_Classes
+from Process_AIS_Classes import AISClass
 import sys
 import MyPreConfigs
 from GlobalDefinitions import Global
 from threading import Thread
 import Statistics
 import logging
-from Payloads import AISStream, Fragments
-
+from Payloads import AISStream, Fragments, CNB, ClassB_position_report, Extende_ClassB_position_report
+from Payloads import StaticData, SAR_aircraft_position_report, Static_data_report, Safety_related_broadcast_message
+from Payloads import Addressed_safety_related_message, Basestation
+from Payloads import Aid_to_navigation_report, Long_range_AIS_broadcast_message, Payload
 
 
 """
@@ -37,6 +39,7 @@ and finally start up a thread to report statistics communicating by yet another 
 def main():
 
     logging.basicConfig(level=logging.ERROR, filename="error.log")
+    #logging.basicConfig(level=logging.ERROR)
 
     inqueue = Global.inputqueue
     #outqueue = Global.outputqueue
@@ -57,6 +60,7 @@ def main():
     diagnostic3 = Global.diagnostic3
 
     FragDict = Fragments.FragDict
+
 
     try:
         # start the data gathering
@@ -88,35 +92,45 @@ def main():
 
     # ##################################################################################################################
     stringer = ""  # will hold incoming encoded AIS string
+
     processed = True
-
     while not GlobalDefinitions.Global.CloseDown:
+        try:
+            try:  # all encompassing catch of exceptions to allow restart
+                if not Global.inputqueue.empty():
+                    processed = True
+                    try:
+                        stringer = Global.inputqueue.get()
+                    except Exception as e:
+                        raise Exception('Error getting aisitem', e) from e
+                    try:
+                        if len(stringer) == 0:
+                            logging.error("Exception zero length payload presented to CreateStream")
+                            processed = True
+                        else:
+                            current_ais = AISStream(stringer)
+                            logging.debug(" input queue item = {}".format(current_ais))
+                            if current_ais.valid_message:
+                                processed = False  # indicate we have an unprocessed record
+                    except Exception as e:
+                        logging.error('Error creating AISStream',stack_info=True)
+                        raise Exception('Error creating AISStream', e) from e
+                else:
+                    # no record to process at the moment - loop
+                    pass
 
-        try:  # all encompassing catch of exceptions to allow restart
-            if not Global.inputqueue.empty():
-                try:
-
-                    stringer = Global.inputqueue.get()
-                    current_ais = AISStream(stringer)
-                    logging.debug(" input queue item = ", current_ais)
-
-
-                    processed = False  # indicate we have an unprocessed record
-
-                except Exception as e:
-                    if inqueue.empty():
-                        print("queue empty")
-                    elif inqueue.full():
-                        print("queue full")
-                    else:
-                        print("??? in main re queue state")
-                    raise RuntimeError("getting queued item in main - error", e) from e
-            else:
-                # no record to process at the moment - loop
-                pass
+            except Exception as e:
+                if inqueue.empty():
+                    print("queue empty")
+                elif inqueue.full():
+                    print("queue full")
+                else:
+                    print("??? in main re queue state")
+                raise RuntimeError("getting queued item in main - error", e) from e
 
             # now the guts of processing the incoming AIS Data
             # have an  encoded string break it down
+
             if not processed and current_ais.valid_message:
                 try:
                     """
@@ -132,18 +146,19 @@ def main():
 
                     # print('Checking for fragments ', aisfields[1],myAIS.AIS_FragCount)
                     # TEMPORARY ######throw away fragmented packets
-                    if current_ais.fragment_count == 1:
+                    packet: Payload = None
+
+                    if current_ais.fragment_count == 1 and current_ais.fragment_number ==1:
                         try:
-                            # print('doing stuff nonfragmented pasyload id =',myAIS.AIS_Payload_ID)
-                            do_function(current_ais.message_type, current_ais.binary_payload)
-                            processed = True
+                            logging.info('doing stuff nonfragmented pasyload id ={}'.format(current_ais.message_type))
+                            packet = do_function(current_ais.message_type, current_ais.binary_payload)
                         except Exception as e:
-                            raise Exception('Main line 136 ', e) from e
+                            raise Exception('In setting packet type prior to processing Main.line 151 ', e) from e
                     else:
                         # now handle the fragments
                         # function will return True when fragments have been merged
                         # declare stream to be a fragment
-
+                        #print('doing fragment')
                         current_frag = Fragments(current_ais.binary_payload,current_ais.fragment_count,
                                                      current_ais.fragment_number, current_ais.message_id)
                         try:
@@ -153,14 +168,23 @@ def main():
                         if current_frag.success:
                             current_ais.binary_payload = current_frag.new_bin_payload
                             current_ais.message_type = int(current_ais.binary_payload[0:6], 2)
-                            do_function(current_ais.message_type, current_ais.binary_payload)
-                            Processed = True
+                            packet = do_function(current_ais.message_type, current_ais.binary_payload)
 
-
+                    # now process the packet
+                    if packet != None:      # if non valid packet dump it
+                        thisclass = AISClass()
+                        logging.info('About to send poacket tp ProcessClasses message_type = {}'
+                                     .format(packet.message_type))
+                        try:
+                            valid_process = thisclass.process_generic_class(packet)
+                        except Exception as e:
+                            raise Exception('Exception when despatching in ProcessClasses in Main', e) from e
+                        if valid_process:
+                            processed = True
                 except Exception as e:
                     raise Exception('Main line 124-160', e) from e
-                else:
-                    pass  # wait for next record
+            else:
+                pass  # wait for next record
 
 
             if not Statsqueue.empty():
@@ -170,6 +194,10 @@ def main():
                         print(xx, Global.Statistics[xx])
                     for xx in Global.UDP_Received_IP_Addresses:
                         print(xx)
+
+
+
+
         except KeyboardInterrupt as e:
             print('Keyboard Interrupt occurred - ending threads and exiting')
             GlobalDefinitions.Global.CloseDown = True
@@ -185,9 +213,11 @@ def main():
             print("Restarting processes after exception\r\n", e)
             #logging.error("Restarting processes after Unknown exception", stack_info=True)
 
-            processed = True
-            if not Global.Production:
-                raise RuntimeError(e) from e
+        processed = True
+        if not Global.Production:
+            raise RuntimeError(e) from e
+
+
 
 
 def select_inputs():
@@ -230,63 +260,106 @@ def ExtractMMSI(Binary_payload):
     pass
 
 
-def do_function(keyword, aisobject: AISStream):
-    # create a dictionary of functions related to keywords that might be being initialised
-    #
+# def do_function(keyword, aisobject:str):
+#     # create a dictionary of functions related to keywords that might be being initialised
+#     #
+#     print('entering do function with kedyword = ', keyword)
+#     ParseDict = {
+#         0: Process_AIS_Classes.AISClass.donothing,  # this is an error condition and should not occur
+#         1: Process_AIS_Classes.AISClass.Process1239_18,
+#         2: Process_AIS_Classes.AISClass.Process1239_18,
+#         3: Process_AIS_Classes.AISClass.Process1239_18,
+#         4: Process_AIS_Classes.AISClass.Process4,
+#         5: Process_AIS_Classes.AISClass.Process5,
+#         6: Process_AIS_Classes.AISClass.donothing,
+#         7: Process_AIS_Classes.AISClass.donothing,
+#         8: Process_AIS_Classes.AISClass.donothing,
+#         9: Process_AIS_Classes.AISClass.Process1239_18,
+#         10: Process_AIS_Classes.AISClass.donothing,
+#         11: Process_AIS_Classes.AISClass.donothing,
+#         12: Process_AIS_Classes.AISClass.donothing,
+#         13: Process_AIS_Classes.AISClass.donothing,
+#         14: Process_AIS_Classes.AISClass.Process14,
+#         15: Process_AIS_Classes.AISClass.donothing,
+#         16: Process_AIS_Classes.AISClass.donothing,
+#         17: Process_AIS_Classes.AISClass.donothing,
+#         18: Process_AIS_Classes.AISClass.Process1239_18,
+#         19: Process_AIS_Classes.AISClass.donothing,
+#         20: Process_AIS_Classes.AISClass.donothing,
+#         21: Process_AIS_Classes.AISClass.donothing,
+#         22: Process_AIS_Classes.AISClass.donothing,
+#         23: Process_AIS_Classes.AISClass.donothing,
+#         24: Process_AIS_Classes.AISClass.Process24,
+#         25: Process_AIS_Classes.AISClass.donothing,
+#         26: Process_AIS_Classes.AISClass.donothing,
+#         27: Process_AIS_Classes.AISClass.donothing,
+#         30: Process_AIS_Classes.AISClass.donothing,  # catchall for malformed packet
+#     }
+#     # print('keyword ', keyword, ' payload ',aisobject )
+#     if keyword in ParseDict:
+#         return ParseDict[keyword](keyword, aisobject)
+#     else:
+#         Errmess = "Error handling payload\r\n"
+#         if isinstance(keyword, int) or isinstance(keyword, float):
+#             c_keyword = str(keyword)
+#             Errmess = (
+#                 Errmess + "Function to handle payload_ID " + c_keyword + "  unknown"
+#             )
+#
+#         elif isinstance(keyword, str):
+#             c_keyword = keyword
+#             Errmess = (
+#                 Errmess + "Function to handle payload_ID " + c_keyword + "  unknown"
+#             )
+#         else:
+#             c_keyword = type(keyword)
+#             Errmess = (
+#                 Errmess + "Function to handle payload_ID " + c_keyword + "  unknown" )
+#         logging.debug( "{}\nAIS Data PayLoad is\n{}".format(Errmess, aisobject))
+#         return None
 
-    ParseDict = {
-        0: Process_AIS_Classes.AISClass.donothing,  # this is an error condition and should not occur
-        1: Process_AIS_Classes.AISClass.Process1239_18,
-        2: Process_AIS_Classes.AISClass.Process1239_18,
-        3: Process_AIS_Classes.AISClass.Process1239_18,
-        4: Process_AIS_Classes.AISClass.Process4,
-        5: Process_AIS_Classes.AISClass.Process5,
-        6: Process_AIS_Classes.AISClass.donothing,
-        7: Process_AIS_Classes.AISClass.donothing,
-        8: Process_AIS_Classes.AISClass.donothing,
-        9: Process_AIS_Classes.AISClass.Process1239_18,
-        10: Process_AIS_Classes.AISClass.donothing,
-        11: Process_AIS_Classes.AISClass.donothing,
-        12: Process_AIS_Classes.AISClass.donothing,
-        13: Process_AIS_Classes.AISClass.donothing,
-        14: Process_AIS_Classes.AISClass.Process14,
-        15: Process_AIS_Classes.AISClass.donothing,
-        16: Process_AIS_Classes.AISClass.donothing,
-        17: Process_AIS_Classes.AISClass.donothing,
-        18: Process_AIS_Classes.AISClass.Process1239_18,
-        19: Process_AIS_Classes.AISClass.donothing,
-        20: Process_AIS_Classes.AISClass.donothing,
-        21: Process_AIS_Classes.AISClass.donothing,
-        22: Process_AIS_Classes.AISClass.donothing,
-        23: Process_AIS_Classes.AISClass.donothing,
-        24: Process_AIS_Classes.AISClass.Process24,
-        25: Process_AIS_Classes.AISClass.donothing,
-        26: Process_AIS_Classes.AISClass.donothing,
-        27: Process_AIS_Classes.AISClass.donothing,
-        30: Process_AIS_Classes.AISClass.donothing,  # catchall for malformed packet
-    }
-    # print('keyword ', keyword, ' payload ',aisobject )
-    if keyword in ParseDict:
-        return ParseDict[keyword](keyword, aisobject)
+def do_function(dummy, aisobject:str):
+    '''
+    Takes in an AIS binary payload and iniates  packet processing
+
+    output:
+        may be ither ca call to sendAPRS or null return having updated Map entries
+    '''
+
+    message_type = int(aisobject[0:6], 2)       # determine what sort of packet
+    logging.info('In do_function message_type = {}'.format(message_type))
+
+    # should do a binary chop to determine what to do but I think is better to just scan in order of likelihood
+
+    if message_type in [1, 2, 3]:
+        packet = CNB(aisobject)
+    elif message_type == 18:
+        packet = ClassB_position_report(aisobject)
+    elif message_type == 19:
+        packet = Extende_ClassB_position_report(aisobject)
+    elif message_type == 9:
+        packet = SAR_aircraft_position_report(aisobject)
+    elif message_type == 4:
+        packet = Basestation(aisobject)
+    elif message_type == 5:
+        packet = StaticData(aisobject)
+    elif message_type == 24:
+        packet = Static_data_report(aisobject)
+    elif message_type == 21:
+        packet = Aid_to_navigation_report(aisobject)
+    elif message_type == 12:
+        packet = Addressed_safety_related_message(aisobject)
+    elif message_type == 14:
+        packet = Safety_related_broadcast_message(aisobject)
+    elif message_type == 27:
+        packet = Long_range_AIS_broadcast_message(aisobject)
     else:
-        Errmess = "Error handling payload\r\n"
-        if isinstance(keyword, int) or isinstance(keyword, float):
-            c_keyword = str(keyword)
-            Errmess = (
-                Errmess + "Function to handle payload_ID " + c_keyword + "  unknown"
-            )
+        packet = None       # default do nothing
 
-        elif isinstance(keyword, str):
-            c_keyword = keyword
-            Errmess = (
-                Errmess + "Function to handle payload_ID " + c_keyword + "  unknown"
-            )
-        else:
-            c_keyword = type(keyword)
-            Errmess = (
-                Errmess + "Function to handle payload_ID " + c_keyword + "  unknown" )
-        logging.debug(Errmess + "\nAIS Data PayLoad is\n" + aisobject.payload)
-        return None
+    return packet
+
+
+
 
 
 #

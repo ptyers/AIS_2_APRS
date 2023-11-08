@@ -85,16 +85,16 @@ class MapItem:
                 raise Exception('In MapItem line74 checking mmsi in GlobalMap', e) from e
 
             logging.debug(
-                (
-                    "Substituting MMSI",
+                    "Substituting MMSI {}\nCall {}\nName {}\nDestination {}\nTimestamp {}\nKill {} ".format(
                     packet.mmsi,
                     map_call,
                     map_name,
                     map_destination,
                     map_timestamp,
                     map_kill
-                )
-            )
+                        )
+                    )
+
             # if moving from MMSI as Callsign to Name need to kill off MMSI object in APRS
             # if moving from MMSI as Callsign to Name need to kill off MMSI object in APRS
             if not map_kill:
@@ -114,8 +114,10 @@ class MapItem:
         #  check if we have a record in the mapping directory for this MMSI
 
         if packet.mmsi in Map.Themap:
-            packet.callsign = Map.Themap[packet.mmsi].callsign
-            packet.vessel_name = Map.Themap[packet.mmsi].vessel_name
+            if Map.Themap[packet.mmsi].callsign != '':
+                packet.callsign = Map.Themap[packet.mmsi].callsign
+            if Map.Themap[packet.mmsi].vessel_name != '':
+                packet.vessel_name = Map.Themap[packet.mmsi].vessel_name
         else:
 
             #  no key/value pair exists
@@ -134,7 +136,16 @@ class MapItem:
             if packet.message_type == 5:
                 newmap = MapItem(packet.mmsi, packet.callsign, packet.vessel_name, packet.destination,
                                  datetime.utcnow(), False)
-            else:
+            elif packet.message_type == 24:
                 newmap = MapItem(packet.mmsi, packet.callsign, packet.vessel_name, '',
+                                 datetime.utcnow(), False)
+            elif packet.message_type == 19:
+                newmap = MapItem(packet.mmsi, '', packet.vessel_name, '',
+                                 datetime.utcnow(), False)
+            elif packet.message_type == 21:
+                newmap = MapItem(packet.mmsi, '', packet.vessel_name, '',
+                                 datetime.utcnow(), False)
+            else:
+                newmap = MapItem(packet.mmsi, '', '', '',
                                  datetime.utcnow(), False)
             Map.Themap.update({packet.mmsi: newmap})

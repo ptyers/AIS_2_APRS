@@ -112,7 +112,7 @@ class Global:
     AISFileName = "AISDatastream.txt"
     APRSFileName = ""
     AVCGAList = ""
-    Station = "CG722"
+    Station = "CG722-1"
     StderrFileName = "StdErrFile"
     WebPort = 8448
 

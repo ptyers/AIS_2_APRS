@@ -19,7 +19,7 @@ class GetDataUDP:
     def clean_up(self):
         self.sock.close()
 
-    def set_Port(self, value):
+    def set_Port(self, value: int):
         if isinstance(value, int):
             self._Port = value
         else:
