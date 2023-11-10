@@ -49,6 +49,8 @@ def ProcessAVCGAList():
         else:
             loop = False
 
+    csv.close()
+
     return AVCGADict
 
 

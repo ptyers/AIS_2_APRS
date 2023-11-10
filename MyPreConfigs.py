@@ -131,7 +131,7 @@ class MyPreConfigs:
                     + GlobalDefinitions.Global.APRSFileName,
                     "w",
                 )
-            f.close
+            f.close()
 
         if len(GlobalDefinitions.Global.AISFileName) != 0:
             try:
@@ -148,7 +148,7 @@ class MyPreConfigs:
                     + GlobalDefinitions.Global.AISFileName,
                     "w",
                 )
-            f.close
+            f.close()
 
         # also a diagnostic file used if stderr has been redirected
         # this filename is hardcoded in GlobalDEfinitions and not set in ini file
@@ -167,7 +167,7 @@ class MyPreConfigs:
                     + GlobalDefinitions.Global.StderrFileName,
                     "w",
                 )
-            f.close
+            f.close()
 
     def stripquotes(self, thisstring: str) -> str:
         if '"' in thisstring or "'" in thisstring:

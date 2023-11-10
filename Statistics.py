@@ -10,7 +10,7 @@ from dns import reversename
 from dns import resolver
 from socket import socket, AF_INET, SOCK_STREAM
 import GlobalDefinitions
-from SendAPRS import do_print_server_address
+from APRS import do_print_server_address
 from Map import Map
 
 

@@ -38,8 +38,6 @@ class Global:
     #  thgis is used by the APRS stream generators to replace MMSI by callsign and to put Name in the comments field
     # again create a dummy to show content
 
-    MyMap = Map.Map()
-    Themap = MyMap.Themap
     #  Dictionary holding list of AVCGA vessels and their MMSI
     # again a dummy to show content keyed om MMSI
     # only facilities with MMSI are held

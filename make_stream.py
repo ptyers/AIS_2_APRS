@@ -246,15 +246,17 @@ def do_5() -> str:
         ais_version = '0'
     binary_payload = binary_payload + '{:02b}'.format(int(ais_version))
 
-    imo_number = input('Enter IMO Number - up to 9 digits - Not Available')
+    imo_number = input('Enter IMO Number - up to 7 digits - Not Available')
     if len(imo_number) == 0:
-        imo_number = '999999990'
+        imo_number = '9999999'
     binary_payload = binary_payload + '{:030b}'.format(int(imo_number))
 
     callsign = input('Enter Callsign 7 characters')
     if len(callsign) == 0 or len(callsign) > 7:
         callsign = 'U/AVAIL'
         print('len callsign bits = ', len(diction.char_to_binary(callsign)))
+    while len(callsign) < 7:
+        callsign = callsign + '@'
     binary_payload = binary_payload + diction.char_to_binary(callsign)
 
     vessel_name = input('Enter Vessel Name 20 characters')
@@ -329,7 +331,10 @@ def do_5() -> str:
 
     destination = destination.upper()[0:20]
     print('len destination bits = ', len(diction.char_to_binary(destination)))
+    while len(destination) < 20:
+        destination = destination + '@'
     binary_payload = binary_payload + diction.char_to_binary(destination)
+
 
     # set DTE bit to 0 and add a spare bit
     binary_payload = binary_payload + '00'
@@ -370,10 +375,15 @@ def do_9() -> str:
 
     binary_payload = binary_payload + binlong + binlat
 
-    course_over_ground = input('Enter Course Over Ground 0-259 ')
-    if len(course_over_ground) == 0 or not (0 <= int(course_over_ground) <= 259):
-        course_over_ground = '0'
-    binary_payload = binary_payload + '{:012b}'.format(int(course_over_ground))
+    # course_over_ground = input('Enter Course Over Ground 0-359 ')
+    # if len(course_over_ground) == 0 or not (0 <= int(course_over_ground) <= 359):
+    #     course_over_ground = '0'
+    # binary_payload = binary_payload + '{:012b}'.format(int(course_over_ground*10))
+
+    course_over_ground = input("Enter course over ground range 0-359 default 360 = ")
+    if len(course_over_ground) == 0 or not (0 <= int(course_over_ground) <= 359):
+        course_over_ground = '360'
+    binary_payload = binary_payload + '{:012b}'.format(int(course_over_ground) * 10)
 
     # set timestamp to 0 , regional reserved to 0 , DTE to 0 plus 3 spare
     binary_payload = binary_payload + '000000' + '00000000' + '0' + '000'
@@ -515,6 +525,7 @@ def do_18() -> str:
 
     # add Radio Bits
     binary_payload = binary_payload + '00000000000000000000'
+    print(binary_payload)
 
     # veracity check print out payload length
     print("Having created Type 123 fields payload length expected 168 got ", len(binary_payload))

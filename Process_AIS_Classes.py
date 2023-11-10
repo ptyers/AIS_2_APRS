@@ -3,9 +3,8 @@
 
 
 import GlobalDefinitions
-import Map
-from GlobalDefinitions import Global
-import SendAPRS
+from Map import Map, MapItem
+from APRS import SendAPRS
 from datetime import datetime
 import logging
 from Payloads import Payload
@@ -51,17 +50,17 @@ class AISClass:
         if packet.message_type in [19, 21]:
             logging.info('Type 19 or 21 presented')
             try:
-                if packet.mmsi in Global.Themap:
-                    mapentry = Global.Themap[packet.mmsi]
-                    logging.debug(f'map found for {packet.mmsi} map entry {Global.Themap[packet.mmsi]}')
+                if packet.mmsi in Map.Themap:
+                    mapentry = Map.Themap[packet.mmsi]
+                    logging.debug(f'map found for {packet.mmsi} map entry {Map.Themap[packet.mmsi]}')
                     if mapentry.vessel_name != packet.vessel_name and packet.vessel_name != '':
                         mapentry.vessel_name = packet.vessel_name
 
                 else:
-                    mapentry = Map.MapItem(packet.mmsi, '', packet.vessel_name,
+                    mapentry = MapItem(packet.mmsi, '', packet.vessel_name,
                                            '', datetime.utcnow(), False)
 
-                Global.Themap.update({packet.mmsi: mapentry})
+                Map.Themap.update({packet.mmsi: mapentry})
             except Exception as e:
                 raise Exception(f'Exception while attempting to update map in ProcessClasses.do_position '
                                 f'for types 19 or 21', e) from e
@@ -70,7 +69,7 @@ class AISClass:
 
             if not test:
                 logging.info('In ProcessClasses.do_position about to SEndAPRS')
-                SendAPRS.SendAPRS(packet.message_type, packet, False, 0)
+                SendAPRS(packet.message_type, packet, False, 0)
             return True, 'do_position'
 
         except Exception as e:
@@ -89,9 +88,9 @@ class AISClass:
             f'name {packet.vessel_name}')
 
         try:
-            if packet.mmsi in Global.Themap:
-                mapentry = Global.Themap[packet.mmsi]
-                logging.debug(f'map found for {packet.mmsi} map entry {Global.Themap[packet.mmsi]}')
+            if packet.mmsi in Map.Themap:
+                mapentry = Map.Themap[packet.mmsi]
+                logging.debug(f'map found for {packet.mmsi} map entry {Map.Themap[packet.mmsi]}')
                 if mapentry.callsign != packet.callsign and packet.callsign != '':
                     mapentry.callsign = packet.callsign
                 if mapentry.vessel_name != packet.vessel_name and packet.vessel_name != '':
@@ -102,13 +101,13 @@ class AISClass:
             else:
                 if packet.message_type == 24:
                     # type 24 has no destination attribute
-                    mapentry = Map.MapItem(packet.mmsi, packet.callsign, packet.vessel_name,
+                    mapentry = MapItem(packet.mmsi, packet.callsign, packet.vessel_name,
                                            '', datetime.utcnow(), False)
                 else:
-                    mapentry = Map.MapItem(packet.mmsi, packet.callsign, packet.vessel_name,
+                    mapentry = MapItem(packet.mmsi, packet.callsign, packet.vessel_name,
                                            packet.destination, datetime.utcnow(), False)
 
-            Global.Themap.update({packet.mmsi: mapentry})
+            Map.Themap.update({packet.mmsi: mapentry})
 
         except Exception as e:
             logging.error(
@@ -131,7 +130,7 @@ class AISClass:
         try:
             if not test:
                 logging.info('In ProcessClasses.do_safety about to SEndAPRS')
-                SendAPRS.SendAPRS(packet.message_type, packet, False, bulletin)
+                SendAPRS(packet.message_type, packet, False, bulletin)
             return True, 'do_safety'
         except Exception as e:
             raise RuntimeError("Exception in ProcessClasses.do_safety, probable failure in SendAPRS", e, "\r\n") from e
@@ -212,9 +211,9 @@ class AISClass:
     #             except Exception as e:
     #                 raise Exception('ProcessClasses do 123', e) from e
     #
-    #         if packet.mmsi in Global.Themap:
+    #         if packet.mmsi in Map.Themap:
     #             try:
-    #                 mapentry = Global.Themap[packet.mmsi]
+    #                 mapentry = Map.Themap[packet.mmsi]
     #             except Exception as e:
     #                 raise Exception('Process 123 getting mapentry', e) from e
     #             try:
@@ -294,8 +293,8 @@ class AISClass:
     #             )
     #         )
     # try:
-    #     if packet.mmsi in Global.Themap:
-    #         mapentry = Global.Themap[packet.mmsi]
+    #     if packet.mmsi in Map.Themap:
+    #         mapentry = Map.Themap[packet.mmsi]
     #
     #     else:
     #         mapentry = Map.MapItem(packet.mmsi, packet.callsign, packet.vessel_name,

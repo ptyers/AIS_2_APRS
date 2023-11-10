@@ -384,7 +384,7 @@ class Basic_Position(Payload):
             sets mycnb.course over_ground (float)
         '''
         # course over ground - scaled by 10
-        intval = self.binary_item(116, 12)
+        intval = self.binary_item(position, length)
         if 0 <= intval <= 3600:
             self.course_over_ground = round(float(intval) / 10.0, 1)
         else:
@@ -406,7 +406,7 @@ class Basic_Position(Payload):
             sets mycnb.true_heading (integer)
         '''
 
-        itru = self.binary_item(128, 9)
+        itru = self.binary_item(position, length)
         # if self.message_type == 18:
         #     itru = 511
         if 0 <= itru <= 359 or itru == 511:
@@ -754,6 +754,8 @@ class Basestation(Basic_Position):
     def __init__(self, p_payload: str):
         logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
+        self.get_longitude(79,28)
+        self.get_latitude(107,27)
         self.get_year()
         self.get_month()
         self.get_day()
@@ -1535,6 +1537,11 @@ class ClassB_position_report(Basic_Position):
     def __init__(self, p_payload):
         super().__init__(p_payload)
 
+        self.get_latitude(85,27)
+        self.get_longitude(57,28)
+        self.getSOG(46,10)
+        self.get_COG(112,12)
+        self.get_tru_head(124,9)
         self.get_cs_unit()
         self.get_display_flag()
         self.get_band_flag()
@@ -2171,13 +2178,26 @@ class Long_range_AIS_broadcast_message(Basic_Position):
         self.get_27longitude(44, 18)
         self.get_27latitude(62, 17)
         self.getSOG(79, 6)
+        self.speed_over_ground = self.speed_over_ground * 10
         self.get_COG(85, 9)
+        self.course_over_ground = self.course_over_ground *10
         self.GNSS_position_status = self.get_flag_bit(94)
 
         pass
 
     def __repr__(self):
-        pass
+        return (f'{self.__class__.__name__}\n'
+                f'Message Type:        {self.message_type}\n'
+                f'Repeat Indicator:    {self.repeat_indicator}\n'
+                f'MMSI:                {self.mmsi}\n'
+                f'Navigation Status:   {self.navigation_status}\n'
+                f'Longitude:           {self.longitude}\n'
+                f'Latitude:            {self.latitude}\n'
+                f'Speed over Ground:   {self.speed_over_ground}\n'
+                f'Course over Ground:  {self.course_over_ground}\n'
+                f'GNSS Position Status{self.GNSS_position_status}\n'
+                f'RAIM status:         {self.raim_flag}\n'
+                )
 
     def get_27longitude(self, startpos: int, length: int = 18) -> None:
         # longitude is in various positions in differing blocks

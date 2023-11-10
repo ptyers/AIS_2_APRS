@@ -1,8 +1,8 @@
-import MyPreConfigs
-import GlobalDefinitions
+
+from APRS import APRS
 from datetime import datetime
 from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR, SOCK_DGRAM
-from APRS import APRS
+
 from Payloads import CNB
 
 
@@ -138,7 +138,7 @@ def do4(args, dumbull: int, dummy: bool):
     # print(myaprs.CreateObjectPosition())
     args1, args2 = args
     try:
-        tcpbytes = bytearray(args2.CreateBasePosition(), " utf-8")
+        tcpbytes = bytearray(args2.CreateBasePosition(Global.Themap), " utf-8")
     except Exception as e:
         raise Exception('SendAPRS .do4 line 127', e) from e
 

@@ -12,7 +12,7 @@ Used to report on known stations/ships
 import time
 from datetime import datetime
 import logging
-from SendAPRS import SendAPRS
+
 
 
 class Map:
@@ -69,46 +69,46 @@ class MapItem:
     def get_kill(self):
         return self.kill
 
-    def coordinate_map(self, packet):
-        if packet.mmsi in Map.Themap:
-            #print("tested for MyMapKey matching MMSI")
-            try:
-                mapentry = Map.Themap[packet.mmsi]
-                map_mmsi = packet.mmsi
-                map_call = mapentry.get_callsign()
-                map_name = mapentry.get_vessel_name()
-                map_destination = mapentry.get_destination()
-                map_timestamp = mapentry.get_timestamp()
-                map_kill = mapentry.get_kill()
-
-            except Exception as e:
-                raise Exception('In MapItem line74 checking mmsi in GlobalMap', e) from e
-
-            logging.debug(
-                    "Substituting MMSI {}\nCall {}\nName {}\nDestination {}\nTimestamp {}\nKill {} ".format(
-                    packet.mmsi,
-                    map_call,
-                    map_name,
-                    map_destination,
-                    map_timestamp,
-                    map_kill
-                        )
-                    )
-
-            # if moving from MMSI as Callsign to Name need to kill off MMSI object in APRS
-            # if moving from MMSI as Callsign to Name need to kill off MMSI object in APRS
-            if not map_kill:
-                try:
-                    SendAPRS(
-                        packet.message_type, packet, True, 0
-                    )
-                    map_kill = True
-                    Map.Themap.update({map_mmsi: mapentry})
-                except Exception as e:
-                    raise RuntimeError(
-                        "Error Sending kill APRS in 12349 - Error in SendAPRS \n", e) from e
-
-            return mapentry
+    # def coordinate_map(self, packet):
+    #     if packet.mmsi in Map.Themap:
+    #         #print("tested for MyMapKey matching MMSI")
+    #         try:
+    #             mapentry = Map.Themap[packet.mmsi]
+    #             map_mmsi = packet.mmsi
+    #             map_call = mapentry.get_callsign()
+    #             map_name = mapentry.get_vessel_name()
+    #             map_destination = mapentry.get_destination()
+    #             map_timestamp = mapentry.get_timestamp()
+    #             map_kill = mapentry.get_kill()
+    #
+    #         except Exception as e:
+    #             raise Exception('In MapItem line74 checking mmsi in GlobalMap', e) from e
+    #
+    #         logging.debug(
+    #                 "Substituting MMSI {}\nCall {}\nName {}\nDestination {}\nTimestamp {}\nKill {} ".format(
+    #                 packet.mmsi,
+    #                 map_call,
+    #                 map_name,
+    #                 map_destination,
+    #                 map_timestamp,
+    #                 map_kill
+    #                     )
+    #                 )
+    #
+    #         # if moving from MMSI as Callsign to Name need to kill off MMSI object in APRS
+    #         # if moving from MMSI as Callsign to Name need to kill off MMSI object in APRS
+    #         if not map_kill:
+    #             try:
+    #                 SendAPRS(
+    #                     packet.message_type, packet, True, 0
+    #                 )
+    #                 map_kill = True
+    #                 Map.Themap.update({map_mmsi: mapentry})
+    #             except Exception as e:
+    #                 raise RuntimeError(
+    #                     "Error Sending kill APRS in 12349 - Error in SendAPRS \n", e) from e
+    #
+    #         return mapentry
 
     def update_map(self, packet):
         #  check if we have a record in the mapping directory for this MMSI

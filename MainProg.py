@@ -3,11 +3,11 @@ import time
 
 import GetUDP
 import GetSerial
-import GlobalDefinitions
 from GetFileData import FileData
 from Process_AIS_Classes import AISClass
 import sys
 import MyPreConfigs
+import GlobalDefinitions
 from GlobalDefinitions import Global
 from threading import Thread
 import Statistics
@@ -34,7 +34,7 @@ then start up the send to APRS thread
 and finally start up a thread to report statistics communicating by yet another queue
 
 """
-
+Themap = {}
 
 def main():
 
