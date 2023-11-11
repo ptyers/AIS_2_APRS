@@ -77,7 +77,7 @@ class APRS:
             speed: float,
             comment: str,
             IsAVCGA: int,
-            relay_station: str = 'CG722',
+            relay_station: str = GlobalDefinitions.Global.Station,
             **kwargs
     ):
 
@@ -181,12 +181,17 @@ class APRS:
                 if not kill:
                     statuschar = "*"
                     if self._mmsi in Map.Themap:
-
-                        mmsi, callsign, vessel_name, destination, timestamp, killflag = Map.Themap[self._mmsi]
+                        #mmsi, callsign, vessel_name, destination, timestamp, killflag = Map.Themap[self._mmsi]
+                        thisitem =Map.Themap[self._mmsi]
+                        vessel_name = thisitem.vessel_name
+                        mmsi = thisitem.mmsi
+                        callsign = thisitem.callsign
+                        destination = thisitem.destination
+                        killflag = thisitem.kill
                         if vessel_name != '':
-                            self.name = vessel_name
+                            self._name = vessel_name
                         if callsign != '':
-                            self.callsign = callsign
+                            self._callsign = callsign
                     if self._name != "":
                         self._comment = self._name + " " + self._mmsi + " " + self._callsign
                         self.callsign = self._name
@@ -391,6 +396,7 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int, test: bool = False):
                 mydata.vessel_name,
                 mydata.isAVCGA
             )
+
         else:
             myaprs = APRS(
                 mydata.mmsi,
@@ -403,56 +409,54 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int, test: bool = False):
             )
 
         myaprs.MMSI = mydata.mmsi
-        if len(mydata.callsign) > 0:
-            myaprs.Callsign = mydata.callsign
+
+        if mydata.message_type in [5,24]:
+            if len(mydata.callsign) > 0:
+                myaprs.Callsign = mydata.callsign
+                if mydata.callsign == "":
+                    xcallsign = mydata.mmsi
+                else:
+                    xcallsign = mydata.callsign
+        else:
+            xcallsign = mydata.mmsi
+
 
     except Exception as e:
         raise RuntimeError("Error creating myaprs in SendAPRS", e) from e
 
-        # switch (p)
-        # switch statements not available simulate with dictionary of things to do
-    thisswitch = {
-        1: doposition,
-        2: doposition,
-        3: doposition,
-        4: do4,
-        5: do5_24,
-        6: donothing,
-        7: donothing,
-        8: donothing,
-        9: doposition,
-        10: donothing,
-        11: donothing,
-        12: do14,
-        13: donothing,
-        14: do14,
-        15: donothing,
-        16: donothing,
-        17: donothing,
-        18: doposition,
-        19: doposition,
-        20: donothing,
-        21: doposition,
-        22: donothing,
-        23: donothing,
-        24: do5_24,
-        25: donothing,
-        26: donothing,
-        27: donothing,
-        28: donothing,
-    }
 
-    # types 1,2 , 3, 9 and 18 position reports
-    #            if ((mydata.Latitude < 91) && (mydata.Longitude < 181))  #  only send valid lat/long to server
-
-    if mydata.callsign == "":
-        xcallsign = mydata.mmsi
-    else:
-        xcallsign = mydata.callsign
     try:
-        print(f'about top call thisswsitch wsith\n{mydata}\n'
-              f'and \n{myaprs}')
-        tcpbytes = thisswitch[p]((mydata, myaprs), Bulletin, kill)
+        # using match statement - needs python 3.10 and upwards
+        match mydata.message_type:
+            case 1:
+                tcpbytes = doposition(mydata, myaprs, 0, kill)
+            case 2:
+                tcpbytes = doposition(mydata, myaprs, 0, kill)
+            case 3:
+                tcpbytes = doposition(mydata, myaprs, 0, kill)
+            case 4:
+                tcpbytes = dobase(mydata, myaprs)
+            case 5:
+                tcpbytes = datareport(mydata, myaprs,  kill)
+            case 9:
+                tcpbytes = doposition(mydata, myaprs, 0, kill)
+            case 12:
+                tcpbytes = dosafety(mydata, myaprs, Bulletin)
+            case 14:
+                tcpbytes = dosafety(mydata, myaprs, Bulletin)
+            case 18:
+                tcpbytes = doposition(mydata, myaprs, 0, kill)
+            case 19:
+                tcpbytes = doposition(mydata, myaprs, 0, kill)
+            case 21:
+                tcpbytes = doposition(mydata, myaprs, 0, kill)
+            case 24:
+                tcpbytes = datareport(mydata, myaprs,  kill)
+            case 27:
+                tcpbytes = doposition(mydata, myaprs, 0, kill)
+            case default:
+                pass
+
     except Exception as e:
         raise Exception('SendAPRS line 78 tcpbytes definition p= {}'.format(p), e) from e
 
@@ -460,16 +464,16 @@ def SendAPRS(p, mydata, kill: bool, Bulletin: int, test: bool = False):
     try:
         if not test:
             logging.debug(f'Called QueueAPRS with Xcallsign {xcallsign} '
-                          f'and bytearray {xcallsign}', stack_info=True)
-            QueueAPRS(xcallsign, xcallsign)
+                          f'and bytearray {tcpbytes}', stack_info=True)
+            QueueAPRS(xcallsign, tcpbytes)
         else:
-            return f'Called QueueAPRS with Xcallsign {xcallsign} and bytearray {xcallsign}'
+            return xcallsign,  tcpbytes
     except Exception as e:
         raise Exception('SendAPRS line 83 QueueAPRS ', e) from e
 
     try:
         logging.debug(f'Called TransmitAPRS bytearray {tcpbytes}', stack_info=True)
-        TransmitAPRS(tcpbytes)
+        TransmitAPRS()
     except Exception as e:
         raise RuntimeError(
             "Error Attempting to Transmit APRS following queuing", e
@@ -484,15 +488,12 @@ def donothing(args, dummy: int, kill: bool):
     pass
 
 
-def doposition(args, dummy: int, kill: bool):
-    print('In SendAPRS.doposition')
+def doposition(mydata, myaprs, dummy: int, kill: bool):
+    logging.debug('In SendAPRS.doposition')
     try:
-        mydata = args[0]
-        myaprs = args[1]
-
         tcpbytes = bytearray(myaprs.CreateObjectPosition(kill, mydata), "utf-8")
 
-        print(tcpbytes)
+        logging.debug(f'in doposition tcpbytes {tcpbytes}')
 
         return tcpbytes
 
@@ -502,11 +503,10 @@ def doposition(args, dummy: int, kill: bool):
         ) from e
 
 
-def do4(args, dumbull: int, dummy: bool):
+def dobase(mydata, myaprs):
     # 'In SendAPORS.do4')
 
     # print(myaprs.CreateObjectPosition())
-    mydata, myaprs = args
     try:
         tcpbytes = bytearray(myaprs.CreateBasePosition(False, mydata), " utf-8")
     except Exception as e:
@@ -515,34 +515,29 @@ def do4(args, dumbull: int, dummy: bool):
     return tcpbytes
 
 
-def do14(args, Bulletin: int, dummy: bool):
+def dosafety(mydata, myaprs, Bulletin: int):
     # print('In SendAPORS.do14')
     try:
-        mydata, myaprs = args
         tcpbytes = bytearray(myaprs.CreateSafetyMessage(Bulletin, mydata), "utf-8")
-
         return tcpbytes
-
     except Exception as e:
         raise RuntimeError("Exception while processing (queue) Type 14", e) from e
 
 
-def do5_24(args, dumbull: int, kill: bool):
+def datareport(mydata, myaprs,  kill: bool):
     # print('In SendAPORS.do5_24')
     try:
         # APRS myaprs = new APRS(mydata.String_MMSI, mydata.Latitude, mydata.Longitude, mydata.COG, mydata.SOG, "")
         try:
-            mydata, myaprs = args
-            myaprs.Course = str(mydata.course_over_ground)
-            myaprs.Speed = str(mydata.speed_over_ground)
+            myaprs._course = str(mydata.course_over_ground)
+            myaprs._speed = str(mydata.speed_over_ground)
         except Exception as e:
-            raise Exception('do5_24 line 151', e) from e
+            raise Exception('In SendAPRS.datareport updating speed and course', e) from e
 
-        #                   print(myaprs.CreateObjectPosition())
         try:
             tcpbytes = bytearray(myaprs.CreateObjectPosition(kill, mydata), "utf-8")
         except Exception as e:
-            raise Exception('SendAPRS .do5_24 line 159 \n', e) from e
+            raise Exception('In SendAPRS.datareport failed to create object position', e) from e
 
         return tcpbytes
 
@@ -550,7 +545,7 @@ def do5_24(args, dumbull: int, kill: bool):
         raise RuntimeError("Exception while processing (queue) Type 5,24", e) from e
 
 
-def QueueAPRS(Callsign: str, tcpbytes):
+def QueueAPRS(Callsign: str, tcpbytes, test: bool = False):
     # print('In SendAPORS.QueueAPRS')
     #  queues APRS text streams deleting duplicates
     #  uses dictionary ServerQueue to hold APRS byte steam keyed on the Callsign field
@@ -568,16 +563,10 @@ def QueueAPRS(Callsign: str, tcpbytes):
     try:
         aprsstring = tcpbytes.decode()
 
-        diagnostic = GlobalDefinitions.Global.diagnostic
-        diagnostic2 = GlobalDefinitions.Global.diagnostic2
-        diagnostic3 = GlobalDefinitions.Global.diagnostic3
         ServerQueue = GlobalDefinitions.Global.ServerQueue
 
-        diagnostic2 = False
-        diagnostic3 = False
 
-        if diagnostic2:
-            print("In QueueAPRS aprsstring = ", aprsstring)
+        logging.info(f'In QueueAPRS aprsstring = {aprsstring}')
 
         try:
             if Callsign in ServerQueue:
@@ -590,26 +579,24 @@ def QueueAPRS(Callsign: str, tcpbytes):
                 except KeyError:
                     pass
 
-                    if diagnostic2:
-                        print("In QueueAPRS Queue Count = {}".format(len(ServerQueue)))
-                        for xx in ServerQueue:
-                            print("MMSI {} Data {} ".format(xx, ServerQueue[xx]))
+                    logging.info(f"In QueueAPRS Queue Count = {len(ServerQueue)}")
+                    for xx in ServerQueue:
+                        logging.info(f"MMSI {xx} Data {ServerQueue[xx]} ")
 
                     #  otherwise do nothing its a duplicate
 
             else:
                 #  Create an entry in queue
-                if diagnostic2:
-                    print("adding record to QueueAPRS ", Callsign, " : ", aprsstring)
+                logging.info(f"adding record to QueueAPRS {Callsign}: {aprsstring}" )
 
                 ServerQueue.update({Callsign: aprsstring})
 
-                if diagnostic2:
-                    print("In QueueAPRS Queue NewEntry Count = {}".format(len(ServerQueue)))
+                logging.info(f"In QueueAPRS Queue NewEntry Count = {len(ServerQueue)}")
 
         except Exception as e:
-            print("Error while queuing APRS")
+            logging.error("Error while queuing APRS")
             raise RuntimeError("Error in Queue APRS\r\n", e) from e
+
     except Exception as e:
         raise Exception('Queue APRS ', e) from e
 
@@ -619,13 +606,10 @@ def Do_diag_print(DiagBool, diagstr):
         print(diagstr)
 
 
-def TransmitAPRS(tcpstream):
+def TransmitAPRS(test: bool = False):
+    logging.debug(f'entering transmit_aprs test = {test}')
     try:
         # print('In SendAPORS.TransmitAPRS')
-        diagnostic = GlobalDefinitions.Global.diagnostic
-        diagnostic2 = GlobalDefinitions.Global.diagnostic2
-        diagnostic3 = GlobalDefinitions.Global.diagnostic3
-        diagnostic_Level = GlobalDefinitions.Global.diagnostic_Level
 
         StatsQ = GlobalDefinitions.Global.Statsqueue
         UseRemote = GlobalDefinitions.Global.UseRemote
@@ -635,6 +619,7 @@ def TransmitAPRS(tcpstream):
         LastTransmit = GlobalDefinitions.Global.LastTransmit
         ServerQueue = GlobalDefinitions.Global.ServerQueue
         NoConnect = GlobalDefinitions.Global.NoConnect
+        NoConnect = True
         try:  # all encompassing exception  catch all to pass up the tree
 
             aprs_stream = socket(AF_INET, SOCK_STREAM)
@@ -645,10 +630,10 @@ def TransmitAPRS(tcpstream):
             current = datetime.now()
             difference = current - GlobalDefinitions.Global.LastTransmit
 
-            diagstr = "tx timedifference {0}".format(difference.total_seconds())
-            Do_diag_print(diagnostic3, diagstr)
+            logging.debug(f'tx timedifference {difference.total_seconds()}')
 
-            if difference.total_seconds() > GlobalDefinitions.Global.ServerPeriod:
+            if difference.total_seconds() > GlobalDefinitions.Global.ServerPeriod or test:
+                logging.debug('about to do a transmit')
                 if NoConnect:
                     try:
                         aprs_stream = socket(AF_INET, SOCK_STREAM)
@@ -682,6 +667,8 @@ def TransmitAPRS(tcpstream):
                             % e
                         ) from e
 
+                    logging.debug('apparently connected')
+
                     GlobalDefinitions.Global.NoConnect = (
                         False  # we now have valid connection
                     )
@@ -689,24 +676,18 @@ def TransmitAPRS(tcpstream):
                     # count number frames sent this time
                     period_frame_count = 0
 
-                    diagstr = "In TransmitAPRS Queue Count = {0}".format(len(ServerQueue))
-                    Do_diag_print(diagnostic2, diagstr)
-                    """if diagnostic2:
-                        print("In TransmitAPRS Queue Count = {0}".format(len(ServerQueue)))
-                    """
+                    logging.debug(f'In TransmitAPRS Queue Count = {len(ServerQueue)}')
+
 
                     for de in ServerQueue:
+                        logging.debug('processing server queue')
                         if ServerQueue[de] != "string2":
                             tcpbytes = bytearray(
                                 ServerQueue[de], "utf-8"
                             )  # convert the APRS string to bytes prior to TX
 
                             try:  # Attempt to send
-                                diagstr = "would send tcp data", tcpbytes.decode()
-                                Do_diag_print(diagnostic3, diagstr)
-                                """if diagnostic3:
-                                    print("would send tcp data", tcpbytes.decode())
-                                """
+                                logging.debug(f'would send tcp data {tcpbytes.decode()}')
 
                                 do_log_aprs(LogAPRS, APRSLogFile, tcpbytes)
 
@@ -750,7 +731,7 @@ def TransmitAPRS(tcpstream):
                 GlobalDefinitions.Global.NoConnect = True
 
         except Exception as e:
-            raise RuntimeError("Error dequeinng in Transmit APRS \n %s", e) from e
+            raise RuntimeError("Error dequeing in Transmit APRS \n %s", e) from e
     except Exception as e:
         raise Exception('TransmitAPRS', e) from e
 
@@ -786,6 +767,8 @@ def do_print_server_address(useremote: bool):
 
 
 def do_log_aprs(logaprs: bool, aprslogfile, tcpbytes):
+
+    logging.debug(f'in do_log logfilename = {aprslogfile}')
     try:
         if logaprs:
             with open(aprslogfile, "a") as f:

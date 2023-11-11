@@ -1342,7 +1342,6 @@ class Addressed_safety_related_message(Payload):
     payload: str  # the binary payload deriverd from the AIS Stream
 
     def __init__(self, p_payload):
-        logging.basicConfig(level=logging.CRITICAL, filename='logfile.log')
         super().__init__(p_payload)
 
         self.payload = p_payload
@@ -2343,7 +2342,6 @@ class AISStream:
 
         self.valid_message = True
         self.split_string(input)
-
         self.packet_id: str
         self.fragment_count: int
         self.fragment_number: int
@@ -2399,7 +2397,9 @@ class AISStream:
     def split_string(self, stream: str):
         try:
             self.valid_message = True
+            logging.debug(f'in payloads.split string stream = {stream}')
             str_split: list = stream.split(',')
+            logging.debug(f'in payloads.splitstream after split str_split = {str_split}')
 
             if (str_split[0] == '!AIVDM') or (str_split[0] == '!AIVDO'):
                 self.packet_id = str_split[0]

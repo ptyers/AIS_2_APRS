@@ -717,7 +717,7 @@ def do_21() -> str:
     return binary_payload
 
 def do_24():
-    whichone = input("Which TYpe of Type 24 A or B or C (type B auxilliary) - null gives Type B ")
+    whichone = input("Which TYpe of Type 24 A or B or C (type B non_auxiallry) - null gives Type B ")
     if len(whichone) == 0 or not (whichone in ['A', 'B', 'C']):
         whichone = 'B'
 
@@ -811,6 +811,8 @@ def do_24B() -> str:
     callsign = input('Enter Callsign 7 characters')
     if len(callsign) == 0 or len(callsign) > 7:
         callsign = 'U/AVAIL'
+    while len(callsign) < 7:
+        callsign = callsign + '@'
     binary_payload = binary_payload + diction.char_to_binary(callsign)
 
     dim_to_bow = input('Enter Dimension to Bow - max 511, default 0')
@@ -845,7 +847,7 @@ def do_24B() -> str:
 
 
 def do_24C():
-    # now create a binary payload for Static Data REport TYpe B (auxialry) , this will be encoded as a last step
+    # now create a binary payload for Static Data REport TYpe B (auxiallry) , this will be encoded as a last step
 
     diction = AISDictionaries()
 
@@ -886,6 +888,8 @@ def do_24C():
     callsign = input('Enter Callsign 7 characters')
     if len(callsign) == 0 or len(callsign) > 7:
         callsign = 'U/AVAIL'
+    while len(callsign) < 7:
+        callsign = callsign + '@'
     binary_payload = binary_payload + diction.char_to_binary(callsign)
 
     mmsi = input('Enter MMSI - 9 digits, default 503123456 = ')

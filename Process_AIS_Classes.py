@@ -98,6 +98,8 @@ class AISClass:
                 if packet.message_type == 5:
                     if mapentry.destination != packet.destination and packet.destination != '':
                         mapentry.destination = packet.destination
+
+
             else:
                 if packet.message_type == 24:
                     # type 24 has no destination attribute
@@ -105,7 +107,19 @@ class AISClass:
                                            '', datetime.utcnow(), False)
                 else:
                     mapentry = MapItem(packet.mmsi, packet.callsign, packet.vessel_name,
-                                           packet.destination, datetime.utcnow(), False)
+                                           packet.destination, datetime.utcnow(), False
+
+
+
+
+
+                                       )
+
+                    packet.int_latitude = 91 * 600000
+                    packet.latitude = 91.0
+                    packet.int_longitude = 181 * 600000
+                    packet.longitude = 181
+                    SendAPRS(packet.message_type, packet, True, 0)
 
             Map.Themap.update({packet.mmsi: mapentry})
 

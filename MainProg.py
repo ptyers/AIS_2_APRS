@@ -38,7 +38,11 @@ Themap = {}
 
 def main():
 
-    logging.basicConfig(level=logging.ERROR, filename="error.log")
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        filename="error.log",
+        level=logging.ERROR,
+        datefmt='%Y-%m-%d %H:%M:%S')
     #logging.basicConfig(level=logging.ERROR)
 
     inqueue = Global.inputqueue
@@ -148,11 +152,22 @@ def main():
                     # TEMPORARY ######throw away fragmented packets
                     packet: Payload = None
 
-                    if current_ais.fragment_count == 1 and current_ais.fragment_number ==1:
+                    if current_ais.fragment_count == 1 and current_ais.fragment_number == 1:
                         try:
                             logging.info('doing stuff nonfragmented pasyload id ={}'.format(current_ais.message_type))
                             packet = do_function(current_ais.message_type, current_ais.binary_payload)
+                            if packet == None and current_ais.message_type != 20:
+                                # log where packet types not able to be processed,
+                                # currently\ not logging type 20 (data link mgt) as problem
+                                logging.error(f'In Main after do_function Null packet returned\nInput stream was:'
+                                              f'\n{stringer}')
+                        except IndexError as e:
+                            logging.error(f'In Main.nonfragment trying to do function Index Error string index out of '
+                                          f'range\ninput stream was:\n{stringer}')
+                            logging.error(f'In Main.nonfragment trying to do function Index Error string index out of '
+                                          f'range\ncurrent_ais:\n{current_ais}')
                         except Exception as e:
+
                             raise Exception('In setting packet type prior to processing Main.line 151 ', e) from e
                     else:
                         # now handle the fragments
@@ -260,73 +275,23 @@ def ExtractMMSI(Binary_payload):
     pass
 
 
-# def do_function(keyword, aisobject:str):
-#     # create a dictionary of functions related to keywords that might be being initialised
-#     #
-#     print('entering do function with kedyword = ', keyword)
-#     ParseDict = {
-#         0: Process_AIS_Classes.AISClass.donothing,  # this is an error condition and should not occur
-#         1: Process_AIS_Classes.AISClass.Process1239_18,
-#         2: Process_AIS_Classes.AISClass.Process1239_18,
-#         3: Process_AIS_Classes.AISClass.Process1239_18,
-#         4: Process_AIS_Classes.AISClass.Process4,
-#         5: Process_AIS_Classes.AISClass.Process5,
-#         6: Process_AIS_Classes.AISClass.donothing,
-#         7: Process_AIS_Classes.AISClass.donothing,
-#         8: Process_AIS_Classes.AISClass.donothing,
-#         9: Process_AIS_Classes.AISClass.Process1239_18,
-#         10: Process_AIS_Classes.AISClass.donothing,
-#         11: Process_AIS_Classes.AISClass.donothing,
-#         12: Process_AIS_Classes.AISClass.donothing,
-#         13: Process_AIS_Classes.AISClass.donothing,
-#         14: Process_AIS_Classes.AISClass.Process14,
-#         15: Process_AIS_Classes.AISClass.donothing,
-#         16: Process_AIS_Classes.AISClass.donothing,
-#         17: Process_AIS_Classes.AISClass.donothing,
-#         18: Process_AIS_Classes.AISClass.Process1239_18,
-#         19: Process_AIS_Classes.AISClass.donothing,
-#         20: Process_AIS_Classes.AISClass.donothing,
-#         21: Process_AIS_Classes.AISClass.donothing,
-#         22: Process_AIS_Classes.AISClass.donothing,
-#         23: Process_AIS_Classes.AISClass.donothing,
-#         24: Process_AIS_Classes.AISClass.Process24,
-#         25: Process_AIS_Classes.AISClass.donothing,
-#         26: Process_AIS_Classes.AISClass.donothing,
-#         27: Process_AIS_Classes.AISClass.donothing,
-#         30: Process_AIS_Classes.AISClass.donothing,  # catchall for malformed packet
-#     }
-#     # print('keyword ', keyword, ' payload ',aisobject )
-#     if keyword in ParseDict:
-#         return ParseDict[keyword](keyword, aisobject)
-#     else:
-#         Errmess = "Error handling payload\r\n"
-#         if isinstance(keyword, int) or isinstance(keyword, float):
-#             c_keyword = str(keyword)
-#             Errmess = (
-#                 Errmess + "Function to handle payload_ID " + c_keyword + "  unknown"
-#             )
-#
-#         elif isinstance(keyword, str):
-#             c_keyword = keyword
-#             Errmess = (
-#                 Errmess + "Function to handle payload_ID " + c_keyword + "  unknown"
-#             )
-#         else:
-#             c_keyword = type(keyword)
-#             Errmess = (
-#                 Errmess + "Function to handle payload_ID " + c_keyword + "  unknown" )
-#         logging.debug( "{}\nAIS Data PayLoad is\n{}".format(Errmess, aisobject))
-#         return None
 
 def do_function(dummy, aisobject:str):
     '''
-    Takes in an AIS binary payload and iniates  packet processing
+    Takes in an AIS binary payload and initiates  packet processing
 
     output:
         may be ither ca call to sendAPRS or null return having updated Map entries
     '''
 
-    message_type = int(aisobject[0:6], 2)       # determine what sort of packet
+    try:
+        message_type = int(aisobject[0:6], 2)       # determine what sort of packet
+    except IndexError as e:
+        logging.error(f'In Main.do_function Index Error while determining message type - dumping record')
+        return None
+    except Exception as e:
+        raise Exception(f'In Main.do_function non-index error while obtaining message_type', e) from e
+
     logging.info('In do_function message_type = {}'.format(message_type))
 
     # should do a binary chop to determine what to do but I think is better to just scan in order of likelihood
